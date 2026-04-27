@@ -426,6 +426,14 @@ footer{
 #builderFrame{width:100%;height:100%;border:none;display:block;}
 
 
+.color-dot{
+  width:22px;height:22px;border-radius:50%;cursor:pointer;
+  border:2.5px solid rgba(255,255,255,0.15);
+  transition:transform 0.15s,border-color 0.15s;
+  flex-shrink:0;
+}
+.color-dot:hover{transform:scale(1.2);}
+.color-dot.active{border-color:white;transform:scale(1.25);box-shadow:0 0 0 2px rgba(255,255,255,0.4);}
 .back-to-landing{
   position:relative;z-index:10;
   background:rgba(255,255,255,0.12);border:2px solid rgba(255,255,255,0.2);
@@ -680,10 +688,11 @@ canvas#pinCanvas{border-radius:50%;display:block;}
 /* ── MOBILE ── */
 @media(max-width:768px){
   body{overflow:auto;height:auto;}
+  #builder-screen{position:relative;overflow:auto;min-height:100vh;}
   .main{grid-template-columns:1fr;overflow:visible;}
   header .header-badge,.qr-pill{display:none;}
   .left-panel{display:none;}
-  .preview-area{padding:16px;min-height:auto;}
+  .preview-area{padding:16px;min-height:300px;background:linear-gradient(160deg,#5DCEF5 0%,#4DC8F0 60%,#3BBCE8 100%);}
   canvas#pinCanvas{width:260px!important;height:260px!important;}
   .ice-platform{width:220px;}
   .mobile-bottom{display:flex;flex-direction:column;}
@@ -1000,6 +1009,40 @@ canvas#pinCanvas{border-radius:50%;display:block;}
         <label>Your Name (bottom arc)</label>
         <input type="text" id="nameInput" value="Alex Rivera" maxlength="20" placeholder="Your name" oninput="drawPin()">
       </div>
+      <div class="inp-group">
+        <label>Text Font</label>
+        <select id="textFont" onchange="drawPin()" style="width:100%;padding:8px 10px;border-radius:10px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);font-family:'Fredoka One',cursive;font-size:13px;color:white;outline:none;cursor:pointer;">
+          <option value="Nunito" style="color:#000">Nunito (Default)</option>
+          <option value="Fredoka One" style="color:#000">Fredoka One</option>
+          <option value="Arial Rounded MT Bold" style="color:#000">Rounded</option>
+          <option value="Georgia" style="color:#000">Georgia</option>
+          <option value="Impact" style="color:#000">Impact</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <div class="inp-group" style="flex:1">
+          <label>Profession Color</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;" id="profColors">
+            <div class="color-dot active" data-color="#0B2E4E" style="background:#0B2E4E" onclick="setProfColor('#0B2E4E',this)"></div>
+            <div class="color-dot" data-color="#FF6FAE" style="background:#FF6FAE" onclick="setProfColor('#FF6FAE',this)"></div>
+            <div class="color-dot" data-color="#FFFFFF" style="background:#FFFFFF" onclick="setProfColor('#FFFFFF',this)"></div>
+            <div class="color-dot" data-color="#FFFF00" style="background:#FFFF00" onclick="setProfColor('#FFFF00',this)"></div>
+            <div class="color-dot" data-color="#FF5E5B" style="background:#FF5E5B" onclick="setProfColor('#FF5E5B',this)"></div>
+            <div class="color-dot" data-color="#06D6A0" style="background:#06D6A0" onclick="setProfColor('#06D6A0',this)"></div>
+          </div>
+        </div>
+        <div class="inp-group" style="flex:1">
+          <label>Name Color</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;" id="nameColors">
+            <div class="color-dot" data-color="#0B2E4E" style="background:#0B2E4E" onclick="setNameColor('#0B2E4E',this)"></div>
+            <div class="color-dot active" data-color="#FF6FAE" style="background:#FF6FAE" onclick="setNameColor('#FF6FAE',this)"></div>
+            <div class="color-dot" data-color="#FFFFFF" style="background:#FFFFFF" onclick="setNameColor('#FFFFFF',this)"></div>
+            <div class="color-dot" data-color="#FFFF00" style="background:#FFFF00" onclick="setNameColor('#FFFF00',this)"></div>
+            <div class="color-dot" data-color="#FF5E5B" style="background:#FF5E5B" onclick="setNameColor('#FF5E5B',this)"></div>
+            <div class="color-dot" data-color="#06D6A0" style="background:#06D6A0" onclick="setNameColor('#06D6A0',this)"></div>
+          </div>
+        </div>
+      </div>
       <button class="approve-btn" onclick="handleApprove()">✓ Approve &amp; Print</button>
     </div>
   </div>
@@ -1186,10 +1229,52 @@ function runLandingAnim(){
   }, 5*800 + 6*700 + 400);
 }
 
+function restartHeroAnims(){
+  // Elements to re-animate
+  const els = [
+    ...document.querySelectorAll('.hero-title .big'),
+    document.querySelector('.hero-sub'),
+    document.querySelector('.hero-btns'),
+    document.querySelector('.badge-pill'),
+    document.querySelector('.hero-right'),
+  ].filter(Boolean);
+
+  els.forEach(el=>{
+    el.style.animation='none';
+    el.style.opacity='0';
+  });
+  // Force reflow then re-apply
+  void document.querySelector('.hero-title')?.offsetWidth;
+  setTimeout(()=>{
+    const titles = document.querySelectorAll('.hero-title .big');
+    titles.forEach((el,i)=>{
+      el.style.animation='';
+      el.style.opacity='';
+      el.style.animationName='titleDrop';
+      el.style.animationDuration='0.7s';
+      el.style.animationDelay=(i*0.15)+'s';
+      el.style.animationFillMode='both';
+      el.style.animationTimingFunction='cubic-bezier(0.22,1,0.36,1)';
+    });
+    const sub = document.querySelector('.hero-sub');
+    if(sub){ sub.style.animation='fadeUp 0.6s 0.4s both'; }
+    const btns = document.querySelector('.hero-btns');
+    if(btns){ btns.style.animation='fadeUp 0.6s 0.55s both'; }
+    const badge = document.querySelector('.badge-pill');
+    if(badge){ badge.style.animation=''; setTimeout(()=>{ badge.style.animation='badgePop 3s ease-in-out infinite'; },100); }
+    const card = document.querySelector('.hero-right');
+    if(card){ card.style.animation='cardSlide 0.8s 0.2s cubic-bezier(0.22,1,0.36,1) both'; }
+  }, 50);
+}
+
 function startLandingAnim(){
   clearInterval(landingAnimTimer);
   runLandingAnim();
-  landingAnimTimer = setInterval(runLandingAnim, 30000);
+  restartHeroAnims();
+  landingAnimTimer = setInterval(()=>{
+    runLandingAnim();
+    restartHeroAnims();
+  }, 15000);
 }
 
 // ═══════════════════════════════════════════
@@ -1390,8 +1475,8 @@ function drawPin(){
   dEyes(ctx);dMouth(ctx);dHair(ctx);
   const oi=CATS.outfit.items[S.outfit];dOutfit(ctx,oi.type,oi.color);
   ctx.restore();
-  arcText(ctx,(document.getElementById('profInput').value||'Future Doctor').toUpperCase(),true,'#0B2E4E');
-  arcText(ctx,(document.getElementById('nameInput').value||'Alex Rivera').toUpperCase(),false,'#FF6FAE');
+  arcText(ctx,(document.getElementById('profInput').value||'Future Doctor').toUpperCase(),true,S.profColor||'#0B2E4E');
+  arcText(ctx,(document.getElementById('nameInput').value||'Alex Rivera').toUpperCase(),false,S.nameColor||'#FF6FAE');
 }
 function arcText(ctx,text,top,color){
   if(!text.trim())return;
@@ -1400,7 +1485,8 @@ function arcText(ctx,text,top,color){
   let fs=MAX;
   for(let s=MAX;s>=MIN;s-=0.5){if((s*0.62/arcR)*n<=maxArc){fs=s;break;}fs=MIN;}
   ctx.save();
-  ctx.font='900 '+fs+'px Nunito';ctx.fillStyle=color;ctx.textAlign='center';ctx.textBaseline='middle';
+  const fontFace=(document.getElementById('textFont')||{}).value||'Nunito';
+  ctx.font='900 '+fs+'px '+fontFace;ctx.fillStyle=color;ctx.textAlign='center';ctx.textBaseline='middle';
   const ca=(fs*0.62)/arcR,total=ca*n;
   const start=top?-(Math.PI/2)-(total/2):(Math.PI/2)+(total/2);
   const dir=top?1:-1;
@@ -1449,6 +1535,23 @@ function dOutfit(ctx,t,color){
   else if(t==='engineer'){ctx.fillStyle='rgba(0,0,0,0.15)';ctx.fillRect(CX-7,CY+84,14,86);}
   else if(t==='astronaut'){ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=3;ctx.beginPath();ctx.arc(CX,CY+108,28,0,Math.PI*2);ctx.stroke();}
   else if(t==='chef'){ctx.fillStyle='rgba(255,255,255,0.6)';ctx.beginPath();ctx.arc(CX,CY+76,20,Math.PI,0);ctx.fill();}
+}
+
+// ── FONT / COLOR HELPERS ──
+S.profColor = '#0B2E4E';
+S.nameColor = '#FF6FAE';
+
+function setProfColor(hex, el){
+  S.profColor = hex;
+  document.querySelectorAll('#profColors .color-dot').forEach(d=>d.classList.remove('active'));
+  el.classList.add('active');
+  drawPin();
+}
+function setNameColor(hex, el){
+  S.nameColor = hex;
+  document.querySelectorAll('#nameColors .color-dot').forEach(d=>d.classList.remove('active'));
+  el.classList.add('active');
+  drawPin();
 }
 
 // ── INIT ──
