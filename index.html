@@ -673,16 +673,22 @@ header::before{
   filter:drop-shadow(0 20px 40px rgba(11,46,78,0.35));
   animation:pinFloat 3s ease-in-out infinite;
 }
-@keyframes pinFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes pinFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
 canvas#pinCanvas{border-radius:50%;display:block;}
 
-/* Ice platform under pin */
+/* Ice platform / shadow under pin */
 .ice-platform{
   width:280px;height:28px;
   background:linear-gradient(180deg,#E8F6FA 0%,#C8EAF5 100%);
   border-radius:50%;margin-top:-8px;
   box-shadow:0 8px 20px rgba(11,46,78,0.2);
   flex-shrink:0;
+  animation:shadowPulse 3s ease-in-out infinite;
+  transform-origin:center center;
+}
+@keyframes shadowPulse{
+  0%,100%{transform:scaleX(1) scaleY(1);opacity:1;}
+  50%{transform:scaleX(0.68) scaleY(0.6);opacity:0.55;}
 }
 
 /* ── MOBILE ── */
@@ -991,6 +997,7 @@ canvas#pinCanvas{border-radius:50%;display:block;}
         <button class="cat-btn" onclick="setCat('eyes',this)"><span class="ci">👁</span>Eyes</button>
         <button class="cat-btn" onclick="setCat('mouth',this)"><span class="ci">😊</span>Mouth</button>
         <button class="cat-btn" onclick="setCat('hair',this)"><span class="ci">💇</span>Hair</button>
+        <button class="cat-btn" onclick="setCat('sticker',this)"><span class="ci">🌸</span>Stickers</button>
         <button class="cat-btn" onclick="setCat('outfit',this)"><span class="ci">👔</span>Outfit</button>
       </div>
     </div>
@@ -1023,23 +1030,39 @@ canvas#pinCanvas{border-radius:50%;display:block;}
         <div class="inp-group" style="flex:1">
           <label>Profession Color</label>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;" id="profColors">
-            <div class="color-dot active" data-color="#0B2E4E" style="background:#0B2E4E" onclick="setProfColor('#0B2E4E',this)"></div>
+            <div class="color-dot active" data-color="#RAINBOW" style="background:conic-gradient(#FF6B9D,#FECA57,#48DBFB,#A29BFE,#55EFC4,#FF6B9D)" onclick="setProfColor('#RAINBOW',this)" title="Rainbow"></div>
+            <div class="color-dot" data-color="#0B2E4E" style="background:#0B2E4E" onclick="setProfColor('#0B2E4E',this)"></div>
             <div class="color-dot" data-color="#FF6FAE" style="background:#FF6FAE" onclick="setProfColor('#FF6FAE',this)"></div>
-            <div class="color-dot" data-color="#FFFFFF" style="background:#FFFFFF" onclick="setProfColor('#FFFFFF',this)"></div>
+            <div class="color-dot" data-color="#FFFFFF" style="background:#FFFFFF;border-color:rgba(255,255,255,0.4)" onclick="setProfColor('#FFFFFF',this)"></div>
             <div class="color-dot" data-color="#FFFF00" style="background:#FFFF00" onclick="setProfColor('#FFFF00',this)"></div>
             <div class="color-dot" data-color="#FF5E5B" style="background:#FF5E5B" onclick="setProfColor('#FF5E5B',this)"></div>
             <div class="color-dot" data-color="#06D6A0" style="background:#06D6A0" onclick="setProfColor('#06D6A0',this)"></div>
+            <div class="color-dot" data-color="#A29BFE" style="background:#A29BFE" onclick="setProfColor('#A29BFE',this)"></div>
+            <div class="color-dot" data-color="#FD79A8" style="background:#FD79A8" onclick="setProfColor('#FD79A8',this)"></div>
+            <div class="color-dot" data-color="#FDCB6E" style="background:#FDCB6E" onclick="setProfColor('#FDCB6E',this)"></div>
+            <div class="color-dot" data-color="#74B9FF" style="background:#74B9FF" onclick="setProfColor('#74B9FF',this)"></div>
+            <div class="color-dot" data-color="#55EFC4" style="background:#55EFC4" onclick="setProfColor('#55EFC4',this)"></div>
+            <div class="color-dot" data-color="#E17055" style="background:#E17055" onclick="setProfColor('#E17055',this)"></div>
+            <div class="color-dot" data-color="#6C5CE7" style="background:#6C5CE7" onclick="setProfColor('#6C5CE7',this)"></div>
           </div>
         </div>
         <div class="inp-group" style="flex:1">
           <label>Name Color</label>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;" id="nameColors">
+            <div class="color-dot active" data-color="#RAINBOW" style="background:conic-gradient(#A29BFE,#FD79A8,#FECA57,#55EFC4,#FF9F43,#A29BFE)" onclick="setNameColor('#RAINBOW',this)" title="Rainbow"></div>
             <div class="color-dot" data-color="#0B2E4E" style="background:#0B2E4E" onclick="setNameColor('#0B2E4E',this)"></div>
-            <div class="color-dot active" data-color="#FF6FAE" style="background:#FF6FAE" onclick="setNameColor('#FF6FAE',this)"></div>
-            <div class="color-dot" data-color="#FFFFFF" style="background:#FFFFFF" onclick="setNameColor('#FFFFFF',this)"></div>
+            <div class="color-dot" data-color="#FF6FAE" style="background:#FF6FAE" onclick="setNameColor('#FF6FAE',this)"></div>
+            <div class="color-dot" data-color="#FFFFFF" style="background:#FFFFFF;border-color:rgba(255,255,255,0.4)" onclick="setNameColor('#FFFFFF',this)"></div>
             <div class="color-dot" data-color="#FFFF00" style="background:#FFFF00" onclick="setNameColor('#FFFF00',this)"></div>
             <div class="color-dot" data-color="#FF5E5B" style="background:#FF5E5B" onclick="setNameColor('#FF5E5B',this)"></div>
             <div class="color-dot" data-color="#06D6A0" style="background:#06D6A0" onclick="setNameColor('#06D6A0',this)"></div>
+            <div class="color-dot" data-color="#A29BFE" style="background:#A29BFE" onclick="setNameColor('#A29BFE',this)"></div>
+            <div class="color-dot" data-color="#FD79A8" style="background:#FD79A8" onclick="setNameColor('#FD79A8',this)"></div>
+            <div class="color-dot" data-color="#FDCB6E" style="background:#FDCB6E" onclick="setNameColor('#FDCB6E',this)"></div>
+            <div class="color-dot" data-color="#74B9FF" style="background:#74B9FF" onclick="setNameColor('#74B9FF',this)"></div>
+            <div class="color-dot" data-color="#55EFC4" style="background:#55EFC4" onclick="setNameColor('#55EFC4',this)"></div>
+            <div class="color-dot" data-color="#E17055" style="background:#E17055" onclick="setNameColor('#E17055',this)"></div>
+            <div class="color-dot" data-color="#6C5CE7" style="background:#6C5CE7" onclick="setNameColor('#6C5CE7',this)"></div>
           </div>
         </div>
       </div>
@@ -1111,6 +1134,7 @@ canvas#pinCanvas{border-radius:50%;display:block;}
     <button class="mob-cat-btn" onclick="setMobCat('eyes',this)"><span class="ci">👁</span>Eyes</button>
     <button class="mob-cat-btn" onclick="setMobCat('mouth',this)"><span class="ci">😊</span>Mouth</button>
     <button class="mob-cat-btn" onclick="setMobCat('hair',this)"><span class="ci">💇</span>Hair</button>
+    <button class="mob-cat-btn" onclick="setMobCat('sticker',this)"><span class="ci">🌸</span>Stickers</button>
     <button class="mob-cat-btn" onclick="setMobCat('outfit',this)"><span class="ci">👔</span>Outfit</button>
   </div>
   <div class="mob-approve"><button onclick="handleApprove()">✓ Approve &amp; Print</button></div>
@@ -1136,6 +1160,7 @@ canvas#pinCanvas{border-radius:50%;display:block;}
 // SCREEN TRANSITIONS
 // ═══════════════════════════════════════════
 function goToBuilder(){
+  clearInterval(landingAnimTimer); // stop landing animation loop
   document.getElementById('landing-screen').classList.add('hidden');
   document.getElementById('builder-screen').classList.add('active');
   setTimeout(()=>{ drawPin(); renderGrid('assetGrid',S.cat||'bg'); renderGrid('mobAssetGrid',S.cat||'bg'); },150);
@@ -1144,7 +1169,7 @@ function goToBuilder(){
 function goToLanding(){
   document.getElementById('builder-screen').classList.remove('active');
   document.getElementById('landing-screen').classList.remove('hidden');
-  startLandingAnim();
+  startLandingAnim(); // restart 15s loop only when on landing
 }
 
 // ═══════════════════════════════════════════
@@ -1283,14 +1308,17 @@ function startLandingAnim(){
 let idleTimer;
 function resetIdle(){
   clearTimeout(idleTimer);
+  const onBuilder = document.getElementById('builder-screen').classList.contains('active');
+  const delay = onBuilder ? 300000 : 300000; // 5min always, landing anim handles its own loop
   idleTimer = setTimeout(()=>{
     if(document.getElementById('builder-screen').classList.contains('active')){
       goToLanding();
     }
-  }, 60000);
+  }, delay);
 }
 document.addEventListener('click', resetIdle);
 document.addEventListener('touchstart', resetIdle);
+document.addEventListener('mousemove', resetIdle);
 
 // ═══════════════════════════════════════════
 // BUILDER DATA & FUNCTIONS
@@ -1317,6 +1345,14 @@ const CATS={
     {label:'Aurora',grad:['#A0F0C0','#92FEE0']},
     {label:'Dusk',grad:['#FFD580','#FFE9AA']},
     {label:'Berry',grad:['#FF758C','#FFB3C1']},
+    {label:'Dreamy',   grad4:['#FFB3C6','#FFFACD','#E8D5FF','#C8F0E0']},
+    {label:'Sunset 4', grad4:['#FFD6A5','#FFB3C6','#FFF0B3','#FECFEF']},
+    {label:'Ocean 4',  grad4:['#B3E5FF','#E8D5FF','#B3C6FF','#C8F5EC']},
+    {label:'Spring 4', grad4:['#C8F0E0','#FFFACD','#D4F5FF','#FFB3C6']},
+    {label:'Twilight', grad4:['#E0AAFF','#FFB3C6','#B3C6FF','#C8F0E0']},
+    {label:'Sherbet',  grad4:['#FF9A9E','#FFD166','#87CEEB','#C8F0D8']},
+    {label:'Fairy',    grad4:['#EED5FF','#FFD6E0','#FFFACD','#D4F5FF']},
+    {label:'Lullaby',  grad4:['#E8D5FF','#B3E5FF','#FFD6E0','#FFFACD']},
   ]},
   skin:{title:'SKIN TONE',items:[
     {label:'Fair',color:'#FDDBB4'},{label:'Light',color:'#F0C27F'},
@@ -1344,6 +1380,15 @@ const CATS={
     {label:'Long',type:'long'},{label:'Curly',type:'curly'},
     {label:'Bun',type:'bun'},{label:'Spiky',type:'spiky'},
   ]},
+  sticker:{title:'STICKERS',items:[
+    {label:'None',  emoji:'—'},
+    {label:'💗 Heart',emoji:'💗'},{label:'💕 Hearts',emoji:'💕'},{label:'🩷 Pink ♥',emoji:'🩷'},
+    {label:'⭐ Star', emoji:'⭐'},{label:'✨ Sparkle',emoji:'✨'},{label:'🌟 Glow',emoji:'🌟'},
+    {label:'🌸 Sakura',emoji:'🌸'},{label:'🌺 Hibiscus',emoji:'🌺'},{label:'🌷 Tulip',emoji:'🌷'},
+    {label:'🍰 Cake', emoji:'🍰'},{label:'🍭 Candy',emoji:'🍭'},{label:'🧁 Cupcake',emoji:'🧁'},
+    {label:'📚 Books',emoji:'📚'},{label:'🎓 Grad',emoji:'🎓'},{label:'✏️ Pencil',emoji:'✏️'},
+    {label:'✦ Gem',  emoji:'✦'},{label:'✧ Star2',emoji:'✧'},{label:'🌈 Rainbow',emoji:'🌈'},
+  ]},
   outfit:{title:'PROFESSION',items:[
     {label:'Casual',type:'tshirt',color:'#FF5E5B'},
     {label:'Doctor',type:'doctor',color:'#E8F4FD'},
@@ -1353,27 +1398,160 @@ const CATS={
     {label:'Astronaut',type:'astronaut',color:'#C0C0C0'},
   ]}
 };
-const S={bg:0,skin:0,face:0,eyes:0,mouth:0,hair:0,outfit:0,cat:'bg'};
+const S={bg:0,skin:0,face:0,eyes:0,mouth:0,hair:0,outfit:0,slots:[0,0,0,0,0,0],activeSlot:0,cat:'bg'};
 
 function setCat(cat,el){
   S.cat=cat;
   document.querySelectorAll('#catBtns .cat-btn').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('assetTitle').textContent=CATS[cat].title;
-  renderGrid('assetGrid',cat);
+  if(cat==='sticker'){renderStickerUI('assetGrid');}
+  else{renderGrid('assetGrid',cat);}
 }
 function setMobCat(cat,el){
   S.cat=cat;
   document.querySelectorAll('#mobCats .mob-cat-btn').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('mobPopTitle').textContent=CATS[cat].title;
-  renderGrid('mobAssetGrid',cat);
+  if(cat==='sticker'){renderStickerUI('mobAssetGrid');}
+  else{renderGrid('mobAssetGrid',cat);}
   document.getElementById('mobPopup').classList.add('open');
 }
 function closePop(e){if(e.target===document.getElementById('mobPopup'))document.getElementById('mobPopup').classList.remove('open');}
 function syncI(f,v){document.getElementById(f==='prof'?'profInput':'nameInput').value=v;drawPin();}
-function handleApprove(){alert('🎉 Avatar approved! Sending to print...');}
+function handleApprove(){
+  showCelebration();
+}
 
+function showCelebration(){
+  // Remove existing if any
+  const old=document.getElementById('celebOverlay');
+  if(old)old.remove();
+
+  const overlay=document.createElement('div');
+  overlay.id='celebOverlay';
+  overlay.style.cssText=`
+    position:fixed;inset:0;z-index:9999;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:rgba(11,46,78,0.72);backdrop-filter:blur(6px);
+    animation:celebFadeIn 0.4s ease both;
+  `;
+
+  // Main card
+  const card=document.createElement('div');
+  card.style.cssText=`
+    background:white;border-radius:32px;padding:40px 48px;text-align:center;
+    max-width:480px;width:90%;
+    box-shadow:0 32px 80px rgba(0,0,0,0.35);
+    animation:celebPop 0.5s cubic-bezier(0.22,1,0.36,1) 0.1s both;
+    position:relative;overflow:hidden;
+  `;
+
+  card.innerHTML=`
+    <div style="font-size:64px;margin-bottom:8px;animation:spinIn 0.6s 0.3s both">🏆</div>
+    <div style="font-family:'Fredoka One',cursive;font-size:13px;letter-spacing:3px;color:#FF6FAE;text-transform:uppercase;margin-bottom:8px;">Achievement Unlocked</div>
+    <h1 style="font-family:'Fredoka One',cursive;font-size:clamp(28px,5vw,40px);color:#0B2E4E;line-height:1.1;margin-bottom:12px;">
+      You just made<br>your future <span style="color:#FF6FAE">official!</span> ✨
+    </h1>
+    <p style="font-family:'Nunito',sans-serif;font-weight:800;font-size:15px;color:#888;margin-bottom:28px;line-height:1.5;">
+      Your pin is being sent to print.<br>Go collect it and wear it with pride! 📌
+    </p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <button onclick="document.getElementById('celebOverlay').remove()" style="padding:13px 28px;background:#FFFF00;color:#0B2E4E;border:none;border-radius:50px;font-family:'Fredoka One',cursive;font-size:17px;cursor:pointer;box-shadow:0 5px 0 #B8B800;">
+        🎨 Make Another
+      </button>
+      <button onclick="document.getElementById('celebOverlay').remove();goToLanding();" style="padding:13px 28px;background:#0B2E4E;color:white;border:none;border-radius:50px;font-family:'Fredoka One',cursive;font-size:17px;cursor:pointer;box-shadow:0 5px 0 #071929;">
+        🏠 Done!
+      </button>
+    </div>
+  `;
+
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+
+  // Inject celebration CSS if not present
+  if(!document.getElementById('celebCSS')){
+    const s=document.createElement('style');
+    s.id='celebCSS';
+    s.textContent=`
+      @keyframes celebFadeIn{from{opacity:0}to{opacity:1}}
+      @keyframes celebPop{from{opacity:0;transform:scale(0.6) translateY(40px)}to{opacity:1;transform:scale(1) translateY(0)}}
+      @keyframes spinIn{from{opacity:0;transform:rotate(-180deg) scale(0)}to{opacity:1;transform:rotate(0) scale(1)}}
+      @keyframes confettiFly{
+        0%{transform:translate(0,0) rotate(0deg);opacity:1;}
+        100%{transform:translate(var(--tx),var(--ty)) rotate(var(--tr));opacity:0;}
+      }
+    `;
+    document.head.appendChild(s);
+  }
+
+  // Confetti burst
+  const colors=['#FF6FAE','#FFFF00','#4DC8F0','#A29BFE','#55EFC4','#FD79A8','#FDCB6E','#FF5E5B'];
+  const shapes=['■','●','▲','★','♦'];
+  for(let i=0;i<80;i++){
+    const p=document.createElement('div');
+    const tx=(Math.random()-0.5)*window.innerWidth*1.4;
+    const ty=-(Math.random()*window.innerHeight*1.2+200);
+    const tr=(Math.random()-0.5)*720;
+    p.style.cssText=`
+      position:fixed;
+      left:${Math.random()*100}vw;
+      top:60%;
+      font-size:${8+Math.random()*14}px;
+      color:${colors[Math.floor(Math.random()*colors.length)]};
+      --tx:${tx}px;--ty:${ty}px;--tr:${tr}deg;
+      animation:confettiFly ${0.7+Math.random()*1.2}s ${Math.random()*0.4}s ease-out both;
+      pointer-events:none;z-index:10000;
+      font-family:serif;
+    `;
+    p.textContent=shapes[Math.floor(Math.random()*shapes.length)];
+    document.body.appendChild(p);
+    setTimeout(()=>p.remove(), 2500);
+  }
+}
+
+function renderStickerUI(gridId){
+  const grid=document.getElementById(gridId);
+  if(!grid)return;
+  grid.innerHTML='';
+  // Slot selector row
+  const slotRow=document.createElement('div');
+  slotRow.style.cssText='grid-column:1/-1;display:flex;gap:5px;margin-bottom:6px;flex-wrap:wrap;';
+  for(let i=0;i<6;i++){
+    const btn=document.createElement('button');
+    const hasItem = S.slots[i]>0;
+    const emoji = hasItem ? CATS.sticker.items[S.slots[i]]?.emoji : (i+1);
+    btn.style.cssText=`flex:1;min-width:36px;padding:5px 4px;border-radius:10px;border:2px solid ${S.activeSlot===i?'var(--yellow)':'rgba(255,255,255,0.2)'};background:${S.activeSlot===i?'rgba(255,255,0,0.15)':'rgba(255,255,255,0.07)'};color:white;font-family:'Fredoka One',cursive;font-size:${hasItem?'16px':'12px'};cursor:pointer;transition:all 0.15s;`;
+    btn.innerHTML=`<div style="font-size:${hasItem?'18px':'11px'}">${emoji}</div><div style="font-size:9px;opacity:0.6">#${i+1}</div>`;
+    btn.onclick=()=>{S.activeSlot=i;renderStickerUI(gridId);};
+    slotRow.appendChild(btn);
+  }
+  grid.appendChild(slotRow);
+  // Divider
+  const div=document.createElement('div');
+  div.style.cssText='grid-column:1/-1;font-size:9px;font-weight:800;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;';
+  div.textContent='Slot #'+(S.activeSlot+1)+' — choose sticker:';
+  grid.appendChild(div);
+  // Sticker options
+  CATS.sticker.items.forEach((item,i)=>{
+    const card=document.createElement('div');
+    const isActive=S.slots[S.activeSlot]===i;
+    card.className='asset-card'+(isActive?' active':'');
+    card.style.fontSize='22px';
+    card.style.display='flex';card.style.alignItems='center';card.style.justifyContent='center';
+    card.textContent=item.emoji==='—'?'✕':item.emoji;
+    card.title=item.label;
+    card.onclick=()=>{
+      S.slots[S.activeSlot]=i;
+      initStickerJitter(); // new random scatter on each pick
+      renderStickerUI(gridId);
+      const other=gridId==='assetGrid'?'mobAssetGrid':'assetGrid';
+      renderStickerUI(other);
+      drawPin();
+    };
+    grid.appendChild(card);
+  });
+}
 function renderGrid(id,cat){
   const grid=document.getElementById(id);
   if(!grid)return;
@@ -1384,7 +1562,13 @@ function renderGrid(id,cat){
     card.onclick=()=>{S[cat]=i;renderGrid('assetGrid',cat);renderGrid('mobAssetGrid',cat);drawPin();};
     if(cat==='bg'){
       const sw=document.createElement('div');sw.className='bg-swatch';
-      sw.style.background=`linear-gradient(135deg,${item.grad[0]},${item.grad[1]})`;
+      if(item.grad4){
+        const [tl,tr,bl,br]=item.grad4;
+        sw.style.background=`radial-gradient(circle at 0% 0%,${tl} 0%,transparent 60%),radial-gradient(circle at 100% 0%,${tr} 0%,transparent 60%),radial-gradient(circle at 0% 100%,${bl} 0%,transparent 60%),radial-gradient(circle at 100% 100%,${br} 0%,transparent 60%)`;
+        sw.style.backgroundColor=tl;
+      } else {
+        sw.style.background=`linear-gradient(135deg,${item.grad[0]},${item.grad[1]})`;
+      }
       card.appendChild(sw);
     } else {
       const c=document.createElement('canvas');c.width=56;c.height=56;
@@ -1399,16 +1583,27 @@ function renderGrid(id,cat){
 function drawMini(canvas,cat,item){
   const ctx=canvas.getContext('2d'),cx=28,cy=28;
   const bg=CATS.bg.items[S.bg];
-  const g=ctx.createLinearGradient(0,0,56,56);
-  g.addColorStop(0,bg.grad[0]);g.addColorStop(1,bg.grad[1]);
   ctx.save();ctx.beginPath();ctx.arc(28,28,27,0,Math.PI*2);ctx.clip();
-  ctx.fillStyle=g;ctx.fillRect(0,0,56,56);
+  if(bg.grad4){
+    const [tl,tr,bl,br]=bg.grad4;
+    ctx.fillStyle=tl;ctx.fillRect(0,0,56,56);
+    [{x:0,y:0,c:tl},{x:56,y:0,c:tr},{x:0,y:56,c:bl},{x:56,y:56,c:br}].forEach(({x,y,c})=>{
+      const rg=ctx.createRadialGradient(x,y,0,x,y,60);
+      rg.addColorStop(0,c+'EE');rg.addColorStop(1,c+'00');
+      ctx.fillStyle=rg;ctx.fillRect(0,0,56,56);
+    });
+  } else {
+    const g=ctx.createLinearGradient(0,0,56,56);
+    g.addColorStop(0,bg.grad[0]);g.addColorStop(1,bg.grad[1]);
+    ctx.fillStyle=g;ctx.fillRect(0,0,56,56);
+  }
   const sk=CATS.skin.items[S.skin].color;
   if(cat==='skin'){ctx.fillStyle=item.color;ctx.beginPath();ctx.arc(cx,cy,18,0,Math.PI*2);ctx.fill();}
   else if(cat==='face'){ctx.fillStyle=sk;mF(ctx,cx,cy,item.shape);}
   else if(cat==='eyes'){ctx.fillStyle=sk;ctx.beginPath();ctx.arc(cx,cy+2,16,0,Math.PI*2);ctx.fill();mE(ctx,cx,cy-1,item.type);}
   else if(cat==='mouth'){ctx.fillStyle=sk;ctx.beginPath();ctx.arc(cx,cy+2,16,0,Math.PI*2);ctx.fill();mE(ctx,cx,cy-3,'normal');mM(ctx,cx,cy+7,item.type);}
   else if(cat==='hair'){ctx.fillStyle=sk;ctx.beginPath();ctx.arc(cx,cy+2,16,0,Math.PI*2);ctx.fill();mH(ctx,cx,cy+2,item.type);}
+  else if(cat==='sticker'){const em={none:'⬜',hearts:'💗',stars:'⭐',flowers:'🌸',sparkle:'✦',food:'🍰',school:'🎓'};ctx.font='22px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(em[item.type]||'🌸',cx,cy);}
   else if(cat==='outfit'){ctx.fillStyle=sk;ctx.beginPath();ctx.arc(cx,cy-4,13,0,Math.PI*2);ctx.fill();ctx.fillStyle=item.color||'#FF5E5B';ctx.beginPath();ctx.roundRect(cx-13,cy+11,26,18,[3]);ctx.fill();}
   ctx.restore();
 }
@@ -1455,9 +1650,27 @@ function drawPin(){
   ctx.save();
   ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);ctx.clip();
   const bi=CATS.bg.items[S.bg];
-  const g=ctx.createLinearGradient(0,0,320,320);
-  g.addColorStop(0,bi.grad[0]);g.addColorStop(1,bi.grad[1]);
-  ctx.fillStyle=g;ctx.fillRect(0,0,320,320);
+  if(bi.grad4){
+    // 4-corner radial blend: draw 4 overlapping radial gradients at each corner
+    const [tl,tr,bl,br]=bi.grad4;
+    ctx.fillStyle=tl; ctx.fillRect(0,0,320,320);
+    const corners=[
+      {x:0,  y:0,   c:tl},
+      {x:320,y:0,   c:tr},
+      {x:0,  y:320, c:bl},
+      {x:320,y:320, c:br},
+    ];
+    corners.forEach(({x,y,c})=>{
+      const rg=ctx.createRadialGradient(x,y,0,x,y,340);
+      rg.addColorStop(0,c+'EE');
+      rg.addColorStop(1,c+'00');
+      ctx.fillStyle=rg;ctx.fillRect(0,0,320,320);
+    });
+  } else {
+    const g=ctx.createLinearGradient(0,0,320,320);
+    g.addColorStop(0,bi.grad[0]);g.addColorStop(1,bi.grad[1]);
+    ctx.fillStyle=g;ctx.fillRect(0,0,320,320);
+  }
   ctx.fillStyle='rgba(0,0,0,0.03)';
   for(let x=10;x<320;x+=20)for(let y=10;y<320;y+=20){ctx.beginPath();ctx.arc(x,y,1.5,0,Math.PI*2);ctx.fill();}
   const sk=CATS.skin.items[S.skin].color;
@@ -1475,30 +1688,112 @@ function drawPin(){
   dEyes(ctx);dMouth(ctx);dHair(ctx);
   const oi=CATS.outfit.items[S.outfit];dOutfit(ctx,oi.type,oi.color);
   ctx.restore();
-  arcText(ctx,(document.getElementById('profInput').value||'Future Doctor').toUpperCase(),true,S.profColor||'#0B2E4E');
-  arcText(ctx,(document.getElementById('nameInput').value||'Alex Rivera').toUpperCase(),false,S.nameColor||'#FF6FAE');
+  // Draw stickers OUTSIDE clip so they sit on the ring edge
+  drawStickers(ctx);
+  arcText(ctx,(document.getElementById('profInput').value||'Future Doctor').toUpperCase(),true,S.profColor||'#RAINBOW');
+  arcText(ctx,(document.getElementById('nameInput').value||'Alex Rivera').toUpperCase(),false,S.nameColor||'#RAINBOW');
+  ctx.save();ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);ctx.clip();
+  const sRing=ctx.createRadialGradient(CX,CY+20,R*0.6,CX,CY,R);
+  sRing.addColorStop(0,'rgba(0,0,0,0)');sRing.addColorStop(0.82,'rgba(0,0,0,0)');sRing.addColorStop(1,'rgba(0,0,0,0.2)');
+  ctx.fillStyle=sRing;ctx.fillRect(0,0,320,320);
+  const gloss=ctx.createLinearGradient(CX-R*0.5,CY-R*0.8,CX+R*0.1,CY-R*0.1);
+  gloss.addColorStop(0,'rgba(255,255,255,0.42)');gloss.addColorStop(0.5,'rgba(255,255,255,0.12)');gloss.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=gloss;ctx.beginPath();ctx.ellipse(CX-R*0.22,CY-R*0.36,R*0.54,R*0.28,-0.6,0,Math.PI*2);ctx.fill();
+  const spec=ctx.createRadialGradient(CX-R*0.38,CY-R*0.42,0,CX-R*0.38,CY-R*0.42,R*0.2);
+  spec.addColorStop(0,'rgba(255,255,255,0.6)');spec.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=spec;ctx.beginPath();ctx.arc(CX-R*0.38,CY-R*0.42,R*0.2,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+  // Outer drop shadow only
+  ctx.save();ctx.shadowColor='rgba(0,0,0,0.3)';ctx.shadowBlur=20;ctx.shadowOffsetY=7;
+  ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);
+  ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=2;ctx.stroke();ctx.restore();
 }
+// Slot angles in canvas coords (0=right, PI/2=down, -PI/2=up=12 o'clock)
+// Left side: 150°,180°,210° from top = -PI/6, -PI/2, -5PI/6 ... wait, from top:
+// 9 o'clock from top = 270° standard = -PI/2 in canvas = left
+// Using: angle from 12 o'clock clockwise. Left=9oc=270deg. Convert: canvas_a = (clock_deg-90)*PI/180
+// 10 o'clock = 300 deg clock → canvas = (300-90)*PI/180 = 210*PI/180
+// 9  o'clock = 270 deg clock → canvas = 180*PI/180 = PI  → points LEFT ✓
+// 8  o'clock = 240 deg clock → canvas = 150*PI/180
+// 2  o'clock =  60 deg clock → canvas = -30*PI/180
+// 3  o'clock =  90 deg clock → canvas =   0 → points RIGHT ✓  
+// 4  o'clock = 120 deg clock → canvas =  30*PI/180
+const DEG=Math.PI/180;
+const SLOT_BASE=[
+  (285-90)*DEG, // slot 1: 9.5 o'clock  (285° clock)
+  (270-90)*DEG, // slot 2: 9   o'clock  (270° clock) BIGGER
+  (255-90)*DEG, // slot 3: 8.5 o'clock  (255° clock)
+  ( 75-90)*DEG, // slot 4: 2.5 o'clock  (75°  clock)
+  ( 90-90)*DEG, // slot 5: 3   o'clock  (90°  clock) BIGGER
+  (105-90)*DEG, // slot 6: 3.5 o'clock  (105° clock)
+];
+let SLOT_JITTER=[0,0,0,0,0,0];
+function initStickerJitter(){
+  SLOT_JITTER=SLOT_BASE.map(()=>(Math.random()-0.5)*0.15);
+}
+// Radius: sticker center sits just inside the ring edge
+const SLOT_R = R - 20;
+const SLOT_SIZE_BASE = 14;
+const SLOT_MID_SCALE = 1.7;
+
+function drawStickers(ctx){
+  const items = CATS.sticker.items;
+  S.slots.forEach((idx,i)=>{
+    if(idx===0)return;
+    const emoji = items[idx]?.emoji;
+    if(!emoji||emoji==='—')return;
+    const a = SLOT_BASE[i] + SLOT_JITTER[i];
+    const x = CX + SLOT_R * Math.cos(a);
+    const y = CY + SLOT_R * Math.sin(a);
+    const isMid=(i===1||i===4);
+    const sz=Math.round(SLOT_SIZE_BASE*(isMid?SLOT_MID_SCALE:1));
+    ctx.save();
+    ctx.font=sz+'px serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(emoji,x,y);
+    ctx.restore();
+  });
+}
+const RAINBOW_TOP=['#FF6B9D','#FF9F43','#FECA57','#48DBFB','#A29BFE','#55EFC4','#FD79A8','#FDCB6E'];
+const RAINBOW_BOT=['#A29BFE','#FD79A8','#FF6B9D','#FECA57','#55EFC4','#FF9F43','#48DBFB','#A29BFE'];
 function arcText(ctx,text,top,color){
   if(!text.trim())return;
-  const MAX=16*1.6*1.2,MIN=16*0.6,arcR=R-15,maxArc=top?Math.PI*0.82:Math.PI*0.78;
+  const MAX=16*1.6*1.2,MIN=16*0.6,arcR=R-34,maxArc=top?Math.PI*0.80:Math.PI*0.76;
   const chars=text.split(''),n=chars.length;
   let fs=MAX;
   for(let s=MAX;s>=MIN;s-=0.5){if((s*0.62/arcR)*n<=maxArc){fs=s;break;}fs=MIN;}
-  ctx.save();
   const fontFace=(document.getElementById('textFont')||{}).value||'Nunito';
-  ctx.font='900 '+fs+'px '+fontFace;ctx.fillStyle=color;ctx.textAlign='center';ctx.textBaseline='middle';
-  const ca=(fs*0.62)/arcR,total=ca*n;
-  const start=top?-(Math.PI/2)-(total/2):(Math.PI/2)+(total/2);
+  const palette=top?RAINBOW_TOP:RAINBOW_BOT;
+  const useRainbow=color==='#RAINBOW';
+  // Measure actual text width for tight kerning
+  ctx.save();ctx.font='900 '+fs+'px '+fontFace;
+  const charWidths=chars.map(ch=>ch===' '?fs*0.3:ctx.measureText(ch).width+2);
+  ctx.restore();
+  const totalWidth=charWidths.reduce((a,b)=>a+b,0);
+  const totalArc=totalWidth/arcR;
+  const clampedArc=Math.min(totalArc,maxArc);
+  const scale=clampedArc/totalArc;
+  const scaledWidths=charWidths.map(w=>w*scale);
+  const startAngle=top?-(Math.PI/2)-(clampedArc/2):(Math.PI/2)+(clampedArc/2);
   const dir=top?1:-1;
+  let cursor=0;
   chars.forEach((ch,i)=>{
-    const angle=start+dir*(i+0.5)*ca;
+    if(ch===' '){cursor+=scaledWidths[i];return;}
+    const angle=startAngle+dir*(cursor+scaledWidths[i]/2)/arcR;
+    cursor+=scaledWidths[i];
     ctx.save();
     ctx.translate(CX+arcR*Math.cos(angle),CY+arcR*Math.sin(angle));
     ctx.rotate(angle+(top?Math.PI/2:-Math.PI/2));
+    ctx.font='900 '+fs+'px '+fontFace;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.lineWidth=fs*0.22;ctx.strokeStyle='rgba(255,255,255,0.95)';ctx.lineJoin='round';
+    ctx.strokeText(ch,0,0);
+    ctx.shadowColor='rgba(0,0,0,0.15)';ctx.shadowBlur=2;ctx.shadowOffsetX=1;ctx.shadowOffsetY=1;
+    ctx.fillStyle=useRainbow?palette[i%palette.length]:color;
     ctx.fillText(ch,0,0);
+    ctx.shadowColor='transparent';
     ctx.restore();
   });
-  ctx.restore();
 }
 function dEyes(ctx){
   const t=CATS.eyes.items[S.eyes].type;
@@ -1538,8 +1833,8 @@ function dOutfit(ctx,t,color){
 }
 
 // ── FONT / COLOR HELPERS ──
-S.profColor = '#0B2E4E';
-S.nameColor = '#FF6FAE';
+S.profColor = '#RAINBOW';
+S.nameColor = '#RAINBOW';
 
 function setProfColor(hex, el){
   S.profColor = hex;
@@ -1555,6 +1850,7 @@ function setNameColor(hex, el){
 }
 
 // ── INIT ──
+initStickerJitter();
 resetIdle();
 startLandingAnim();
 </script>
