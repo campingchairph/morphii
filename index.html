@@ -670,25 +670,49 @@ header::before{
 /* Pin stage */
 .pin-stage{
   position:relative;
-  filter:drop-shadow(0 20px 40px rgba(11,46,78,0.35));
+  z-index:2;
   animation:pinFloat 3s ease-in-out infinite;
 }
-@keyframes pinFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
-canvas#pinCanvas{border-radius:50%;display:block;}
+@keyframes pinFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+canvas#pinCanvas{border-radius:50%;display:block;filter:drop-shadow(0 8px 20px rgba(11,46,78,0.3));}
 
-/* Ice platform / shadow under pin */
-.ice-platform{
-  width:280px;height:28px;
-  background:linear-gradient(180deg,#E8F6FA 0%,#C8EAF5 100%);
-  border-radius:50%;margin-top:-8px;
-  box-shadow:0 8px 20px rgba(11,46,78,0.2);
+/* Reflective glass platform */
+.ice-platform-wrap{
+  position:relative;
+  width:280px;
+  height:60px;
+  margin-top:-10px;
   flex-shrink:0;
+  z-index:1;
   animation:shadowPulse 3s ease-in-out infinite;
-  transform-origin:center center;
+  transform-origin:center top;
+}
+/* Shadow ellipse (below, dark) */
+.ice-shadow{
+  position:absolute;
+  bottom:0;left:50%;transform:translateX(-50%);
+  width:200px;height:14px;
+  background:radial-gradient(ellipse at center,rgba(11,46,78,0.35) 0%,transparent 70%);
+  border-radius:50%;
+}
+/* Glass reflection of pin */
+.ice-reflection{
+  position:absolute;
+  top:0;left:50%;transform:translateX(-50%);
+  width:280px;height:50px;
+  overflow:hidden;
+  border-radius:0 0 50% 50%;
+}
+.ice-reflection canvas{
+  border-radius:50%;
+  transform:scaleY(-0.3) translateY(-168px);
+  transform-origin:top center;
+  opacity:0.28;
+  filter:blur(1.5px) saturate(1.2);
 }
 @keyframes shadowPulse{
-  0%,100%{transform:scaleX(1) scaleY(1);opacity:1;}
-  50%{transform:scaleX(0.68) scaleY(0.6);opacity:0.55;}
+  0%,100%{transform:scaleX(1);opacity:1;}
+  50%{transform:scaleX(0.62);opacity:0.5;}
 }
 
 /* ── MOBILE ── */
@@ -700,12 +724,20 @@ canvas#pinCanvas{border-radius:50%;display:block;}
   .left-panel{display:none;}
   .preview-area{padding:16px;min-height:300px;background:linear-gradient(160deg,#5DCEF5 0%,#4DC8F0 60%,#3BBCE8 100%);}
   canvas#pinCanvas{width:260px!important;height:260px!important;}
-  .ice-platform{width:220px;}
+  .ice-platform-wrap{width:220px;} .ice-reflection{width:220px;}
   .mobile-bottom{display:flex;flex-direction:column;}
   .mob-inputs{display:flex;gap:8px;padding:12px 16px;background:var(--navy);border-top:3px solid rgba(255,255,255,0.08);}
   .mob-inputs .inp-group{flex:1;}
   .mob-inputs .inp-group label{font-size:8px;color:rgba(255,255,255,0.4);}
   .mob-inputs .inp-group input{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15);color:white;font-family:'Fredoka One',cursive;font-size:13px;padding:8px 10px;border-radius:10px;border-width:2px;outline:none;width:100%;}
+  /* Mobile color/font pickers — inject via JS, so style them here */
+  .mob-customizer{background:var(--navy);padding:10px 16px 6px;border-top:2px solid rgba(255,255,255,0.06);}
+  .mob-customizer-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
+  .mob-customizer-label{font-size:9px;font-weight:800;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;min-width:60px;}
+  .mob-customizer select{background:rgba(255,255,255,0.1);border:1.5px solid rgba(255,255,255,0.15);color:white;font-family:'Fredoka One',cursive;font-size:12px;padding:5px 8px;border-radius:8px;outline:none;flex:1;}
+  .mob-customizer select option{color:#000;}
+  .mob-dot-row{display:flex;gap:5px;flex-wrap:wrap;}
+  .mob-dot-row .color-dot{width:20px;height:20px;}
   .mob-cats{display:flex;gap:6px;padding:10px 14px;background:var(--navy);overflow-x:auto;scrollbar-width:none;border-top:2px solid rgba(255,255,255,0.06);}
   .mob-cats::-webkit-scrollbar{display:none;}
   .mob-cat-btn{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 10px;border-radius:12px;border:2px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.07);cursor:pointer;font-family:'Fredoka One',cursive;font-size:9px;color:rgba(255,255,255,0.5);min-width:48px;}
@@ -723,6 +755,225 @@ canvas#pinCanvas{border-radius:50%;display:block;}
 @media(min-width:769px){
   .mobile-bottom,.mob-popup-overlay{display:none!important;}
 }
+
+
+/* ══════════════════════════════
+   ADMIN SCREEN
+══════════════════════════════ */
+#admin-screen{
+  width:100%;height:100%;display:flex;flex-direction:column;
+  position:absolute;inset:0;
+  opacity:0;pointer-events:none;
+  transition:opacity 0.4s ease;
+  z-index:8;
+  background:#0B2E4E;
+  overflow:hidden;
+}
+#admin-screen.active{opacity:1;pointer-events:all;z-index:12;}
+
+/* Admin header */
+.admin-header{
+  background:#071929;
+  padding:14px 28px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;border-bottom:2px solid rgba(255,255,255,0.08);
+}
+.admin-logo{font-family:'Fredoka One',cursive;font-size:20px;color:white;}
+.admin-logo span{color:#FFFF00;}
+.admin-logo small{font-size:11px;color:rgba(255,255,255,0.4);font-family:'Nunito',sans-serif;font-weight:700;margin-left:8px;letter-spacing:2px;text-transform:uppercase;}
+.admin-back{background:rgba(255,255,255,0.08);border:2px solid rgba(255,255,255,0.15);color:white;font-family:'Fredoka One',cursive;font-size:13px;padding:6px 16px;border-radius:20px;cursor:pointer;transition:background 0.2s;}
+.admin-back:hover{background:rgba(255,255,255,0.15);}
+
+/* Tabs */
+.admin-tabs{
+  display:flex;gap:4px;padding:14px 28px 0;
+  flex-shrink:0;border-bottom:2px solid rgba(255,255,255,0.08);
+  background:#071929;
+}
+.admin-tab{
+  padding:9px 20px;border-radius:12px 12px 0 0;border:none;
+  font-family:'Fredoka One',cursive;font-size:14px;color:rgba(255,255,255,0.45);
+  background:none;cursor:pointer;transition:all 0.18s;white-space:nowrap;
+}
+.admin-tab:hover{color:white;background:rgba(255,255,255,0.06);}
+.admin-tab.active{background:#0B2E4E;color:white;border-top:3px solid #FFFF00;}
+.tab-count{
+  display:inline-block;margin-left:6px;
+  background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.6);
+  font-size:10px;padding:1px 7px;border-radius:10px;font-family:'Nunito',sans-serif;font-weight:800;
+}
+.tab-count.yellow{background:rgba(255,255,0,0.2);color:#FFFF00;}
+
+/* Stats bar */
+.admin-stats{
+  display:flex;gap:12px;padding:14px 28px;flex-shrink:0;
+  background:#071929;border-bottom:2px solid rgba(255,255,255,0.06);
+}
+.stat-pill{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.1);
+  border-radius:12px;padding:8px 16px;
+}
+.stat-pill .sval{font-family:'Fredoka One',cursive;font-size:22px;color:white;}
+.stat-pill .slbl{font-family:'Nunito',sans-serif;font-weight:700;font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;}
+
+/* Pin grid */
+.admin-content{flex:1;overflow-y:auto;padding:20px 28px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.15) transparent;}
+.pins-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;}
+
+/* Pin card */
+.pin-card{
+  background:rgba(255,255,255,0.06);border:2px solid rgba(255,255,255,0.08);
+  border-radius:20px;padding:14px;cursor:pointer;
+  transition:all 0.18s;position:relative;
+}
+.pin-card:hover{border-color:rgba(255,255,255,0.2);transform:translateY(-2px);}
+.pin-card.selected{border-color:#FFFF00;background:rgba(255,255,0,0.06);box-shadow:0 0 0 2px rgba(255,255,0,0.2);}
+.pin-card.paid{border-left:3px solid #55EFC4;}
+.pin-card.printed{border-left:3px solid #74B9FF;}
+.pin-card.paid.printed{border-left:3px solid #A29BFE;}
+
+.pin-thumb{
+  width:100%;aspect-ratio:1;border-radius:50%;
+  background:linear-gradient(135deg,#FFD6E0,#C9E8FF);
+  margin-bottom:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.pin-thumb canvas{border-radius:50%;}
+
+.pin-info-name{font-family:'Fredoka One',cursive;font-size:15px;color:white;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pin-info-prof{font-size:10px;font-weight:700;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pin-info-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.meta-badge{font-size:9px;font-weight:800;padding:2px 8px;border-radius:8px;font-family:'Nunito',sans-serif;}
+.badge-size{background:rgba(77,200,240,0.2);color:#4DC8F0;}
+.badge-time{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.4);}
+
+/* Toggles */
+.pin-toggles{display:flex;gap:6px;}
+.toggle-btn{
+  flex:1;padding:5px 4px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.05);
+  font-family:'Nunito',sans-serif;font-weight:800;font-size:9px;
+  color:rgba(255,255,255,0.35);cursor:pointer;transition:all 0.15s;text-align:center;
+}
+.toggle-btn.on-paid{background:rgba(85,239,196,0.2);border-color:#55EFC4;color:#55EFC4;}
+.toggle-btn.on-printed{background:rgba(116,185,255,0.2);border-color:#74B9FF;color:#74B9FF;}
+
+/* Select checkbox */
+.pin-select-box{
+  position:absolute;top:10px;right:10px;
+  width:22px;height:22px;border-radius:6px;
+  border:2px solid rgba(255,255,255,0.2);
+  background:rgba(255,255,255,0.05);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;transition:all 0.15s;
+}
+.pin-card.selected .pin-select-box{background:#FFFF00;border-color:#FFFF00;color:#0B2E4E;}
+
+/* Print layout bar */
+.print-bar{
+  background:#071929;border-top:2px solid rgba(255,255,255,0.08);
+  padding:12px 28px;display:flex;align-items:center;gap:12px;flex-shrink:0;
+  flex-wrap:wrap;
+}
+.print-bar-count{font-family:'Fredoka One',cursive;font-size:14px;color:rgba(255,255,255,0.5);}
+.print-bar-count span{color:#FFFF00;}
+.select-all-btn,.clear-sel-btn{
+  padding:7px 16px;border-radius:12px;font-family:'Fredoka One',cursive;font-size:12px;cursor:pointer;border:none;
+}
+.select-all-btn{background:rgba(255,255,255,0.1);color:white;}
+.clear-sel-btn{background:transparent;color:rgba(255,255,255,0.3);border:1.5px solid rgba(255,255,255,0.1);}
+.layout-btn{
+  margin-left:auto;padding:9px 22px;background:#FFFF00;color:#0B2E4E;
+  border:none;border-radius:14px;font-family:'Fredoka One',cursive;font-size:14px;
+  cursor:pointer;box-shadow:0 4px 0 #B8B800;transition:transform 0.1s,box-shadow 0.1s;
+}
+.layout-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #B8B800;}
+.layout-btn:disabled{opacity:0.35;cursor:not-allowed;}
+
+/* ── PRINT LAYOUT MODAL ── */
+#printModal{
+  display:none;position:fixed;inset:0;z-index:200;
+  background:rgba(7,25,41,0.92);backdrop-filter:blur(8px);
+  flex-direction:column;align-items:center;
+  overflow-y:auto;padding:24px;
+}
+#printModal.open{display:flex;}
+.print-modal-inner{
+  background:#0B2E4E;border-radius:24px;width:100%;max-width:900px;
+  border:2px solid rgba(255,255,255,0.1);overflow:hidden;
+}
+.pmi-header{
+  padding:18px 24px;background:#071929;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:2px solid rgba(255,255,255,0.08);
+}
+.pmi-title{font-family:'Fredoka One',cursive;font-size:20px;color:white;}
+.pmi-close{background:none;border:none;color:rgba(255,255,255,0.4);font-size:22px;cursor:pointer;padding:4px 8px;}
+.pmi-controls{
+  padding:14px 24px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+  border-bottom:2px solid rgba(255,255,255,0.06);
+}
+.pmi-label{font-size:11px;font-weight:800;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;}
+.pmi-select{
+  padding:7px 12px;border-radius:10px;
+  background:rgba(255,255,255,0.08);border:1.5px solid rgba(255,255,255,0.15);
+  color:white;font-family:'Fredoka One',cursive;font-size:13px;outline:none;cursor:pointer;
+}
+.pmi-select option{color:#000;}
+.pmi-pack-btn{
+  margin-left:auto;padding:8px 20px;background:#4DC8F0;color:#0B2E4E;
+  border:none;border-radius:12px;font-family:'Fredoka One',cursive;font-size:13px;cursor:pointer;
+  box-shadow:0 3px 0 #2BA8D8;
+}
+.pmi-body{padding:20px 24px;display:flex;gap:20px;flex-wrap:wrap;}
+.paper-preview-wrap{
+  flex:1;min-width:280px;display:flex;flex-direction:column;align-items:center;gap:10px;
+}
+.paper-canvas-wrap{
+  border:2px solid rgba(255,255,255,0.15);border-radius:8px;overflow:hidden;
+  box-shadow:0 8px 24px rgba(0,0,0,0.4);background:white;
+  max-width:100%;
+}
+#paperCanvas{display:block;max-width:100%;}
+.pmi-sidebar{width:200px;flex-shrink:0;}
+.pmi-sidebar-title{font-family:'Fredoka One',cursive;font-size:14px;color:rgba(255,255,255,0.6);margin-bottom:10px;}
+.pmi-pin-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;}
+.pmi-pin-item{
+  display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:10px;
+  background:rgba(255,255,255,0.05);font-size:11px;color:rgba(255,255,255,0.6);font-family:'Nunito',sans-serif;font-weight:700;
+}
+.pmi-pin-item canvas{border-radius:50%;flex-shrink:0;}
+.print-action-btn{
+  width:100%;padding:12px;background:#FFFF00;color:#0B2E4E;
+  border:none;border-radius:14px;font-family:'Fredoka One',cursive;font-size:16px;
+  cursor:pointer;box-shadow:0 5px 0 #B8B800;margin-top:12px;
+}
+
+/* ── ADMIN LOGIN ── */
+#adminLogin{
+  position:fixed;inset:0;z-index:300;
+  background:rgba(7,25,41,0.96);backdrop-filter:blur(10px);
+  display:flex;align-items:center;justify-content:center;
+}
+.login-card{
+  background:#0B2E4E;border-radius:28px;padding:40px;text-align:center;
+  width:320px;border:2px solid rgba(255,255,255,0.1);
+}
+.login-card h2{font-family:'Fredoka One',cursive;font-size:28px;color:white;margin-bottom:6px;}
+.login-card p{font-size:12px;font-weight:700;color:rgba(255,255,255,0.35);margin-bottom:24px;text-transform:uppercase;letter-spacing:1px;}
+.pin-dots{display:flex;gap:12px;justify-content:center;margin-bottom:24px;}
+.pin-dot-display{width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.2);transition:all 0.2s;}
+.pin-dot-display.filled{background:#FFFF00;border-color:#FFFF00;}
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+.num-btn{
+  padding:14px;border-radius:14px;border:2px solid rgba(255,255,255,0.1);
+  background:rgba(255,255,255,0.06);color:white;
+  font-family:'Fredoka One',cursive;font-size:20px;cursor:pointer;transition:all 0.15s;
+}
+.num-btn:hover{background:rgba(255,255,255,0.14);}
+.num-btn:active{transform:scale(0.94);}
+.login-err{color:#FF6FAE;font-size:12px;font-weight:800;height:16px;margin-bottom:4px;}
 
 </style>
 </head>
@@ -997,6 +1248,7 @@ canvas#pinCanvas{border-radius:50%;display:block;}
         <button class="cat-btn" onclick="setCat('eyes',this)"><span class="ci">👁</span>Eyes</button>
         <button class="cat-btn" onclick="setCat('mouth',this)"><span class="ci">😊</span>Mouth</button>
         <button class="cat-btn" onclick="setCat('hair',this)"><span class="ci">💇</span>Hair</button>
+        <button class="cat-btn" onclick="setCat('pattern',this)"><span class="ci">🔷</span>Pattern</button>
         <button class="cat-btn" onclick="setCat('sticker',this)"><span class="ci">🌸</span>Stickers</button>
         <button class="cat-btn" onclick="setCat('outfit',this)"><span class="ci">👔</span>Outfit</button>
       </div>
@@ -1111,7 +1363,12 @@ canvas#pinCanvas{border-radius:50%;display:block;}
     <div class="pin-stage">
       <canvas id="pinCanvas" width="320" height="320"></canvas>
     </div>
-    <div class="ice-platform"></div>
+    <div class="ice-platform-wrap">
+      <div class="ice-reflection">
+        <canvas id="reflectionCanvas" width="320" height="320"></canvas>
+      </div>
+      <div class="ice-shadow"></div>
+    </div>
   </div>
 </div>
 
@@ -1127,6 +1384,45 @@ canvas#pinCanvas{border-radius:50%;display:block;}
       <input type="text" id="nameInputM" value="Alex Rivera" maxlength="20" oninput="syncI('name',this.value)">
     </div>
   </div>
+  <!-- Mobile font + color pickers -->
+  <div class="mob-customizer" id="mobCustomizer">
+    <div class="mob-customizer-row">
+      <span class="mob-customizer-label">Font</span>
+      <select onchange="document.getElementById('textFont').value=this.value;drawPin()">
+        <option value="Nunito">Nunito</option>
+        <option value="Fredoka One">Fredoka One</option>
+        <option value="Arial Rounded MT Bold">Rounded</option>
+        <option value="Georgia">Georgia</option>
+        <option value="Impact">Impact</option>
+      </select>
+    </div>
+    <div class="mob-customizer-row">
+      <span class="mob-customizer-label">Profession</span>
+      <div class="mob-dot-row">
+        <div class="color-dot active" style="background:conic-gradient(#FF6B9D,#FECA57,#48DBFB,#A29BFE,#55EFC4,#FF6B9D)" onclick="setProfColor('#RAINBOW',this)"></div>
+        <div class="color-dot" style="background:#0B2E4E" onclick="setProfColor('#0B2E4E',this)"></div>
+        <div class="color-dot" style="background:#FF6FAE" onclick="setProfColor('#FF6FAE',this)"></div>
+        <div class="color-dot" style="background:#FFFF00" onclick="setProfColor('#FFFF00',this)"></div>
+        <div class="color-dot" style="background:#FFFFFF;border-color:rgba(255,255,255,0.4)" onclick="setProfColor('#FFFFFF',this)"></div>
+        <div class="color-dot" style="background:#A29BFE" onclick="setProfColor('#A29BFE',this)"></div>
+        <div class="color-dot" style="background:#55EFC4" onclick="setProfColor('#55EFC4',this)"></div>
+        <div class="color-dot" style="background:#FF5E5B" onclick="setProfColor('#FF5E5B',this)"></div>
+      </div>
+    </div>
+    <div class="mob-customizer-row">
+      <span class="mob-customizer-label">Name</span>
+      <div class="mob-dot-row">
+        <div class="color-dot active" style="background:conic-gradient(#A29BFE,#FD79A8,#FECA57,#55EFC4,#FF9F43,#A29BFE)" onclick="setNameColor('#RAINBOW',this)"></div>
+        <div class="color-dot" style="background:#0B2E4E" onclick="setNameColor('#0B2E4E',this)"></div>
+        <div class="color-dot" style="background:#FF6FAE" onclick="setNameColor('#FF6FAE',this)"></div>
+        <div class="color-dot" style="background:#FFFF00" onclick="setNameColor('#FFFF00',this)"></div>
+        <div class="color-dot" style="background:#FFFFFF;border-color:rgba(255,255,255,0.4)" onclick="setNameColor('#FFFFFF',this)"></div>
+        <div class="color-dot" style="background:#A29BFE" onclick="setNameColor('#A29BFE',this)"></div>
+        <div class="color-dot" style="background:#55EFC4" onclick="setNameColor('#55EFC4',this)"></div>
+        <div class="color-dot" style="background:#FF5E5B" onclick="setNameColor('#FF5E5B',this)"></div>
+      </div>
+    </div>
+  </div>
   <div class="mob-cats" id="mobCats">
     <button class="mob-cat-btn active" onclick="setMobCat('bg',this)"><span class="ci">🌈</span>BG</button>
     <button class="mob-cat-btn" onclick="setMobCat('skin',this)"><span class="ci">🎨</span>Skin</button>
@@ -1134,6 +1430,7 @@ canvas#pinCanvas{border-radius:50%;display:block;}
     <button class="mob-cat-btn" onclick="setMobCat('eyes',this)"><span class="ci">👁</span>Eyes</button>
     <button class="mob-cat-btn" onclick="setMobCat('mouth',this)"><span class="ci">😊</span>Mouth</button>
     <button class="mob-cat-btn" onclick="setMobCat('hair',this)"><span class="ci">💇</span>Hair</button>
+    <button class="mob-cat-btn" onclick="setMobCat('pattern',this)"><span class="ci">🔷</span>Pattern</button>
     <button class="mob-cat-btn" onclick="setMobCat('sticker',this)"><span class="ci">🌸</span>Stickers</button>
     <button class="mob-cat-btn" onclick="setMobCat('outfit',this)"><span class="ci">👔</span>Outfit</button>
   </div>
@@ -1380,6 +1677,18 @@ const CATS={
     {label:'Long',type:'long'},{label:'Curly',type:'curly'},
     {label:'Bun',type:'bun'},{label:'Spiky',type:'spiky'},
   ]},
+  pattern:{title:'PATTERN',items:[
+    {label:'None',    type:'none'},
+    {label:'Dots',    type:'dots'},
+    {label:'Confetti',type:'confetti'},
+    {label:'Stars',   type:'stars'},
+    {label:'Hearts',  type:'hearts'},
+    {label:'Stripes', type:'stripes'},
+    {label:'Checks',  type:'checks'},
+    {label:'Bubbles', type:'bubbles'},
+    {label:'Flowers', type:'flowers'},
+    {label:'Zigzag',  type:'zigzag'},
+  ]},
   sticker:{title:'STICKERS',items:[
     {label:'None',  emoji:'—'},
     {label:'💗 Heart',emoji:'💗'},{label:'💕 Hearts',emoji:'💕'},{label:'🩷 Pink ♥',emoji:'🩷'},
@@ -1398,7 +1707,7 @@ const CATS={
     {label:'Astronaut',type:'astronaut',color:'#C0C0C0'},
   ]}
 };
-const S={bg:0,skin:0,face:0,eyes:0,mouth:0,hair:0,outfit:0,slots:[0,0,0,0,0,0],activeSlot:0,cat:'bg'};
+const S={bg:0,skin:0,face:0,eyes:0,mouth:0,hair:0,outfit:0,pattern:0,slots:[0,0,0,0,0,0],activeSlot:0,cat:'bg'};
 
 function setCat(cat,el){
   S.cat=cat;
@@ -1406,6 +1715,7 @@ function setCat(cat,el){
   el.classList.add('active');
   document.getElementById('assetTitle').textContent=CATS[cat].title;
   if(cat==='sticker'){renderStickerUI('assetGrid');}
+  else if(cat==='pattern'){renderPatternUI('assetGrid');}
   else{renderGrid('assetGrid',cat);}
 }
 function setMobCat(cat,el){
@@ -1414,6 +1724,7 @@ function setMobCat(cat,el){
   el.classList.add('active');
   document.getElementById('mobPopTitle').textContent=CATS[cat].title;
   if(cat==='sticker'){renderStickerUI('mobAssetGrid');}
+  else if(cat==='pattern'){renderPatternUI('mobAssetGrid');}
   else{renderGrid('mobAssetGrid',cat);}
   document.getElementById('mobPopup').classList.add('open');
 }
@@ -1603,6 +1914,7 @@ function drawMini(canvas,cat,item){
   else if(cat==='eyes'){ctx.fillStyle=sk;ctx.beginPath();ctx.arc(cx,cy+2,16,0,Math.PI*2);ctx.fill();mE(ctx,cx,cy-1,item.type);}
   else if(cat==='mouth'){ctx.fillStyle=sk;ctx.beginPath();ctx.arc(cx,cy+2,16,0,Math.PI*2);ctx.fill();mE(ctx,cx,cy-3,'normal');mM(ctx,cx,cy+7,item.type);}
   else if(cat==='hair'){ctx.fillStyle=sk;ctx.beginPath();ctx.arc(cx,cy+2,16,0,Math.PI*2);ctx.fill();mH(ctx,cx,cy+2,item.type);}
+  else if(cat==='pattern'){drawPatternMini(ctx,cx,cy,item.type);}
   else if(cat==='sticker'){const em={none:'⬜',hearts:'💗',stars:'⭐',flowers:'🌸',sparkle:'✦',food:'🍰',school:'🎓'};ctx.font='22px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(em[item.type]||'🌸',cx,cy);}
   else if(cat==='outfit'){ctx.fillStyle=sk;ctx.beginPath();ctx.arc(cx,cy-4,13,0,Math.PI*2);ctx.fill();ctx.fillStyle=item.color||'#FF5E5B';ctx.beginPath();ctx.roundRect(cx-13,cy+11,26,18,[3]);ctx.fill();}
   ctx.restore();
@@ -1673,6 +1985,8 @@ function drawPin(){
   }
   ctx.fillStyle='rgba(0,0,0,0.03)';
   for(let x=10;x<320;x+=20)for(let y=10;y<320;y+=20){ctx.beginPath();ctx.arc(x,y,1.5,0,Math.PI*2);ctx.fill();}
+  // Pattern layer — above bg, below avatar
+  if(S.pattern>0&&CATS.pattern){drawPattern(ctx,CATS.pattern.items[S.pattern].type);}
   const sk=CATS.skin.items[S.skin].color;
   const fs=CATS.face.items[S.face].shape;
   ctx.fillStyle=sk;ctx.beginPath();
@@ -1691,7 +2005,7 @@ function drawPin(){
   // Draw stickers OUTSIDE clip so they sit on the ring edge
   drawStickers(ctx);
   arcText(ctx,(document.getElementById('profInput').value||'Future Doctor').toUpperCase(),true,S.profColor||'#RAINBOW');
-  arcText(ctx,(document.getElementById('nameInput').value||'Alex Rivera').toUpperCase(),false,S.nameColor||'#RAINBOW');
+  arcTextWithHolder(ctx,(document.getElementById('nameInput').value||'Alex Rivera').toUpperCase(),S.nameColor||'#RAINBOW');
   ctx.save();ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);ctx.clip();
   const sRing=ctx.createRadialGradient(CX,CY+20,R*0.6,CX,CY,R);
   sRing.addColorStop(0,'rgba(0,0,0,0)');sRing.addColorStop(0.82,'rgba(0,0,0,0)');sRing.addColorStop(1,'rgba(0,0,0,0.2)');
@@ -1707,6 +2021,9 @@ function drawPin(){
   ctx.save();ctx.shadowColor='rgba(0,0,0,0.3)';ctx.shadowBlur=20;ctx.shadowOffsetY=7;
   ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);
   ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=2;ctx.stroke();ctx.restore();
+  // Mirror to reflection canvas
+  const rc=document.getElementById('reflectionCanvas');
+  if(rc){const rctx=rc.getContext('2d');rctx.clearRect(0,0,320,320);rctx.drawImage(canvas,0,0);}
 }
 // Slot angles in canvas coords (0=right, PI/2=down, -PI/2=up=12 o'clock)
 // Left side: 150°,180°,210° from top = -PI/6, -PI/2, -5PI/6 ... wait, from top:
@@ -1849,11 +2166,754 @@ function setNameColor(hex, el){
   drawPin();
 }
 
+// ══ PATTERN SYSTEM ══
+function renderPatternUI(gridId){
+  const grid=document.getElementById(gridId);
+  if(!grid)return;
+  grid.innerHTML='';
+  document.getElementById(gridId==='assetGrid'?'assetTitle':'mobPopTitle').textContent='PATTERN';
+  CATS.pattern.items.forEach((item,i)=>{
+    const card=document.createElement('div');
+    card.className='asset-card'+(S.pattern===i?' active':'');
+    card.onclick=()=>{S.pattern=i;renderPatternUI(gridId);const o=gridId==='assetGrid'?'mobAssetGrid':'assetGrid';renderPatternUI(o);drawPin();};
+    const c2=document.createElement('canvas');c2.width=56;c2.height=56;
+    const ctx2=c2.getContext('2d');
+    ctx2.save();ctx2.beginPath();ctx2.arc(28,28,27,0,Math.PI*2);ctx2.clip();
+    ctx2.fillStyle='#E8F4FD';ctx2.fillRect(0,0,56,56);
+    drawPatternMini(ctx2,28,28,item.type);
+    ctx2.restore();
+    card.appendChild(c2);
+    const lbl=document.createElement('div');lbl.className='asset-lbl';lbl.textContent=item.label;
+    card.appendChild(lbl);
+    grid.appendChild(card);
+  });
+}
+
+function drawPatternMini(ctx,cx,cy,type){
+  if(type==='none'){ctx.fillStyle='rgba(0,0,0,0.08)';ctx.font='18px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('✕',cx,cy);return;}
+  ctx.save();
+  const scale=56/320;
+  ctx.translate(cx-28,cy-28);ctx.scale(scale,scale);
+  drawPattern(ctx,type,true);
+  ctx.restore();
+}
+
+function drawPattern(ctx,type,mini=false){
+  const size=mini?320:320;
+  const alpha=mini?1:0.22;
+  ctx.save();ctx.globalAlpha=alpha;
+  if(type==='dots'){
+    ctx.fillStyle='rgba(255,255,255,0.9)';
+    const sp=22;
+    for(let x=sp/2;x<size;x+=sp)for(let y=sp/2;y<size;y+=sp){ctx.beginPath();ctx.arc(x,y,3.5,0,Math.PI*2);ctx.fill();}
+  } else if(type==='confetti'){
+    const cols=['#FF6FAE','#FFFF00','#4DC8F0','#A29BFE','#FF5E5B','#55EFC4'];
+    const seed=[{x:20,y:25,r:4,c:0},{x:55,y:10,r:3,c:1},{x:90,y:40,r:4,c:2},{x:130,y:18,r:3,c:3},{x:160,y:50,r:4,c:4},{x:200,y:15,r:3,c:5},{x:240,y:38,r:4,c:0},{x:275,y:12,r:3,c:1},{x:305,y:45,r:4,c:2},{x:30,y:80,r:3,c:3},{x:70,y:95,r:4,c:4},{x:110,y:70,r:3,c:5},{x:150,y:100,r:4,c:0},{x:190,y:75,r:3,c:1},{x:230,y:90,r:4,c:2},{x:270,y:65,r:3,c:3},{x:10,y:150,r:4,c:4},{x:50,y:130,r:3,c:5},{x:95,y:160,r:4,c:0},{x:140,y:135,r:3,c:1},{x:180,y:155,r:4,c:2},{x:220,y:125,r:3,c:3},{x:260,y:150,r:4,c:4},{x:300,y:130,r:3,c:5},{x:25,y:210,r:4,c:0},{x:65,y:195,r:3,c:1},{x:105,y:215,r:4,c:2},{x:145,y:190,r:3,c:3},{x:185,y:220,r:4,c:4},{x:225,y:200,r:3,c:5},{x:265,y:210,r:4,c:0},{x:300,y:185,r:3,c:1},{x:15,y:270,r:4,c:2},{x:55,y:255,r:3,c:3},{x:95,y:275,r:4,c:4},{x:135,y:250,r:3,c:5},{x:175,y:270,r:4,c:0},{x:215,y:255,r:3,c:1},{x:255,y:275,r:4,c:2},{x:295,y:250,r:3,c:3}];
+    seed.forEach(({x,y,r,c})=>{ctx.fillStyle=cols[c];ctx.fillRect(x-r,y-r,r*2,r*1.2);});
+  } else if(type==='stars'){
+    ctx.fillStyle='rgba(255,220,50,0.85)';
+    const pts=[[30,30],[80,15],[140,35],[200,12],[265,30],[300,20],[15,90],[60,80],[120,100],[180,82],[240,95],[290,75],[35,160],[90,145],[155,165],[210,148],[268,162],[45,225],[100,210],[160,228],[218,212],[278,225],[20,285],[75,270],[140,290],[200,272],[260,288]];
+    pts.forEach(([x,y])=>{
+      ctx.beginPath();
+      for(let i=0;i<5;i++){const a=i*Math.PI*2/5-Math.PI/2;const b=a+Math.PI/5;ctx.lineTo(x+Math.cos(a)*7,y+Math.sin(a)*7);ctx.lineTo(x+Math.cos(b)*3,y+Math.sin(b)*3);}
+      ctx.closePath();ctx.fill();
+    });
+  } else if(type==='hearts'){
+    ctx.fillStyle='rgba(255,111,174,0.7)';
+    ctx.font='18px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    const pts=[[30,30],[90,15],[155,35],[220,12],[285,28],[15,85],[70,100],[135,80],[200,95],[265,82],[310,90],[30,155],[85,140],[150,162],[215,145],[278,158],[20,215],[75,228],[140,210],[205,225],[270,212],[30,275],[88,260],[153,278],[218,262],[280,275]];
+    pts.forEach(([x,y])=>ctx.fillText('♥',x,y));
+  } else if(type==='stripes'){
+    ctx.fillStyle='rgba(255,255,255,0.45)';
+    for(let i=0;i<320;i+=28){ctx.fillRect(i,0,14,320);}
+  } else if(type==='checks'){
+    const sz=28;
+    for(let x=0;x<320;x+=sz)for(let y=0;y<320;y+=sz){
+      if(Math.floor(x/sz+y/sz)%2===0){ctx.fillStyle='rgba(255,255,255,0.3)';ctx.fillRect(x,y,sz,sz);}
+    }
+  } else if(type==='bubbles'){
+    ctx.strokeStyle='rgba(255,255,255,0.55)';ctx.lineWidth=2;ctx.fillStyle='rgba(255,255,255,0.1)';
+    const bs=[[25,25,18],[80,12,12],[145,30,20],[210,8,14],[280,22,16],[15,88,14],[65,75,18],[130,95,12],[195,78,16],[258,90,18],[300,72,10],[30,158,16],[88,142,20],[155,165,14],[218,148,18],[274,160,12],[20,222,18],[75,208,14],[140,228,16],[202,215,20],[265,225,12],[30,280,14],[85,268,18],[150,285,12],[215,272,16],[272,282,10]];
+    bs.forEach(([x,y,r])=>{ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.stroke();});
+  } else if(type==='flowers'){
+    ctx.font='20px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    const pts=[[30,30],[95,12],[165,32],[238,14],[300,28],[12,88],[72,102],[142,82],[208,98],[272,84],[20,162],[78,145],[148,168],[215,150],[280,165],[30,228],[88,212],[155,232],[222,215],[285,228],[18,290],[76,275],[145,292],[212,276],[278,290]];
+    const fl=['🌸','🌺','🌼','🌷','🌸'];
+    pts.forEach(([x,y],i)=>ctx.fillText(fl[i%fl.length],x,y));
+  } else if(type==='zigzag'){
+    ctx.strokeStyle='rgba(255,255,255,0.45)';ctx.lineWidth=2.5;ctx.lineJoin='round';
+    for(let y=16;y<320;y+=28){
+      ctx.beginPath();
+      for(let x=0;x<=320;x+=20){ctx.lineTo(x,y+(x%40===0?8:-8));}
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+// ══ NAME HOLDER BANNER ══
+function arcTextWithHolder(ctx, text, color){
+  if(!text.trim())return;
+  const MAX=16*1.6*1.2,MIN=16*0.6,arcR=R-34,maxArc=Math.PI*0.76;
+  const chars=text.split(''),n=chars.length;
+  let fs=MAX;
+  for(let s=MAX;s>=MIN;s-=0.5){if((s*0.62/arcR)*n<=maxArc){fs=s;break;}fs=MIN;}
+  const fontFace=(document.getElementById('textFont')||{}).value||'Nunito';
+  ctx.save();ctx.font='900 '+fs+'px '+fontFace;
+  // Measure total arc width
+  const charWidths=chars.map(ch=>ch===' '?fs*0.3:ctx.measureText(ch).width+2);
+  ctx.restore();
+  const totalWidth=charWidths.reduce((a,b)=>a+b,0);
+  const totalArc=Math.min(totalWidth/arcR,maxArc);
+  const scale=totalArc/(totalWidth/arcR);
+  const scaledWidths=charWidths.map(w=>w*scale);
+  const startAngle=(Math.PI/2)+(totalArc/2);
+
+  // ── Draw holder banner ──
+  const padH=fs*0.38; // vertical padding (1/3 of font height)
+  const padW=fs*0.55; // horizontal padding on each side
+  const bannerArc=totalArc+padW*2/arcR;
+  const bannerR1=arcR+padH*1.1; // outer edge
+  const bannerR2=arcR-padH*1.2; // inner edge
+
+  ctx.save();
+  // Holder shape — arc segment path
+  ctx.beginPath();
+  ctx.arc(CX,CY,bannerR1,Math.PI/2-bannerArc/2,Math.PI/2+bannerArc/2);
+  ctx.arc(CX,CY,bannerR2,Math.PI/2+bannerArc/2,Math.PI/2-bannerArc/2,true);
+  ctx.closePath();
+  // Solid shadow offset (no blur — print safe)
+  ctx.shadowColor='rgba(0,0,0,0.0)';
+  // Draw shadow manually as a shifted filled path
+  ctx.save();
+  ctx.translate(2,3);
+  ctx.beginPath();
+  ctx.arc(CX,CY,bannerR1,Math.PI/2-bannerArc/2,Math.PI/2+bannerArc/2);
+  ctx.arc(CX,CY,bannerR2,Math.PI/2+bannerArc/2,Math.PI/2-bannerArc/2,true);
+  ctx.closePath();
+  ctx.fillStyle='rgba(0,0,0,0.22)';
+  ctx.fill();
+  ctx.restore();
+  // Banner fill
+  ctx.beginPath();
+  ctx.arc(CX,CY,bannerR1,Math.PI/2-bannerArc/2,Math.PI/2+bannerArc/2);
+  ctx.arc(CX,CY,bannerR2,Math.PI/2+bannerArc/2,Math.PI/2-bannerArc/2,true);
+  ctx.closePath();
+  ctx.fillStyle='rgba(255,255,255,0.82)';
+  ctx.fill();
+  // Subtle border
+  ctx.strokeStyle='rgba(255,255,255,0.95)';
+  ctx.lineWidth=1.5;
+  ctx.stroke();
+  ctx.restore();
+
+  // ── Draw arc text on top ──
+  const palette=RAINBOW_BOT;
+  const useRainbow=color==='#RAINBOW';
+  let cursor=0;
+  chars.forEach((ch,i)=>{
+    if(ch===' '){cursor+=scaledWidths[i];return;}
+    const angle=startAngle-(cursor+scaledWidths[i]/2)/arcR;
+    cursor+=scaledWidths[i];
+    ctx.save();
+    ctx.translate(CX+arcR*Math.cos(angle),CY+arcR*Math.sin(angle));
+    ctx.rotate(angle-Math.PI/2);
+    ctx.font='900 '+fs+'px '+fontFace;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.lineWidth=fs*0.22;ctx.strokeStyle='rgba(255,255,255,0.95)';ctx.lineJoin='round';
+    ctx.strokeText(ch,0,0);
+    ctx.fillStyle=useRainbow?palette[i%palette.length]:color;
+    ctx.fillText(ch,0,0);
+    ctx.restore();
+  });
+}
+
 // ── INIT ──
 initStickerJitter();
 resetIdle();
 startLandingAnim();
+
+// ══════════════════════════════════════════════
+// ADMIN SYSTEM
+// ══════════════════════════════════════════════
+const ADMIN_PIN = '1234';
+let adminPinEntry = '';
+let adminCurrentTab = 'all';
+let adminSelected = new Set();
+
+// ── Storage ──
+function getSubmissions(){
+  try{ return JSON.parse(localStorage.getItem('morphii_submissions')||'[]'); }
+  catch(e){ return []; }
+}
+function saveSubmissions(arr){
+  localStorage.setItem('morphii_submissions', JSON.stringify(arr));
+}
+
+// ── Save submission on approve ──
+function saveSubmission(){
+  const name = document.getElementById('nameInput').value || 'Alex Rivera';
+  const prof = document.getElementById('profInput').value || 'Future Doctor';
+  const canvas = document.getElementById('pinCanvas');
+  const thumb = canvas ? canvas.toDataURL('image/png') : '';
+  const subs = getSubmissions();
+  const entry = {
+    id: Date.now().toString(),
+    name, prof,
+    size: document.getElementById('pinSizeSelect')?.value || '2.25',
+    thumb,
+    state: JSON.parse(JSON.stringify(S)), // snapshot avatar state
+    timestamp: new Date().toISOString(),
+    paid: false,
+    printed: false,
+  };
+  subs.unshift(entry);
+  saveSubmissions(subs);
+}
+
+// ── Patch handleApprove to also save ──
+const _origApprove = handleApprove;
+handleApprove = function(){
+  saveSubmission();
+  showCelebration();
+};
+
+// ── Admin navigation ──
+function goToAdmin(){
+  adminPinEntry = '';
+  updatePinDots();
+  document.getElementById('adminLogin').style.display = 'flex';
+}
+function openAdminScreen(){
+  document.getElementById('adminLogin').style.display = 'none';
+  document.getElementById('landing-screen').classList.add('hidden');
+  document.getElementById('builder-screen').classList.remove('active');
+  document.getElementById('admin-screen').classList.add('active');
+  clearTimeout(idleTimer);
+  adminSelected.clear();
+  refreshAdmin();
+}
+
+// ── Numpad ──
+function numpadPress(v){
+  if(v==='clear'){ adminPinEntry=''; }
+  else if(v==='back'){ adminPinEntry=adminPinEntry.slice(0,-1); }
+  else if(adminPinEntry.length<4){ adminPinEntry+=v; }
+  updatePinDots();
+  document.getElementById('loginErr').textContent='';
+  if(adminPinEntry.length===4){
+    setTimeout(()=>{
+      if(adminPinEntry===ADMIN_PIN){ openAdminScreen(); }
+      else{
+        document.getElementById('loginErr').textContent='Wrong PIN. Try again.';
+        adminPinEntry='';
+        updatePinDots();
+      }
+    },150);
+  }
+}
+function updatePinDots(){
+  for(let i=0;i<4;i++){
+    document.getElementById('pd'+i).classList.toggle('filled', i<adminPinEntry.length);
+  }
+}
+
+// ── Tab ──
+function setAdminTab(tab, el){
+  adminCurrentTab = tab;
+  document.querySelectorAll('.admin-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  adminSelected.clear();
+  renderPinsGrid();
+  updatePrintBar();
+}
+
+// ── Filter ──
+function filterSubs(tab){
+  const subs = getSubmissions();
+  if(tab==='all') return subs;
+  if(tab==='unpaid') return subs.filter(s=>!s.paid);
+  if(tab==='paid') return subs.filter(s=>s.paid);
+  if(tab==='unprinted') return subs.filter(s=>s.paid&&!s.printed);
+  if(tab==='printed') return subs.filter(s=>s.printed);
+  return subs;
+}
+
+// ── Stats ──
+function refreshAdmin(){
+  const all = getSubmissions();
+  const paid = all.filter(s=>s.paid).length;
+  const printed = all.filter(s=>s.printed).length;
+  const pending = all.filter(s=>!s.paid).length;
+  const queue = all.filter(s=>s.paid&&!s.printed).length;
+  document.getElementById('adminStats').innerHTML = `
+    <div class="stat-pill"><div><div class="sval">${all.length}</div><div class="slbl">Total</div></div></div>
+    <div class="stat-pill"><div><div class="sval" style="color:#FF6FAE">${pending}</div><div class="slbl">Unpaid</div></div></div>
+    <div class="stat-pill"><div><div class="sval" style="color:#55EFC4">${paid}</div><div class="slbl">Paid</div></div></div>
+    <div class="stat-pill"><div><div class="sval" style="color:#74B9FF">${queue}</div><div class="slbl">In Queue</div></div></div>
+    <div class="stat-pill"><div><div class="sval" style="color:#A29BFE">${printed}</div><div class="slbl">Printed</div></div></div>
+  `;
+  // Update tab counts
+  document.getElementById('cnt-all').textContent = all.length;
+  document.getElementById('cnt-unpaid').textContent = all.filter(s=>!s.paid).length;
+  document.getElementById('cnt-paid').textContent = paid;
+  document.getElementById('cnt-unprinted').textContent = queue;
+  document.getElementById('cnt-printed').textContent = printed;
+  renderPinsGrid();
+  updatePrintBar();
+}
+
+// ── Render grid ──
+function renderPinsGrid(){
+  const grid = document.getElementById('pinsGrid');
+  const subs = filterSubs(adminCurrentTab);
+  if(!subs.length){
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:rgba(255,255,255,0.2);font-family:Fredoka One,cursive;font-size:20px;">No pins here yet 📌</div>';
+    return;
+  }
+  grid.innerHTML = '';
+  subs.forEach(sub => {
+    const card = document.createElement('div');
+    const sel = adminSelected.has(sub.id);
+    card.className = 'pin-card' + (sel?' selected':'') + (sub.paid?' paid':'') + (sub.printed?' printed':'');
+    const timeStr = new Date(sub.timestamp).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    card.innerHTML = `
+      <div class="pin-select-box">${sel?'✓':''}</div>
+      <div class="pin-thumb">
+        <img src="${sub.thumb}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display='none'">
+      </div>
+      <div class="pin-info-name">${sub.name}</div>
+      <div class="pin-info-prof">${sub.prof}</div>
+      <div class="pin-info-meta">
+        <span class="meta-badge badge-size">${sub.size}" pin</span>
+        <span class="meta-badge badge-time">${timeStr}</span>
+      </div>
+      <div class="pin-toggles">
+        <button class="toggle-btn ${sub.paid?'on-paid':''}" onclick="event.stopPropagation();toggleStatus('${sub.id}','paid')">${sub.paid?'✓ Paid':'$ Unpaid'}</button>
+        <button class="toggle-btn ${sub.printed?'on-printed':''}" onclick="event.stopPropagation();toggleStatus('${sub.id}','printed')">${sub.printed?'✓ Printed':'🖨 Queue'}</button>
+      </div>
+    `;
+    card.onclick = () => toggleSelect(sub.id);
+    grid.appendChild(card);
+  });
+}
+
+// ── Toggle paid/printed ──
+function toggleStatus(id, field){
+  const subs = getSubmissions();
+  const sub = subs.find(s=>s.id===id);
+  if(sub){ sub[field]=!sub[field]; saveSubmissions(subs); refreshAdmin(); }
+}
+
+// ── Selection ──
+function toggleSelect(id){
+  if(adminSelected.has(id)) adminSelected.delete(id);
+  else adminSelected.add(id);
+  renderPinsGrid();
+  updatePrintBar();
+}
+function selectAllVisible(){
+  filterSubs(adminCurrentTab).forEach(s=>adminSelected.add(s.id));
+  renderPinsGrid();updatePrintBar();
+}
+function clearSelection(){
+  adminSelected.clear();
+  renderPinsGrid();updatePrintBar();
+}
+function updatePrintBar(){
+  const n = adminSelected.size;
+  document.getElementById('selCount').textContent = n;
+  const lb = document.getElementById('layoutBtnBar');
+  const lb2 = document.getElementById('layoutBtn');
+  lb.disabled = n===0; lb2.disabled = n===0;
+  if(n>0){lb.style.opacity='1';lb2.style.opacity='1';}
+  else{lb.style.opacity='0.35';lb2.style.opacity='0.35';}
+}
+
+// ── Size select in builder ──
+// Inject size picker next to approve button
+function injectSizePicker(){
+  const inp = document.querySelector('.inputs-section');
+  if(!inp||document.getElementById('pinSizeSelect'))return;
+  const wrap = document.createElement('div');
+  wrap.className = 'inp-group';
+  wrap.innerHTML = `<label>Pin Size</label>
+    <select id="pinSizeSelect" style="width:100%;padding:9px 12px;border-radius:12px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);font-family:'Fredoka One',cursive;font-size:14px;color:white;outline:none;cursor:pointer;">
+      <option value="1.5">Small — 1.5"</option>
+      <option value="2.25" selected>Regular — 2.25"</option>
+      <option value="3">Large — 3"</option>
+    </select>`;
+  inp.insertBefore(wrap, inp.querySelector('.approve-btn'));
+}
+
+// ══ PRINT LAYOUT ══
+function openPrintModal(){
+  if(adminSelected.size===0)return;
+  document.getElementById('printModal').classList.add('open');
+  packPins();
+  setTimeout(initPaperDrag,100);
+}
+function closePrintModal(){
+  document.getElementById('printModal').classList.remove('open');
+}
+
+const PAPER_SIZES = {
+  letter: { w: 8.5, h: 11 },
+  a4:     { w: 8.27, h: 11.69 },
+};
+const MARGIN_IN = 0.4;
+const PREVIEW_W = 420; // canvas px for preview
+
+// Mixed-size shelf packer
+// Algorithm: shelf packing — place pins left to right on a shelf,
+// start a new shelf when current pin doesn't fit width.
+// Each shelf height = tallest pin on that shelf.
+// ── Print layout state ──
+let layoutPins = []; // {sub, cx, cy, rad, dPx, active}
+let dragIdx = -1, dragOffX = 0, dragOffY = 0;
+let printScale = 1;
+let printMg = 0;
+
+function packPins(){
+  const paper = PAPER_SIZES[document.getElementById('paperSize').value];
+  const GAP = 0.12;
+  const usableW = paper.w - MARGIN_IN*2;
+  const usableH = paper.h - MARGIN_IN*2;
+  printScale = PREVIEW_W / paper.w;
+  printMg = MARGIN_IN * printScale;
+  const gapPx = GAP * printScale;
+
+  const subs = getSubmissions().filter(s=>adminSelected.has(s.id));
+
+  // Shelf pack
+  let shelfX=printMg, shelfY=printMg, shelfH=0;
+  layoutPins = [];
+  for(const sub of subs){
+    const d = (parseFloat(sub.size)||2.25)*printScale;
+    const rad = d/2-2;
+    if(shelfX+d > printMg+(usableW*printScale) && shelfX>printMg){ shelfY+=shelfH+gapPx; shelfX=printMg; shelfH=0; }
+    if(shelfY+d > printMg+(usableH*printScale)) break;
+    layoutPins.push({sub, cx:shelfX+d/2, cy:shelfY+d/2, rad, dPx:d, active:true, img:null});
+    shelfX+=d+gapPx; shelfH=Math.max(shelfH,d);
+  }
+  // Preload images
+  layoutPins.forEach(p=>{
+    if(!p.sub.thumb)return;
+    const img=new Image(); img.onload=()=>{p.img=img;renderPaperCanvas();}; img.src=p.sub.thumb;
+  });
+  renderPaperCanvas();
+  renderPmiSidebar();
+}
+
+function renderPaperCanvas(){
+  const paper = PAPER_SIZES[document.getElementById('paperSize').value];
+  const canvH = Math.round(paper.h * printScale);
+  const pc = document.getElementById('paperCanvas');
+  pc.width = PREVIEW_W; pc.height = canvH;
+  const ctx = pc.getContext('2d');
+
+  // Paper
+  ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,PREVIEW_W,canvH);
+  // Margin
+  ctx.setLineDash([3,3]); ctx.strokeStyle='rgba(180,180,180,0.5)'; ctx.lineWidth=0.7;
+  ctx.strokeRect(printMg,printMg,PREVIEW_W-printMg*2,canvH-printMg*2);
+  ctx.setLineDash([]);
+
+  layoutPins.forEach((p,i)=>{
+    if(!p.active){ // greyed out
+      ctx.save(); ctx.globalAlpha=0.2;
+      ctx.beginPath(); ctx.arc(p.cx,p.cy,p.rad,0,Math.PI*2);
+      ctx.strokeStyle='#CCC'; ctx.lineWidth=1; ctx.setLineDash([3,2]); ctx.stroke();
+      ctx.setLineDash([]); ctx.restore();
+      return;
+    }
+    ctx.save();
+    if(p.img){
+      ctx.beginPath(); ctx.arc(p.cx,p.cy,p.rad,0,Math.PI*2); ctx.clip();
+      ctx.drawImage(p.img,p.cx-p.rad,p.cy-p.rad,p.rad*2,p.rad*2);
+    } else {
+      ctx.beginPath(); ctx.arc(p.cx,p.cy,p.rad,0,Math.PI*2);
+      ctx.fillStyle='#EEF6FF'; ctx.fill();
+      ctx.fillStyle='#AAA'; ctx.font=`bold ${Math.max(7,p.rad*0.25)}px sans-serif`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(p.sub.size+'"',p.cx,p.cy);
+    }
+    ctx.restore();
+    // Cut-line ring
+    ctx.save();
+    ctx.beginPath(); ctx.arc(p.cx,p.cy,p.rad+1,0,Math.PI*2);
+    ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.lineWidth=0.8; ctx.stroke();
+    ctx.restore();
+    // Checkmark badge top-right
+    const bx=p.cx+p.rad*0.62, by=p.cy-p.rad*0.62;
+    ctx.save();
+    ctx.fillStyle='#55EFC4'; ctx.beginPath(); ctx.arc(bx,by,Math.max(5,p.rad*0.22),0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='white'; ctx.font=`bold ${Math.max(5,p.rad*0.18)}px sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('✓',bx,by);
+    ctx.restore();
+  });
+
+  const active = layoutPins.filter(p=>p.active);
+  const counts={}; active.forEach(p=>{ counts[p.sub.size]=(counts[p.sub.size]||0)+1; });
+  const bd=Object.entries(counts).map(([s,n])=>`${n}×${s}"`).join(' · ');
+  document.getElementById('packInfo').textContent = `${active.length} pins on paper${bd?' · '+bd:''}`;
+}
+
+function renderPmiSidebar(){
+  const list=document.getElementById('pmiPinList');
+  list.innerHTML='';
+  const allSubs = getSubmissions().filter(s=>adminSelected.has(s.id));
+  allSubs.forEach(sub=>{
+    const idx = layoutPins.findIndex(p=>p.sub.id===sub.id);
+    const onPaper = idx>=0;
+    const isActive = onPaper && layoutPins[idx].active;
+    const item=document.createElement('div');
+    item.className='pmi-pin-item';
+    item.style.cssText=`cursor:pointer;border:1.5px solid ${isActive?'#55EFC4':'rgba(255,255,255,0.08)'};border-radius:10px;padding:5px 8px;background:${isActive?'rgba(85,239,196,0.08)':'rgba(255,255,255,0.03)'};transition:all 0.15s;`;
+    // Thumbnail
+    const mc=document.createElement('canvas'); mc.width=28; mc.height=28;
+    const mctx=mc.getContext('2d');
+    const mi=new Image();
+    mi.onload=function(){mctx.save();mctx.beginPath();mctx.arc(14,14,13,0,Math.PI*2);mctx.clip();mctx.drawImage(mi,0,0,28,28);mctx.restore();};
+    if(sub.thumb)mi.src=sub.thumb;
+    item.appendChild(mc);
+    // Info
+    const info=document.createElement('div'); info.style.flex='1';
+    info.innerHTML=`<div style="font-size:10px;color:white;font-family:'Nunito',sans-serif;font-weight:800">${sub.name}</div><div style="font-size:8px;color:rgba(255,255,255,0.4);font-family:'Nunito',sans-serif">${sub.size}" · ${sub.prof}</div>`;
+    item.appendChild(info);
+    // Toggle checkbox
+    const cb=document.createElement('div');
+    cb.style.cssText=`width:18px;height:18px;border-radius:5px;border:2px solid ${isActive?'#55EFC4':'rgba(255,255,255,0.2)'};background:${isActive?'#55EFC4':'transparent'};display:flex;align-items:center;justify-content:center;font-size:10px;color:#0B2E4E;flex-shrink:0;`;
+    if(isActive)cb.textContent='✓';
+    item.appendChild(cb);
+    item.onclick=()=>{
+      if(idx>=0){ layoutPins[idx].active=!layoutPins[idx].active; }
+      else {
+        // Add to layout at a free spot
+        const paper=PAPER_SIZES[document.getElementById('paperSize').value];
+        const d=(parseFloat(sub.size)||2.25)*printScale;
+        layoutPins.push({sub,cx:printMg+d/2+10,cy:printMg+d/2+10,rad:d/2-2,dPx:d,active:true,img:null});
+        if(sub.thumb){const img=new Image();img.onload=()=>{layoutPins[layoutPins.length-1].img=img;renderPaperCanvas();};img.src=sub.thumb;}
+      }
+      renderPaperCanvas(); renderPmiSidebar();
+    };
+    list.appendChild(item);
+  });
+}
+
+// ── Drag interactions ──
+function initPaperDrag(){
+  const pc=document.getElementById('paperCanvas');
+  if(!pc||pc._dragInited)return;
+  pc._dragInited=true;
+  function getPos(e){
+    const r=pc.getBoundingClientRect();
+    const scx=pc.width/r.width;
+    const scy=pc.height/r.height;
+    const cx=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+    const cy=(e.touches?e.touches[0].clientY:e.clientY)-r.top;
+    return{x:cx*scx,y:cy*scy};
+  }
+  function startDrag(e){
+    const{x,y}=getPos(e);
+    dragIdx=-1;
+    for(let i=layoutPins.length-1;i>=0;i--){
+      const p=layoutPins[i];
+      if(!p.active)continue;
+      const dx=x-p.cx,dy=y-p.cy;
+      if(dx*dx+dy*dy<p.rad*p.rad){dragIdx=i;dragOffX=dx;dragOffY=dy;break;}
+    }
+    if(dragIdx>=0)pc.style.cursor='grabbing';
+    e.preventDefault();
+  }
+  function moveDrag(e){
+    if(dragIdx<0)return;
+    const{x,y}=getPos(e);
+    layoutPins[dragIdx].cx=x-dragOffX;
+    layoutPins[dragIdx].cy=y-dragOffY;
+    renderPaperCanvas();
+    e.preventDefault();
+  }
+  function endDrag(){
+    dragIdx=-1;
+    pc.style.cursor='grab';
+  }
+  pc.addEventListener('mousedown',startDrag);
+  pc.addEventListener('mousemove',moveDrag);
+  pc.addEventListener('mouseup',endDrag);
+  pc.addEventListener('touchstart',startDrag,{passive:false});
+  pc.addEventListener('touchmove',moveDrag,{passive:false});
+  pc.addEventListener('touchend',endDrag);
+}
+
+function doPrint(){
+  const pc = document.getElementById('paperCanvas');
+  const paper = PAPER_SIZES[document.getElementById('paperSize').value];
+  // Open print window with the canvas as image
+  const win = window.open('','_blank');
+  const img = pc.toDataURL('image/png');
+  win.document.write(`<!DOCTYPE html><html><head><title>Morphii Print</title>
+    <style>*{margin:0;padding:0;}body{background:white;}
+    img{width:${paper.w}in;height:${paper.h}in;display:block;}
+    @media print{@page{size:${paper.w}in ${paper.h}in;margin:0;}img{width:100%;height:100%;}}
+    </style></head><body>
+    <img src="${img}" onload="setTimeout(()=>{window.print();window.close();},200)">
+    </body></html>`);
+  // Mark only active layout pins as printed
+  const subs = getSubmissions();
+  layoutPins.filter(p=>p.active).forEach(p=>{
+    const s=subs.find(x=>x.id===p.sub.id);
+    if(s)s.printed=true;
+  });
+  saveSubmissions(subs);
+  refreshAdmin();
+}
+
+// Add admin access: long-press on landing logo (3 sec) or hidden button
+document.addEventListener('DOMContentLoaded',()=>{
+  injectSizePicker();
+  // Add secret admin button to builder header
+  const adminBtn = document.createElement('button');
+  adminBtn.className = 'back-to-landing';
+  adminBtn.style.cssText = 'opacity:0.4;font-size:11px;padding:4px 10px;';
+  adminBtn.textContent = '⚙ Admin';
+  adminBtn.onclick = (e)=>{ e.stopPropagation(); goToAdmin(); };
+  const hdr = document.querySelector('#admin-screen')?.previousElementSibling;
+  // Attach to builder header
+  setTimeout(()=>{
+    const builderNav = document.querySelector('#builder-screen header');
+    if(builderNav){
+      builderNav.appendChild(adminBtn);
+    }
+  },500);
+});
+
+// Add demo data if empty
+function addDemoData(){
+  const existing = getSubmissions();
+  if(existing.length > 0) return;
+  const demos=[
+    {name:'Mia Santos',prof:'Future Doctor',size:'2.25',paid:true,printed:false},
+    {name:'Jake Cruz',prof:'Future Engineer',size:'1.5',paid:true,printed:true},
+    {name:'Lily Reyes',prof:'Future Chef',size:'3',paid:false,printed:false},
+    {name:'Sam Lim',prof:'Future Astronaut',size:'2.25',paid:true,printed:false},
+    {name:'Ana Garcia',prof:'Future Teacher',size:'1.5',paid:false,printed:false},
+  ];
+  const canvas = document.getElementById('pinCanvas');
+  const thumb = canvas ? canvas.toDataURL('image/png') : '';
+  const now = Date.now();
+  const subs = demos.map((d,i)=>({
+    id:(now-i*60000).toString(),
+    ...d, thumb,
+    state:{},
+    timestamp: new Date(now-i*3600000).toISOString(),
+  }));
+  saveSubmissions(subs);
+}
+
+setTimeout(addDemoData, 800);
+
 </script>
+
+
+<!-- ══ ADMIN LOGIN ══ -->
+<div id="adminLogin" style="display:none">
+  <div class="login-card">
+    <div style="font-size:40px;margin-bottom:8px">🔐</div>
+    <h2>Admin Access</h2>
+    <p>Enter your PIN</p>
+    <div class="pin-dots" id="pinDots">
+      <div class="pin-dot-display" id="pd0"></div>
+      <div class="pin-dot-display" id="pd1"></div>
+      <div class="pin-dot-display" id="pd2"></div>
+      <div class="pin-dot-display" id="pd3"></div>
+    </div>
+    <div class="login-err" id="loginErr"></div>
+    <div class="numpad">
+      <button class="num-btn" onclick="numpadPress('1')">1</button>
+      <button class="num-btn" onclick="numpadPress('2')">2</button>
+      <button class="num-btn" onclick="numpadPress('3')">3</button>
+      <button class="num-btn" onclick="numpadPress('4')">4</button>
+      <button class="num-btn" onclick="numpadPress('5')">5</button>
+      <button class="num-btn" onclick="numpadPress('6')">6</button>
+      <button class="num-btn" onclick="numpadPress('7')">7</button>
+      <button class="num-btn" onclick="numpadPress('8')">8</button>
+      <button class="num-btn" onclick="numpadPress('9')">9</button>
+      <button class="num-btn" onclick="numpadPress('clear')" style="font-size:14px">CLR</button>
+      <button class="num-btn" onclick="numpadPress('0')">0</button>
+      <button class="num-btn" onclick="numpadPress('back')" style="font-size:16px">⌫</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADMIN SCREEN ══ -->
+<div id="admin-screen">
+  <div class="admin-header">
+    <div class="admin-logo">morphii<span>.</span><small>Admin</small></div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="admin-back" onclick="openPrintModal()" id="layoutBtn" style="background:#FFFF00;color:#0B2E4E;border-color:#FFFF00;" disabled>🖨 Layout &amp; Print</button>
+      <button class="admin-back" onclick="goToLanding()">← Exit Admin</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="admin-stats" id="adminStats"></div>
+
+  <!-- Tabs -->
+  <div class="admin-tabs">
+    <button class="admin-tab active" onclick="setAdminTab('all',this)">All Pins <span class="tab-count yellow" id="cnt-all">0</span></button>
+    <button class="admin-tab" onclick="setAdminTab('unpaid',this)">Unpaid <span class="tab-count" id="cnt-unpaid">0</span></button>
+    <button class="admin-tab" onclick="setAdminTab('paid',this)">Paid <span class="tab-count" id="cnt-paid">0</span></button>
+    <button class="admin-tab" onclick="setAdminTab('unprinted',this)">Queue <span class="tab-count" id="cnt-unprinted">0</span></button>
+    <button class="admin-tab" onclick="setAdminTab('printed',this)">Printed <span class="tab-count" id="cnt-printed">0</span></button>
+  </div>
+
+  <!-- Pin Grid -->
+  <div class="admin-content">
+    <div class="pins-grid" id="pinsGrid"></div>
+  </div>
+
+  <!-- Print bar -->
+  <div class="print-bar">
+    <div class="print-bar-count"><span id="selCount">0</span> selected</div>
+    <button class="select-all-btn" onclick="selectAllVisible()">Select All</button>
+    <button class="clear-sel-btn" onclick="clearSelection()">Clear</button>
+    <button class="layout-btn" id="layoutBtnBar" onclick="openPrintModal()" disabled>🖨 Layout &amp; Print</button>
+  </div>
+</div>
+
+<!-- ══ PRINT MODAL ══ -->
+<div id="printModal">
+  <div class="print-modal-inner">
+    <div class="pmi-header">
+      <div class="pmi-title">🖨 Print Layout</div>
+      <button class="pmi-close" onclick="closePrintModal()">✕</button>
+    </div>
+    <div class="pmi-controls">
+      <span class="pmi-label">Paper:</span>
+      <select class="pmi-select" id="paperSize" onchange="packPins()">
+        <option value="letter">Letter (8.5×11")</option>
+        <option value="a4">A4 (8.27×11.69")</option>
+      </select>
+      <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.35);font-family:'Nunito',sans-serif;margin-left:12px;">Drag pins to reposition · Click to remove</span>
+      <button class="pmi-pack-btn" onclick="packPins()" style="margin-left:auto">↺ Auto-arrange</button>
+    </div>
+    <div class="pmi-body">
+      <div class="paper-preview-wrap">
+        <div class="paper-canvas-wrap" style="position:relative;cursor:grab">
+          <canvas id="paperCanvas"></canvas>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.3);font-family:'Nunito',sans-serif;margin-top:6px;" id="packInfo"></div>
+        <button class="print-action-btn" onclick="doPrint()">🖨 Send to Printer</button>
+      </div>
+      <div class="pmi-sidebar">
+        <div class="pmi-sidebar-title">Pin Queue</div>
+        <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.3);margin-bottom:8px;font-family:'Nunito',sans-serif;">Check to include on paper</div>
+        <div class="pmi-pin-list" id="pmiPinList"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
