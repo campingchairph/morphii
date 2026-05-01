@@ -1254,9 +1254,10 @@ canvas#pinCanvas{border-radius:50%;display:block;filter:drop-shadow(0 8px 20px r
         <label>Your Name (bottom arc)</label>
         <input type="text" id="nameInput" value="Alex Rivera" maxlength="20" placeholder="Your name" oninput="drawPin()">
       </div>
-      <div class="inp-group">
-        <label>Text Font</label>
-        <select id="textFont" onchange="drawPin()" style="width:100%;padding:8px 10px;border-radius:10px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);font-family:'Fredoka One',cursive;font-size:13px;color:white;outline:none;cursor:pointer;">
+      <div style="display:flex;gap:8px;">
+        <div class="inp-group" style="flex:1">
+          <label>Profession Font</label>
+          <select id="profFont" onchange="drawPin()" style="width:100%;padding:8px 10px;border-radius:10px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);font-family:'Fredoka One',cursive;font-size:13px;color:white;outline:none;cursor:pointer;">
           <option value="Nunito" style="color:#000">Nunito</option>
           <option value="Fredoka One" style="color:#000">Fredoka One</option>
           <option value="Bubblegum Sans" style="color:#000">Bubblegum Sans</option>
@@ -1270,7 +1271,39 @@ canvas#pinCanvas{border-radius:50%;display:block;filter:drop-shadow(0 8px 20px r
           <option value="Chewy" style="color:#000">Chewy</option>
           <option value="Patrick Hand" style="color:#000">Patrick Hand</option>
           <option value="Arial Rounded MT Bold" style="color:#000">System Rounded</option>
-        </select>
+          </select>
+        </div>
+        <div class="inp-group" style="flex:1">
+          <label>Name Font</label>
+          <select id="nameFont" onchange="drawPin()" style="width:100%;padding:8px 10px;border-radius:10px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);font-family:'Fredoka One',cursive;font-size:13px;color:white;outline:none;cursor:pointer;">
+          <option value="Nunito" style="color:#000">Nunito</option>
+          <option value="Fredoka One" style="color:#000">Fredoka One</option>
+          <option value="Bubblegum Sans" style="color:#000">Bubblegum Sans</option>
+          <option value="Baloo 2" style="color:#000">Baloo 2</option>
+          <option value="Righteous" style="color:#000">Righteous</option>
+          <option value="Titan One" style="color:#000">Titan One</option>
+          <option value="Lilita One" style="color:#000">Lilita One</option>
+          <option value="Pacifico" style="color:#000">Pacifico</option>
+          <option value="Boogaloo" style="color:#000">Boogaloo</option>
+          <option value="Grandstander" style="color:#000">Grandstander</option>
+          <option value="Chewy" style="color:#000">Chewy</option>
+          <option value="Patrick Hand" style="color:#000">Patrick Hand</option>
+          <option value="Arial Rounded MT Bold" style="color:#000">System Rounded</option>
+          </select>
+        </div>
+      </div>
+      <div class="inp-group">
+        <label>Name Holder Color</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;" id="holderColors">
+            <div class="color-dot active" data-color="rgba(255,255,255,0.82)" style="background:rgba(255,255,255,0.82);border:2px solid #ccc" onclick="setHolderColor('rgba(255,255,255,0.82)',this)"></div>
+            <div class="color-dot" data-color="#FFFF00" style="background:#FFFF00" onclick="setHolderColor('#FFFF00',this)"></div>
+            <div class="color-dot" data-color="#FF6FAE" style="background:#FF6FAE" onclick="setHolderColor('#FF6FAE',this)"></div>
+            <div class="color-dot" data-color="#0B2E4E" style="background:#0B2E4E" onclick="setHolderColor('#0B2E4E',this)"></div>
+            <div class="color-dot" data-color="#4DC8F0" style="background:#4DC8F0" onclick="setHolderColor('#4DC8F0',this)"></div>
+            <div class="color-dot" data-color="#A29BFE" style="background:#A29BFE" onclick="setHolderColor('#A29BFE',this)"></div>
+            <div class="color-dot" data-color="#55EFC4" style="background:#55EFC4" onclick="setHolderColor('#55EFC4',this)"></div>
+            <div class="color-dot" data-color="transparent" style="background:transparent;border:2px dashed rgba(255,255,255,0.4)" onclick="setHolderColor('transparent',this)" title="No holder"></div>
+        </div>
       </div>
       <div style="display:flex;gap:8px;">
         <div class="inp-group" style="flex:1">
@@ -1379,19 +1412,33 @@ canvas#pinCanvas{border-radius:50%;display:block;filter:drop-shadow(0 8px 20px r
   <div class="mob-customizer" id="mobCustomizer">
     <div class="mob-customizer-row">
       <span class="mob-customizer-label">Font</span>
-      <select onchange="document.getElementById('textFont').value=this.value;drawPin()">
-        <option value="Nunito">Nunito</option>
-        <option value="Fredoka One">Fredoka One</option>
-        <option value="Bubblegum Sans">Bubblegum Sans</option>
-        <option value="Baloo 2">Baloo 2</option>
-        <option value="Righteous">Righteous</option>
-        <option value="Titan One">Titan One</option>
-        <option value="Lilita One">Lilita One</option>
-        <option value="Pacifico">Pacifico</option>
-        <option value="Boogaloo">Boogaloo</option>
-        <option value="Grandstander">Grandstander</option>
-        <option value="Chewy">Chewy</option>
-        <option value="Patrick Hand">Patrick Hand</option>
+      <select onchange="document.getElementById('profFont').value=this.value;drawPin()">
+          <option value="Nunito">Nunito</option>
+          <option value="Fredoka One">Fredoka One</option>
+          <option value="Bubblegum Sans">Bubblegum Sans</option>
+          <option value="Baloo 2">Baloo 2</option>
+          <option value="Righteous">Righteous</option>
+          <option value="Titan One">Titan One</option>
+          <option value="Lilita One">Lilita One</option>
+          <option value="Pacifico">Pacifico</option>
+          <option value="Boogaloo">Boogaloo</option>
+          <option value="Grandstander">Grandstander</option>
+          <option value="Chewy">Chewy</option>
+          <option value="Patrick Hand">Patrick Hand</option>
+      </select>
+      <select onchange="document.getElementById('nameFont').value=this.value;drawPin()">
+          <option value="Nunito">Nunito</option>
+          <option value="Fredoka One">Fredoka One</option>
+          <option value="Bubblegum Sans">Bubblegum Sans</option>
+          <option value="Baloo 2">Baloo 2</option>
+          <option value="Righteous">Righteous</option>
+          <option value="Titan One">Titan One</option>
+          <option value="Lilita One">Lilita One</option>
+          <option value="Pacifico">Pacifico</option>
+          <option value="Boogaloo">Boogaloo</option>
+          <option value="Grandstander">Grandstander</option>
+          <option value="Chewy">Chewy</option>
+          <option value="Patrick Hand">Patrick Hand</option>
       </select>
     </div>
     <div class="mob-customizer-row">
@@ -1451,6 +1498,59 @@ canvas#pinCanvas{border-radius:50%;display:block;filter:drop-shadow(0 8px 20px r
 
 
 <script>
+
+// ══════════════════════════════════════════════
+// GITHUB ASSET LOADER
+// Base: campingchairph/morphii/main/assets/avatar/
+// ══════════════════════════════════════════════
+const GITHUB_BASE = 'https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/';
+const MANIFEST_URL = GITHUB_BASE + 'manifest.json';
+const loadedImages = {}; // cache: url -> HTMLImageElement
+
+function preloadImage(url){
+  if(loadedImages[url]) return Promise.resolve(loadedImages[url]);
+  return new Promise(resolve=>{
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = ()=>{ loadedImages[url]=img; resolve(img); };
+    img.onerror = ()=>resolve(null); // fallback to CSS drawing
+    img.src = url;
+  });
+}
+
+function drawImageLayer(ctx, url, x, y, w, h){
+  const img = loadedImages[url];
+  if(!img) return false;
+  ctx.drawImage(img, x, y, w, h);
+  return true;
+}
+
+// Fetch manifest and update CATS with real image URLs
+async function loadAssetManifest(){
+  try {
+    const res = await fetch(MANIFEST_URL);
+    if(!res.ok) return; // no manifest yet — use CSS fallback
+    const manifest = await res.json();
+    // Merge into CATS — add url to each item
+    const catMap = {
+      hair:'hair', eyes:'eyes', mouth:'mouth', face:'face',
+      skin:'skin', outfit:'outfit', stickers:'sticker', patterns:'pattern'
+    };
+    for(const [key, catKey] of Object.entries(catMap)){
+      if(!manifest[key] || !CATS[catKey]) continue;
+      manifest[key].forEach((item, i)=>{
+        if(CATS[catKey].items[i]){
+          CATS[catKey].items[i].url = item.url;
+          if(item.url) preloadImage(item.url);
+        }
+      });
+    }
+    console.log('Morphii assets loaded from GitHub');
+  } catch(e){
+    console.log('No manifest found — using CSS drawing');
+  }
+}
+
 // ═══════════════════════════════════════════
 // SCREEN TRANSITIONS
 // ═══════════════════════════════════════════
@@ -1722,7 +1822,8 @@ const CATS={
   ]}
 };
 const S={bg:0,skin:0,face:0,eyes:0,mouth:0,hair:0,outfit:0,pattern:0,cat:'bg'};
-let placedStickers=[]; // {emoji,x,y,size,rot,id}
+let placedStickers=[];
+let holderColor='rgba(255,255,255,0.82)'; // {emoji,x,y,size,rot,id}
 let selectedStickerEmojis=new Set(); // checked stickers in panel
 let dragSt=null; // currently dragged sticker {idx,offX,offY}
 
@@ -2153,8 +2254,15 @@ function drawPin(){
   ctx.fillStyle='rgba(255,150,150,0.28)';
   ctx.beginPath();ctx.ellipse(CX-46,CY+24,17,10,0,0,Math.PI*2);ctx.fill();
   ctx.beginPath();ctx.ellipse(CX+46,CY+24,17,10,0,0,Math.PI*2);ctx.fill();
-  dEyes(ctx);dMouth(ctx);dHair(ctx);
-  const oi=CATS.outfit.items[S.outfit];dOutfit(ctx,oi.type,oi.color);
+  const oi=CATS.outfit.items[S.outfit];
+  // Use PNG asset if available, else CSS fallback
+  const hairItem=CATS.hair.items[S.hair];
+  const eyeItem=CATS.eyes.items[S.eyes];
+  const mouthItem=CATS.mouth.items[S.mouth];
+  if(!hairItem?.url || !drawImageLayer(ctx,hairItem.url,0,0,320,320)) dHair(ctx);
+  if(!eyeItem?.url  || !drawImageLayer(ctx,eyeItem.url,0,0,320,320))  dEyes(ctx);
+  if(!mouthItem?.url|| !drawImageLayer(ctx,mouthItem.url,0,0,320,320))dMouth(ctx);
+  if(!oi?.url       || !drawImageLayer(ctx,oi.url,0,0,320,320))       dOutfit(ctx,oi.type,oi.color);
   ctx.restore();
 
   // ── LAYER 2: placed stickers (clipped, above avatar) ──
@@ -2206,7 +2314,7 @@ function arcText(ctx,text,top,color){
   const chars=text.split(''),n=chars.length;
   let fs=MAX;
   for(let s=MAX;s>=MIN;s-=0.5){if((s*0.62/arcR)*n<=maxArc){fs=s;break;}fs=MIN;}
-  const fontFace=(document.getElementById('textFont')||{}).value||'Nunito';
+  const fontFace=(document.getElementById('profFont')||document.getElementById('textFont')||{}).value||'Nunito';
   const palette=top?RAINBOW_TOP:RAINBOW_BOT;
   const useRainbow=color==='#RAINBOW';
   // Measure actual text width for tight kerning
@@ -2243,6 +2351,12 @@ function arcText(ctx,text,top,color){
 S.profColor = '#RAINBOW';
 S.nameColor = '#RAINBOW';
 
+function setHolderColor(val,el){
+  holderColor=val;
+  document.querySelectorAll('#holderColors .color-dot').forEach(d=>d.classList.remove('active'));
+  el.classList.add('active');
+  drawPin();
+}
 function setProfColor(hex, el){
   S.profColor = hex;
   document.querySelectorAll('#profColors .color-dot').forEach(d=>d.classList.remove('active'));
@@ -2264,7 +2378,7 @@ function arcTextWithHolder(ctx, text, color){
   const chars=text.split(''),n=chars.length;
   let fs=MAX;
   for(let s=MAX;s>=MIN;s-=0.5){if((s*0.62/arcR)*n<=maxArc){fs=s;break;}fs=MIN;}
-  const fontFace=(document.getElementById('textFont')||{}).value||'Nunito';
+  const fontFace=(document.getElementById('nameFont')||document.getElementById('textFont')||{}).value||'Nunito';
   ctx.save();ctx.font='900 '+fs+'px '+fontFace;
   // Measure total arc width
   const charWidths=chars.map(ch=>ch===' '?fs*0.3:ctx.measureText(ch).width+2);
@@ -2305,7 +2419,7 @@ function arcTextWithHolder(ctx, text, color){
   ctx.arc(CX,CY,bannerR1,Math.PI/2-bannerArc/2,Math.PI/2+bannerArc/2);
   ctx.arc(CX,CY,bannerR2,Math.PI/2+bannerArc/2,Math.PI/2-bannerArc/2,true);
   ctx.closePath();
-  ctx.fillStyle='rgba(255,255,255,0.82)';
+  ctx.fillStyle=holderColor;
   ctx.fill();
   // Subtle border
   ctx.strokeStyle='rgba(255,255,255,0.95)';
@@ -2337,6 +2451,7 @@ function arcTextWithHolder(ctx, text, color){
 // ── INIT ──
 resetIdle();
 startLandingAnim();
+loadAssetManifest();
 
 // ══════════════════════════════════════════════
 // ADMIN SYSTEM
