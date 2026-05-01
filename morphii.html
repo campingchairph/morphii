@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Morphii — Build Your Future Self</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;800;900&family=Bubblegum+Sans&family=Baloo+2:wght@700;800&family=Righteous&family=Titan+One&family=Lilita+One&family=Pacifico&family=Boogaloo&family=Grandstander:wght@700;800&family=Chewy&family=Patrick+Hand:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="morphii.css">
+</head>
+<body>
+
+<!-- ══ LANDING SCREEN ══ -->
+<div id="landing-screen" onclick="goToBuilder()">
+
+
+<!-- LANDING -->
+
+
+  <!-- background -->
+  <div class="bg"></div>
+
+  <!-- corner blobs -->
+  <div class="blob blob-tl"></div>
+  <div class="blob blob-br"></div>
+  <div class="blob blob-bl"></div>
+  <div class="blob blob-tr"></div>
+
+  <!-- halftone dots -->
+  <svg class="ht" style="top:6%;right:4%;width:110px;height:70px" viewBox="0 0 110 70">
+    <circle cx="10" cy="10" r="3" fill="white"/><circle cx="25" cy="10" r="3" fill="white"/><circle cx="40" cy="10" r="3" fill="white"/><circle cx="55" cy="10" r="3" fill="white"/>
+    <circle cx="10" cy="25" r="3" fill="white"/><circle cx="25" cy="25" r="3" fill="white"/><circle cx="40" cy="25" r="3" fill="white"/>
+    <circle cx="10" cy="40" r="3" fill="white"/><circle cx="25" cy="40" r="3" fill="white"/>
+  </svg>
+  <svg class="ht" style="bottom:38%;left:2%;width:90px;height:60px;transform:rotate(8deg)" viewBox="0 0 90 60">
+    <circle cx="10" cy="10" r="3" fill="white"/><circle cx="25" cy="10" r="3" fill="white"/>
+    <circle cx="10" cy="25" r="3" fill="white"/><circle cx="25" cy="25" r="3" fill="white"/><circle cx="40" cy="25" r="3" fill="white"/>
+    <circle cx="10" cy="40" r="3" fill="white"/>
+  </svg>
+  <svg class="ht" style="top:38%;right:2%;width:70px;height:50px" viewBox="0 0 70 50">
+    <circle cx="10" cy="10" r="2.5" fill="#FF6FAE"/><circle cx="22" cy="10" r="2.5" fill="#FF6FAE"/><circle cx="34" cy="10" r="2.5" fill="#FF6FAE"/>
+    <circle cx="10" cy="22" r="2.5" fill="#FF6FAE"/><circle cx="22" cy="22" r="2.5" fill="#FF6FAE"/>
+    <circle cx="10" cy="34" r="2.5" fill="#FF6FAE"/>
+  </svg>
+
+  <!-- clouds -->
+  <div class="cloud-wrap cw1"><div class="cb"></div></div>
+  <div class="cloud-wrap cw2"><div class="cb"></div></div>
+  <div class="cloud-wrap cw3"><div class="cb"></div></div>
+  <div class="cloud-wrap cw4"><div class="cb"></div></div>
+
+  <!-- floating shapes -->
+  <div class="fs fs-star" style="top:22%;left:6%;animation-delay:0s">⭐</div>
+  <div class="fs fs-star" style="top:10%;left:32%;font-size:16px;animation-delay:1s">✨</div>
+  <div class="fs fs-star" style="bottom:42%;left:4%;font-size:18px;animation-delay:1.8s">⭐</div>
+  <div class="fs fs-star" style="bottom:36%;right:2%;font-size:14px;animation-delay:0.5s">✨</div>
+  <div class="fs fs-ring" style="top:32%;left:8%;animation-delay:0.7s"></div>
+  <div class="fs fs-ring" style="bottom:46%;right:4%;animation-delay:1.4s"></div>
+  <div class="fs fs-dot" style="top:18%;left:46%;animation-delay:0.3s"></div>
+  <div class="fs fs-dot" style="bottom:50%;left:10%;animation-delay:1.1s"></div>
+  <div class="fs fs-sq" style="top:44%;left:14%;background:rgba(255,255,0,0.7);animation-delay:0.9s"></div>
+  <div class="fs fs-sq" style="top:28%;right:6%;background:rgba(255,111,174,0.7);animation-delay:1.6s"></div>
+
+  <!-- wave overlays -->
+  <div class="bg-wave" style="bottom:22%;left:0;right:0;pointer-events:none">
+    <svg viewBox="0 0 1440 60" preserveAspectRatio="none" style="width:100%;height:50px">
+      <path d="M0,30 C240,55 480,5 720,30 C960,55 1200,5 1440,30 L1440,60 L0,60 Z" fill="rgba(255,255,255,0.12)"/>
+    </svg>
+  </div>
+  <div class="bg-wave" style="bottom:14%;left:0;right:0;pointer-events:none">
+    <svg viewBox="0 0 1440 60" preserveAspectRatio="none" style="width:100%;height:40px">
+      <path d="M0,20 C360,45 720,-5 1080,20 C1260,32 1380,10 1440,20 L1440,60 L0,60 Z" fill="rgba(255,255,255,0.07)"/>
+    </svg>
+  </div>
+
+  <!-- NAV -->
+  <nav onclick="event.stopPropagation()">
+    <div class="nav-logo">morphii<span class="dot">.</span></div>
+    <div class="nav-links">
+      <a href="#">Home</a>
+      <a href="#">About</a>
+      <a href="#">Features</a>
+      <a href="#">How It Works</a>
+    </div>
+    <button class="nav-cta" onclick="goToBuilder()">Start Building →</button>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <!-- LEFT -->
+    <div class="hero-left">
+      <div class="badge-pill">🌟 School Edition 2026</div>
+
+      <h1 class="hero-title">
+        <span class="big">morphii<span class="dot">.</span></span>
+        <span class="big navy">a build your future</span>
+        <span class="big navy">self avatar.</span>
+      </h1>
+
+      <p class="hero-sub">
+        Design your dream avatar, pick your future profession, and print a one-of-a-kind pin that's totally you. Create · Customize · Become.
+      </p>
+
+      <div class="hero-btns">
+        <button class="btn-primary" onclick="event.stopPropagation();goToBuilder()">🎨 Create Your Avatar</button>
+        <button class="btn-secondary" onclick="event.stopPropagation()">Learn More</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: Avatar card mockup -->
+    <div class="hero-right">
+      <div class="avatar-card">
+        <div class="card-badge"><div class="card-badge-inner">BUILD YOUR FUTURE SELF ✦ MORPHII ✦</div></div>
+
+        <div class="card-preview">
+          <!-- category icons -->
+          <div class="card-icons">
+            <div class="card-icon active">👤</div>
+            <div class="card-icon">👔</div>
+            <div class="card-icon">👓</div>
+            <div class="card-icon">🎨</div>
+            <div class="card-icon">😊</div>
+          </div>
+          <!-- avatar display -->
+          <div class="card-avatar-wrap">
+            <span class="card-sparkle-bl">✦</span>
+            <span class="card-sparkle-br">✦</span>
+            <!-- CSS avatar -->
+            <div class="mini-avatar">
+              <div class="av-hair"></div>
+              <div class="av-head">
+                <div class="av-eye-l"></div>
+                <div class="av-eye-r"></div>
+                <div class="av-smile"></div>
+              </div>
+              <div class="av-body"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- swatches -->
+        <div class="card-swatches">
+          <div class="swatch active" style="background:#FF6FAE"></div>
+          <div class="swatch" style="background:#3a7cc8"></div>
+          <div class="swatch" style="background:#FFFF00"></div>
+          <div class="swatch" style="background:#FF6FAE;opacity:0.5"></div>
+          <div class="swatch" style="background:#87CEEB"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TICKERS -->
+  <div class="ticker">
+    <div class="ticker-inner">
+      <span>⭐ BUILD YOUR FUTURE SELF</span><span>🎨 DESIGN YOUR AVATAR</span>
+      <span>📌 PRINT YOUR PIN</span><span>✨ WHAT WILL YOU BE?</span>
+      <span>🚀 DOCTOR · ENGINEER · TEACHER · CHEF · ASTRONAUT</span>
+      <span>💫 CREATE. DREAM. BECOME.</span>
+      <span>⭐ BUILD YOUR FUTURE SELF</span><span>🎨 DESIGN YOUR AVATAR</span>
+      <span>📌 PRINT YOUR PIN</span><span>✨ WHAT WILL YOU BE?</span>
+      <span>🚀 DOCTOR · ENGINEER · TEACHER · CHEF · ASTRONAUT</span>
+      <span>💫 CREATE. DREAM. BECOME.</span>
+    </div>
+  </div>
+  <div class="ticker2">
+    <div class="ticker-inner">
+      <span>🎓 100% SCHOOL-FRIENDLY EXPERIENCE</span>
+      <span>🖨️ INSTANT PIN PRINTING</span>
+      <span>📱 SCAN QR TO SUBMIT FROM YOUR PHONE</span>
+      <span>🌟 POWERED BY PURE CREATIVITY</span>
+      <span>🎓 100% SCHOOL-FRIENDLY EXPERIENCE</span>
+      <span>🖨️ INSTANT PIN PRINTING</span>
+      <span>📱 SCAN QR TO SUBMIT FROM YOUR PHONE</span>
+      <span>🌟 POWERED BY PURE CREATIVITY</span>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <div class="features" onclick="event.stopPropagation()">
+    <h2 class="feat-title">Build. Evolve. Become.</h2>
+    <p class="feat-sub">Design your avatar. Choose your future. Print your story.</p>
+    <div class="feat-grid">
+      <div class="feat-card">
+        <div class="feat-icon yellow">🎨</div>
+        <div class="feat-name">Design</div>
+        <div class="feat-desc">Customize every detail of your avatar to represent the future you.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon pink">🚀</div>
+        <div class="feat-name">Dream Big</div>
+        <div class="feat-desc">Pick your dream profession — doctor, engineer, astronaut and more.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon sky">📌</div>
+        <div class="feat-name">Print</div>
+        <div class="feat-desc">Walk away with a real pin that shows the world who you'll become.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon navy">✨</div>
+        <div class="feat-name">Own It</div>
+        <div class="feat-desc">Your avatar, your story. A keepsake from today's special event.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM BANNER -->
+  <div class="bottom-banner" onclick="event.stopPropagation()">
+    <div class="bb-check">✓</div>
+    <div class="bb-text">
+      100% CUSTOMIZABLE · INSTANT PRINT · SCHOOL-READY KIOSK
+      <small>Tap anywhere on screen to start building your avatar →</small>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer onclick="event.stopPropagation()">
+    <div class="footer-logo">morphii<span>.</span></div>
+    <div class="footer-copy">© 2026 Morphii. All rights reserved.</div>
+    <div class="footer-links">
+      <a href="#">Terms &amp; Conditions</a>
+      <a href="#">Privacy Policy</a>
+    </div>
+  </footer>
+
+  <!-- tap hint -->
+  <div class="tap-hint">👆 Tap anywhere to start building!</div>
+
+
+
+
+
+
+</div>
+
+<!-- ══ BUILDER SCREEN ══ -->
+<div id="builder-screen">
+
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-inner">
+    <span>⭐ BUILD YOUR FUTURE SELF</span><span>🎨 CHOOSE YOUR OUTFIT</span>
+    <span>✨ CUSTOMIZE YOUR AVATAR</span><span>📌 PRINT YOUR PIN</span>
+    <span>🚀 WHAT WILL YOU BE?</span><span>💫 CREATE. DREAM. BECOME.</span>
+    <span>⭐ BUILD YOUR FUTURE SELF</span><span>🎨 CHOOSE YOUR OUTFIT</span>
+    <span>✨ CUSTOMIZE YOUR AVATAR</span><span>📌 PRINT YOUR PIN</span>
+    <span>🚀 WHAT WILL YOU BE?</span><span>💫 CREATE. DREAM. BECOME.</span>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo-wrap">
+    <div class="logo-icon">🌟</div>
+    <div class="logo-text fredoka">Morphii<span>.</span></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;"><button class="back-to-landing" onclick="event.stopPropagation();goToLanding()">← Back</button><div class="header-badge fredoka">✦ Build Your Future Self ✦</div></div>
+  <div class="qr-pill">
+    <div class="qr-icon">📱</div>
+    <div class="qr-text nunito">
+      Scan to submit on your phone
+      <small>Link valid for 5 hours</small>
+    </div>
+  </div>
+</header>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+    <div class="cat-section">
+      <div class="cat-section-label">Customize</div>
+      <div class="cats" id="catBtns">
+        <button class="cat-btn active" onclick="setCat('bg',this)"><span class="ci">🌈</span>BG</button>
+        <button class="cat-btn" onclick="setCat('skin',this)"><span class="ci">🎨</span>Skin</button>
+        <button class="cat-btn" onclick="setCat('face',this)"><span class="ci">😶</span>Face</button>
+        <button class="cat-btn" onclick="setCat('eyes',this)"><span class="ci">👁</span>Eyes</button>
+        <button class="cat-btn" onclick="setCat('mouth',this)"><span class="ci">😊</span>Mouth</button>
+        <button class="cat-btn" onclick="setCat('hair',this)"><span class="ci">💇</span>Hair</button>
+        <button class="cat-btn" onclick="setCat('pattern',this)"><span class="ci">🔷</span>Pattern</button>
+        <button class="cat-btn" onclick="setCat('sticker',this)"><span class="ci">🌸</span>Stickers</button>
+        <button class="cat-btn" onclick="setCat('outfit',this)"><span class="ci">👔</span>Outfit</button>
+      </div>
+    </div>
+
+    <div class="asset-wrap">
+      <div class="asset-wrap-title" id="assetTitle">BACKGROUND</div>
+      <div class="asset-grid" id="assetGrid"></div>
+    </div>
+
+    <div class="inputs-section">
+      <div class="inp-group">
+        <label>Profession (top arc)</label>
+        <input type="text" id="profInput" value="Future Doctor" maxlength="22" placeholder="e.g. Future Doctor" oninput="drawPin()">
+      </div>
+      <div class="inp-group">
+        <label>Your Name (bottom arc)</label>
+        <input type="text" id="nameInput" value="Alex Rivera" maxlength="20" placeholder="Your name" oninput="drawPin()">
+      </div>
+      <div style="display:flex;gap:8px;">
+        <div class="inp-group" style="flex:1">
+          <label>Profession Font</label>
+          <select id="profFont" onchange="drawPin()" style="width:100%;padding:8px 10px;border-radius:10px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);font-family:'Fredoka One',cursive;font-size:13px;color:white;outline:none;cursor:pointer;">
+          <option value="Nunito" style="color:#000">Nunito</option>
+          <option value="Fredoka One" style="color:#000">Fredoka One</option>
+          <option value="Bubblegum Sans" style="color:#000">Bubblegum Sans</option>
+          <option value="Baloo 2" style="color:#000">Baloo 2</option>
+          <option value="Righteous" style="color:#000">Righteous</option>
+          <option value="Titan One" style="color:#000">Titan One</option>
+          <option value="Lilita One" style="color:#000">Lilita One</option>
+          <option value="Pacifico" style="color:#000">Pacifico</option>
+          <option value="Boogaloo" style="color:#000">Boogaloo</option>
+          <option value="Grandstander" style="color:#000">Grandstander</option>
+          <option value="Chewy" style="color:#000">Chewy</option>
+          <option value="Patrick Hand" style="color:#000">Patrick Hand</option>
+          <option value="Arial Rounded MT Bold" style="color:#000">System Rounded</option>
+          </select>
+        </div>
+        <div class="inp-group" style="flex:1">
+          <label>Name Font</label>
+          <select id="nameFont" onchange="drawPin()" style="width:100%;padding:8px 10px;border-radius:10px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);font-family:'Fredoka One',cursive;font-size:13px;color:white;outline:none;cursor:pointer;">
+          <option value="Nunito" style="color:#000">Nunito</option>
+          <option value="Fredoka One" style="color:#000">Fredoka One</option>
+          <option value="Bubblegum Sans" style="color:#000">Bubblegum Sans</option>
+          <option value="Baloo 2" style="color:#000">Baloo 2</option>
+          <option value="Righteous" style="color:#000">Righteous</option>
+          <option value="Titan One" style="color:#000">Titan One</option>
+          <option value="Lilita One" style="color:#000">Lilita One</option>
+          <option value="Pacifico" style="color:#000">Pacifico</option>
+          <option value="Boogaloo" style="color:#000">Boogaloo</option>
+          <option value="Grandstander" style="color:#000">Grandstander</option>
+          <option value="Chewy" style="color:#000">Chewy</option>
+          <option value="Patrick Hand" style="color:#000">Patrick Hand</option>
+          <option value="Arial Rounded MT Bold" style="color:#000">System Rounded</option>
+          </select>
+        </div>
+      </div>
+      <div class="inp-group">
+        <label>Name Holder Color</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;" id="holderColors">
+            <div class="color-dot active" data-color="rgba(255,255,255,0.82)" style="background:rgba(255,255,255,0.82);border:2px solid #ccc" onclick="setHolderColor('rgba(255,255,255,0.82)',this)"></div>
+            <div class="color-dot" data-color="#FFFF00" style="background:#FFFF00" onclick="setHolderColor('#FFFF00',this)"></div>
+            <div class="color-dot" data-color="#FF6FAE" style="background:#FF6FAE" onclick="setHolderColor('#FF6FAE',this)"></div>
+            <div class="color-dot" data-color="#0B2E4E" style="background:#0B2E4E" onclick="setHolderColor('#0B2E4E',this)"></div>
+            <div class="color-dot" data-color="#4DC8F0" style="background:#4DC8F0" onclick="setHolderColor('#4DC8F0',this)"></div>
+            <div class="color-dot" data-color="#A29BFE" style="background:#A29BFE" onclick="setHolderColor('#A29BFE',this)"></div>
+            <div class="color-dot" data-color="#55EFC4" style="background:#55EFC4" onclick="setHolderColor('#55EFC4',this)"></div>
+            <div class="color-dot" data-color="transparent" style="background:transparent;border:2px dashed rgba(255,255,255,0.4)" onclick="setHolderColor('transparent',this)" title="No holder"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <div class="inp-group" style="flex:1">
+          <label>Profession Color</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;" id="profColors">
+            <div class="color-dot active" data-color="#RAINBOW" style="background:conic-gradient(#FF6B9D,#FECA57,#48DBFB,#A29BFE,#55EFC4,#FF6B9D)" onclick="setProfColor('#RAINBOW',this)" title="Rainbow"></div>
+            <div class="color-dot" data-color="#0B2E4E" style="background:#0B2E4E" onclick="setProfColor('#0B2E4E',this)"></div>
+            <div class="color-dot" data-color="#FF6FAE" style="background:#FF6FAE" onclick="setProfColor('#FF6FAE',this)"></div>
+            <div class="color-dot" data-color="#FFFFFF" style="background:#FFFFFF;border-color:rgba(255,255,255,0.4)" onclick="setProfColor('#FFFFFF',this)"></div>
+            <div class="color-dot" data-color="#FFFF00" style="background:#FFFF00" onclick="setProfColor('#FFFF00',this)"></div>
+            <div class="color-dot" data-color="#FF5E5B" style="background:#FF5E5B" onclick="setProfColor('#FF5E5B',this)"></div>
+            <div class="color-dot" data-color="#06D6A0" style="background:#06D6A0" onclick="setProfColor('#06D6A0',this)"></div>
+            <div class="color-dot" data-color="#A29BFE" style="background:#A29BFE" onclick="setProfColor('#A29BFE',this)"></div>
+            <div class="color-dot" data-color="#FD79A8" style="background:#FD79A8" onclick="setProfColor('#FD79A8',this)"></div>
+            <div class="color-dot" data-color="#FDCB6E" style="background:#FDCB6E" onclick="setProfColor('#FDCB6E',this)"></div>
+            <div class="color-dot" data-color="#74B9FF" style="background:#74B9FF" onclick="setProfColor('#74B9FF',this)"></div>
+            <div class="color-dot" data-color="#55EFC4" style="background:#55EFC4" onclick="setProfColor('#55EFC4',this)"></div>
+            <div class="color-dot" data-color="#E17055" style="background:#E17055" onclick="setProfColor('#E17055',this)"></div>
+            <div class="color-dot" data-color="#6C5CE7" style="background:#6C5CE7" onclick="setProfColor('#6C5CE7',this)"></div>
+          </div>
+        </div>
+        <div class="inp-group" style="flex:1">
+          <label>Name Color</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;" id="nameColors">
+            <div class="color-dot active" data-color="#RAINBOW" style="background:conic-gradient(#A29BFE,#FD79A8,#FECA57,#55EFC4,#FF9F43,#A29BFE)" onclick="setNameColor('#RAINBOW',this)" title="Rainbow"></div>
+            <div class="color-dot" data-color="#0B2E4E" style="background:#0B2E4E" onclick="setNameColor('#0B2E4E',this)"></div>
+            <div class="color-dot" data-color="#FF6FAE" style="background:#FF6FAE" onclick="setNameColor('#FF6FAE',this)"></div>
+            <div class="color-dot" data-color="#FFFFFF" style="background:#FFFFFF;border-color:rgba(255,255,255,0.4)" onclick="setNameColor('#FFFFFF',this)"></div>
+            <div class="color-dot" data-color="#FFFF00" style="background:#FFFF00" onclick="setNameColor('#FFFF00',this)"></div>
+            <div class="color-dot" data-color="#FF5E5B" style="background:#FF5E5B" onclick="setNameColor('#FF5E5B',this)"></div>
+            <div class="color-dot" data-color="#06D6A0" style="background:#06D6A0" onclick="setNameColor('#06D6A0',this)"></div>
+            <div class="color-dot" data-color="#A29BFE" style="background:#A29BFE" onclick="setNameColor('#A29BFE',this)"></div>
+            <div class="color-dot" data-color="#FD79A8" style="background:#FD79A8" onclick="setNameColor('#FD79A8',this)"></div>
+            <div class="color-dot" data-color="#FDCB6E" style="background:#FDCB6E" onclick="setNameColor('#FDCB6E',this)"></div>
+            <div class="color-dot" data-color="#74B9FF" style="background:#74B9FF" onclick="setNameColor('#74B9FF',this)"></div>
+            <div class="color-dot" data-color="#55EFC4" style="background:#55EFC4" onclick="setNameColor('#55EFC4',this)"></div>
+            <div class="color-dot" data-color="#E17055" style="background:#E17055" onclick="setNameColor('#E17055',this)"></div>
+            <div class="color-dot" data-color="#6C5CE7" style="background:#6C5CE7" onclick="setNameColor('#6C5CE7',this)"></div>
+          </div>
+        </div>
+      </div>
+      <button class="approve-btn" onclick="handleApprove()">✓ Approve &amp; Print</button>
+    </div>
+  </div>
+
+  <!-- CENTER PREVIEW -->
+  <div class="preview-area">
+    <!-- corner blobs -->
+    <div class="blob-corner blob-tl"></div>
+    <div class="blob-corner blob-br"></div>
+    <div class="blob-corner blob-bl"></div>
+    <div class="blob-corner blob-tr"></div>
+    <!-- waves -->
+    <div class="wave wave-1"></div>
+    <div class="wave wave-2"></div>
+    <!-- halftone dots (SVG) -->
+    <svg class="halftone" style="top:5%;right:5%" viewBox="0 0 120 80"><g>
+      <circle cx="10" cy="10" r="3"/><circle cx="25" cy="10" r="3"/><circle cx="40" cy="10" r="3"/><circle cx="55" cy="10" r="3"/>
+      <circle cx="10" cy="25" r="3"/><circle cx="25" cy="25" r="3"/><circle cx="40" cy="25" r="3"/><circle cx="55" cy="25" r="3"/>
+      <circle cx="10" cy="40" r="3"/><circle cx="25" cy="40" r="3"/><circle cx="40" cy="40" r="3"/>
+    </g></svg>
+    <svg class="halftone" style="bottom:15%;left:3%;transform:rotate(10deg)" viewBox="0 0 120 80"><g>
+      <circle cx="10" cy="10" r="3"/><circle cx="25" cy="10" r="3"/><circle cx="40" cy="10" r="3"/>
+      <circle cx="10" cy="25" r="3"/><circle cx="25" cy="25" r="3"/><circle cx="40" cy="25" r="3"/><circle cx="55" cy="25" r="3"/>
+      <circle cx="10" cy="40" r="3"/><circle cx="25" cy="40" r="3"/>
+    </g></svg>
+    <!-- CSS clouds -->
+    <div class="cloud cloud-1"><div class="cloud-body"></div></div>
+    <div class="cloud cloud-2"><div class="cloud-body"></div></div>
+    <div class="cloud cloud-3"><div class="cloud-body"></div></div>
+    <div class="cloud cloud-4"><div class="cloud-body"></div></div>
+    <!-- floating shapes -->
+    <div class="fshape fshape-star" style="top:9%;left:22%;animation-delay:0s;">⭐</div>
+    <div class="fshape fshape-star" style="top:6%;right:22%;font-size:16px;animation-delay:0.8s;">✨</div>
+    <div class="fshape fshape-star" style="bottom:26%;left:18%;font-size:18px;animation-delay:1.5s;">⭐</div>
+    <div class="fshape fshape-star" style="bottom:18%;right:16%;font-size:14px;animation-delay:0.4s;">✨</div>
+    <div class="fshape fshape-ring" style="top:28%;left:12%;animation-delay:0.6s;"></div>
+    <div class="fshape fshape-ring" style="bottom:35%;right:10%;animation-delay:1.2s;"></div>
+    <div class="fshape fshape-dot" style="top:40%;left:8%;animation-delay:0.3s;"></div>
+    <div class="fshape fshape-dot" style="top:20%;right:12%;animation-delay:1s;"></div>
+    <div class="fshape fshape-sq" style="bottom:42%;left:6%;animation-delay:0.7s;"></div>
+    <div class="fshape fshape-sq" style="top:50%;right:7%;animation-delay:1.6s;"></div>
+
+    <div class="pin-stage">
+      <canvas id="pinCanvas" width="320" height="320"></canvas>
+    </div>
+    <div class="ice-platform-wrap">
+      <div class="ice-shadow"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MOBILE BOTTOM -->
+<div class="mobile-bottom">
+  <div class="mob-inputs">
+    <div class="inp-group">
+      <label>Profession (top)</label>
+      <input type="text" id="profInputM" value="Future Doctor" maxlength="22" oninput="syncI('prof',this.value)">
+    </div>
+    <div class="inp-group">
+      <label>Your Name (bottom)</label>
+      <input type="text" id="nameInputM" value="Alex Rivera" maxlength="20" oninput="syncI('name',this.value)">
+    </div>
+  </div>
+  <!-- Mobile font + color pickers -->
+  <div class="mob-customizer" id="mobCustomizer">
+    <div class="mob-customizer-row">
+      <span class="mob-customizer-label">Font</span>
+      <select onchange="document.getElementById('profFont').value=this.value;drawPin()">
+          <option value="Nunito">Nunito</option>
+          <option value="Fredoka One">Fredoka One</option>
+          <option value="Bubblegum Sans">Bubblegum Sans</option>
+          <option value="Baloo 2">Baloo 2</option>
+          <option value="Righteous">Righteous</option>
+          <option value="Titan One">Titan One</option>
+          <option value="Lilita One">Lilita One</option>
+          <option value="Pacifico">Pacifico</option>
+          <option value="Boogaloo">Boogaloo</option>
+          <option value="Grandstander">Grandstander</option>
+          <option value="Chewy">Chewy</option>
+          <option value="Patrick Hand">Patrick Hand</option>
+      </select>
+      <select onchange="document.getElementById('nameFont').value=this.value;drawPin()">
+          <option value="Nunito">Nunito</option>
+          <option value="Fredoka One">Fredoka One</option>
+          <option value="Bubblegum Sans">Bubblegum Sans</option>
+          <option value="Baloo 2">Baloo 2</option>
+          <option value="Righteous">Righteous</option>
+          <option value="Titan One">Titan One</option>
+          <option value="Lilita One">Lilita One</option>
+          <option value="Pacifico">Pacifico</option>
+          <option value="Boogaloo">Boogaloo</option>
+          <option value="Grandstander">Grandstander</option>
+          <option value="Chewy">Chewy</option>
+          <option value="Patrick Hand">Patrick Hand</option>
+      </select>
+    </div>
+    <div class="mob-customizer-row">
+      <span class="mob-customizer-label">Profession</span>
+      <div class="mob-dot-row">
+        <div class="color-dot active" style="background:conic-gradient(#FF6B9D,#FECA57,#48DBFB,#A29BFE,#55EFC4,#FF6B9D)" onclick="setProfColor('#RAINBOW',this)"></div>
+        <div class="color-dot" style="background:#0B2E4E" onclick="setProfColor('#0B2E4E',this)"></div>
+        <div class="color-dot" style="background:#FF6FAE" onclick="setProfColor('#FF6FAE',this)"></div>
+        <div class="color-dot" style="background:#FFFF00" onclick="setProfColor('#FFFF00',this)"></div>
+        <div class="color-dot" style="background:#FFFFFF;border-color:rgba(255,255,255,0.4)" onclick="setProfColor('#FFFFFF',this)"></div>
+        <div class="color-dot" style="background:#A29BFE" onclick="setProfColor('#A29BFE',this)"></div>
+        <div class="color-dot" style="background:#55EFC4" onclick="setProfColor('#55EFC4',this)"></div>
+        <div class="color-dot" style="background:#FF5E5B" onclick="setProfColor('#FF5E5B',this)"></div>
+      </div>
+    </div>
+    <div class="mob-customizer-row">
+      <span class="mob-customizer-label">Name</span>
+      <div class="mob-dot-row">
+        <div class="color-dot active" style="background:conic-gradient(#A29BFE,#FD79A8,#FECA57,#55EFC4,#FF9F43,#A29BFE)" onclick="setNameColor('#RAINBOW',this)"></div>
+        <div class="color-dot" style="background:#0B2E4E" onclick="setNameColor('#0B2E4E',this)"></div>
+        <div class="color-dot" style="background:#FF6FAE" onclick="setNameColor('#FF6FAE',this)"></div>
+        <div class="color-dot" style="background:#FFFF00" onclick="setNameColor('#FFFF00',this)"></div>
+        <div class="color-dot" style="background:#FFFFFF;border-color:rgba(255,255,255,0.4)" onclick="setNameColor('#FFFFFF',this)"></div>
+        <div class="color-dot" style="background:#A29BFE" onclick="setNameColor('#A29BFE',this)"></div>
+        <div class="color-dot" style="background:#55EFC4" onclick="setNameColor('#55EFC4',this)"></div>
+        <div class="color-dot" style="background:#FF5E5B" onclick="setNameColor('#FF5E5B',this)"></div>
+      </div>
+    </div>
+  </div>
+  <div class="mob-cats" id="mobCats">
+    <button class="mob-cat-btn active" onclick="setMobCat('bg',this)"><span class="ci">🌈</span>BG</button>
+    <button class="mob-cat-btn" onclick="setMobCat('skin',this)"><span class="ci">🎨</span>Skin</button>
+    <button class="mob-cat-btn" onclick="setMobCat('face',this)"><span class="ci">😶</span>Face</button>
+    <button class="mob-cat-btn" onclick="setMobCat('eyes',this)"><span class="ci">👁</span>Eyes</button>
+    <button class="mob-cat-btn" onclick="setMobCat('mouth',this)"><span class="ci">😊</span>Mouth</button>
+    <button class="mob-cat-btn" onclick="setMobCat('hair',this)"><span class="ci">💇</span>Hair</button>
+    <button class="mob-cat-btn" onclick="setMobCat('pattern',this)"><span class="ci">🔷</span>Pattern</button>
+    <button class="mob-cat-btn" onclick="setMobCat('sticker',this)"><span class="ci">🌸</span>Stickers</button>
+    <button class="mob-cat-btn" onclick="setMobCat('outfit',this)"><span class="ci">👔</span>Outfit</button>
+  </div>
+  <div class="mob-approve"><button onclick="handleApprove()">✓ Approve &amp; Print</button></div>
+</div>
+
+<!-- MOBILE POPUP -->
+<div class="mob-popup-overlay" id="mobPopup" onclick="closePop(event)">
+  <div class="mob-popup">
+    <div class="mob-popup-handle"></div>
+    <div class="mob-popup-title" id="mobPopTitle">Background</div>
+    <div class="mob-asset-grid" id="mobAssetGrid"></div>
+  </div>
+</div>
+
+
+
+</div>
+
+
+
+<script src="morphii.js"></script>
+
+
+<!-- ══ ADMIN LOGIN ══ -->
+<div id="adminLogin" style="display:none">
+  <div class="login-card">
+    <div style="font-size:40px;margin-bottom:8px">🔐</div>
+    <h2>Admin Access</h2>
+    <p>Enter your PIN</p>
+    <div class="pin-dots" id="pinDots">
+      <div class="pin-dot-display" id="pd0"></div>
+      <div class="pin-dot-display" id="pd1"></div>
+      <div class="pin-dot-display" id="pd2"></div>
+      <div class="pin-dot-display" id="pd3"></div>
+    </div>
+    <div class="login-err" id="loginErr"></div>
+    <div class="numpad">
+      <button class="num-btn" onclick="numpadPress('1')">1</button>
+      <button class="num-btn" onclick="numpadPress('2')">2</button>
+      <button class="num-btn" onclick="numpadPress('3')">3</button>
+      <button class="num-btn" onclick="numpadPress('4')">4</button>
+      <button class="num-btn" onclick="numpadPress('5')">5</button>
+      <button class="num-btn" onclick="numpadPress('6')">6</button>
+      <button class="num-btn" onclick="numpadPress('7')">7</button>
+      <button class="num-btn" onclick="numpadPress('8')">8</button>
+      <button class="num-btn" onclick="numpadPress('9')">9</button>
+      <button class="num-btn" onclick="numpadPress('clear')" style="font-size:14px">CLR</button>
+      <button class="num-btn" onclick="numpadPress('0')">0</button>
+      <button class="num-btn" onclick="numpadPress('back')" style="font-size:16px">⌫</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADMIN SCREEN ══ -->
+<div id="admin-screen">
+  <div class="admin-header">
+    <div class="admin-logo">morphii<span>.</span><small>Admin</small></div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="admin-back" onclick="openPrintModal()" id="layoutBtn" style="background:#FFFF00;color:#0B2E4E;border-color:#FFFF00;" disabled>🖨 Layout &amp; Print</button>
+      <button class="admin-back" onclick="goToLanding()">← Exit Admin</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="admin-stats" id="adminStats"></div>
+
+  <!-- Tabs -->
+  <div class="admin-tabs">
+    <button class="admin-tab active" onclick="setAdminTab('all',this)">All Pins <span class="tab-count yellow" id="cnt-all">0</span></button>
+    <button class="admin-tab" onclick="setAdminTab('unpaid',this)">Unpaid <span class="tab-count" id="cnt-unpaid">0</span></button>
+    <button class="admin-tab" onclick="setAdminTab('paid',this)">Paid <span class="tab-count" id="cnt-paid">0</span></button>
+    <button class="admin-tab" onclick="setAdminTab('unprinted',this)">Queue <span class="tab-count" id="cnt-unprinted">0</span></button>
+    <button class="admin-tab" onclick="setAdminTab('printed',this)">Printed <span class="tab-count" id="cnt-printed">0</span></button>
+  </div>
+
+  <!-- Pin Grid -->
+  <div class="admin-content">
+    <div class="pins-grid" id="pinsGrid"></div>
+  </div>
+
+  <!-- Print bar -->
+  <div class="print-bar">
+    <div class="print-bar-count"><span id="selCount">0</span> selected</div>
+    <button class="select-all-btn" onclick="selectAllVisible()">Select All</button>
+    <button class="clear-sel-btn" onclick="clearSelection()">Clear</button>
+    <button class="layout-btn" id="layoutBtnBar" onclick="openPrintModal()" disabled>🖨 Layout &amp; Print</button>
+  </div>
+</div>
+
+<!-- ══ STICKER PLACER OVERLAY ══ -->
+<div id="stickerPlacer" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(11,46,78,0.85);backdrop-filter:blur(6px);align-items:center;justify-content:center;flex-direction:column;gap:16px;">
+  <div style="font-family:'Fredoka One',cursive;font-size:18px;color:white;text-align:center;">
+    Drag stickers to place them! <span style="font-size:13px;color:rgba(255,255,255,0.5);font-family:'Nunito',sans-serif;font-weight:700;display:block;margin-top:4px;">Tap ✕ on a sticker to remove it</span>
+  </div>
+  <div id="stickerPlacerWrap" style="border-radius:50%;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5);position:relative;width:min(80vw,80vh);height:min(80vw,80vh);">
+    <canvas id="stickerPlacerCanvas" width="320" height="320" style="display:block;width:100%;height:100%;cursor:grab;touch-action:none;border-radius:50%;"></canvas>
+  </div>
+  <div style="display:flex;gap:12px;">
+    <button onclick="closeStickerPlacer()" style="padding:12px 28px;background:#FFFF00;color:#0B2E4E;border:none;border-radius:50px;font-family:'Fredoka One',cursive;font-size:16px;cursor:pointer;box-shadow:0 5px 0 #B8B800;">✓ Done</button>
+    <button onclick="placedStickers=[];drawPin();renderStickerPlacer();" style="padding:12px 22px;background:rgba(255,255,255,0.1);color:white;border:2px solid rgba(255,255,255,0.2);border-radius:50px;font-family:'Fredoka One',cursive;font-size:14px;cursor:pointer;">✕ Clear All</button>
+  </div>
+</div>
+
+<!-- ══ PRINT MODAL ══ -->
+<div id="printModal">
+  <div class="print-modal-inner">
+    <div class="pmi-header">
+      <div class="pmi-title">🖨 Print Layout</div>
+      <button class="pmi-close" onclick="closePrintModal()">✕</button>
+    </div>
+    <div class="pmi-controls">
+      <span class="pmi-label">Paper:</span>
+      <select class="pmi-select" id="paperSize" onchange="packPins()">
+        <option value="letter">Letter (8.5×11")</option>
+        <option value="a4">A4 (8.27×11.69")</option>
+      </select>
+      <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.35);font-family:'Nunito',sans-serif;margin-left:12px;">Drag pins to reposition · Click to remove</span>
+      <button class="pmi-pack-btn" onclick="packPins()" style="margin-left:auto">↺ Auto-arrange</button>
+    </div>
+    <div class="pmi-body">
+      <div class="paper-preview-wrap">
+        <div class="paper-canvas-wrap" style="position:relative;cursor:grab">
+          <canvas id="paperCanvas"></canvas>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.3);font-family:'Nunito',sans-serif;margin-top:6px;" id="packInfo"></div>
+        <button class="print-action-btn" onclick="doPrint()">🖨 Send to Printer</button>
+      </div>
+      <div class="pmi-sidebar">
+        <div class="pmi-sidebar-title">Pin Queue</div>
+        <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.3);margin-bottom:8px;font-family:'Nunito',sans-serif;">Check to include on paper</div>
+        <div class="pmi-pin-list" id="pmiPinList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
