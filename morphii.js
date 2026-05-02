@@ -327,7 +327,8 @@ const CATS={
 };
 const S={bg:0,skin:0,face:0,eyes:0,mouth:0,hair:0,outfit:0,pattern:0,cat:'bg'};
 let placedStickers=[];
-let holderColor='rgba(255,255,255,0.82)'; // {emoji,x,y,size,rot,id}
+let holderColor='#87CEEB';
+let showHolder=true;
 let selectedStickerEmojis=new Set(); // checked stickers in panel
 let dragSt=null; // currently dragged sticker {idx,offX,offY}
 
@@ -730,7 +731,7 @@ function renderGrid(id,cat){
 }
 
 // ── Main drawPin ──
-function drawPin(){
+function drawPin(forPrint){
   const canvas=document.getElementById('pinCanvas');if(!canvas)return;
   const ctx=canvas.getContext('2d');
   ctx.clearRect(0,0,320,320);
@@ -781,29 +782,33 @@ function drawPin(){
   }
 
   // ── LAYER 3: 3D shine (clipped, above stickers, under text) ──
-  ctx.save();
-  ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);ctx.clip();
-  const sRing=ctx.createRadialGradient(CX,CY+20,R*0.6,CX,CY,R);
-  sRing.addColorStop(0,'rgba(0,0,0,0)');sRing.addColorStop(0.82,'rgba(0,0,0,0)');sRing.addColorStop(1,'rgba(0,0,0,0.22)');
-  ctx.fillStyle=sRing;ctx.fillRect(0,0,320,320);
-  const gl=ctx.createLinearGradient(CX-R*0.5,CY-R*0.8,CX+R*0.1,CY-R*0.1);
-  gl.addColorStop(0,'rgba(255,255,255,0.45)');gl.addColorStop(0.5,'rgba(255,255,255,0.14)');gl.addColorStop(1,'rgba(255,255,255,0)');
-  ctx.fillStyle=gl;ctx.beginPath();ctx.ellipse(CX-R*0.22,CY-R*0.36,R*0.54,R*0.28,-0.6,0,Math.PI*2);ctx.fill();
-  const sp=ctx.createRadialGradient(CX-R*0.38,CY-R*0.42,0,CX-R*0.38,CY-R*0.42,R*0.22);
-  sp.addColorStop(0,'rgba(255,255,255,0.65)');sp.addColorStop(1,'rgba(255,255,255,0)');
-  ctx.fillStyle=sp;ctx.beginPath();ctx.arc(CX-R*0.38,CY-R*0.42,R*0.22,0,Math.PI*2);ctx.fill();
-  ctx.restore();
+  if(!forPrint){
+    ctx.save();
+    ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);ctx.clip();
+    const sRing=ctx.createRadialGradient(CX,CY+20,R*0.6,CX,CY,R);
+    sRing.addColorStop(0,'rgba(0,0,0,0)');sRing.addColorStop(0.82,'rgba(0,0,0,0)');sRing.addColorStop(1,'rgba(0,0,0,0.22)');
+    ctx.fillStyle=sRing;ctx.fillRect(0,0,320,320);
+    const gl=ctx.createLinearGradient(CX-R*0.5,CY-R*0.8,CX+R*0.1,CY-R*0.1);
+    gl.addColorStop(0,'rgba(255,255,255,0.45)');gl.addColorStop(0.5,'rgba(255,255,255,0.14)');gl.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=gl;ctx.beginPath();ctx.ellipse(CX-R*0.22,CY-R*0.36,R*0.54,R*0.28,-0.6,0,Math.PI*2);ctx.fill();
+    const sp=ctx.createRadialGradient(CX-R*0.38,CY-R*0.42,0,CX-R*0.38,CY-R*0.42,R*0.22);
+    sp.addColorStop(0,'rgba(255,255,255,0.65)');sp.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=sp;ctx.beginPath();ctx.arc(CX-R*0.38,CY-R*0.42,R*0.22,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
 
   // ── LAYER 4: arc texts (no clip, always on top) ──
   const profTxt=(document.getElementById('profInput')||{value:'Future Doctor'}).value||'Future Doctor';
   const nameTxt=(document.getElementById('nameInput')||{value:'Alex Rivera'}).value||'Alex Rivera';
   arcText(ctx,profTxt.toUpperCase(),true,S.profColor||'#RAINBOW');
-  arcTextWithHolder(ctx,nameTxt.toUpperCase(),S.nameColor||'#RAINBOW');
+  arcTextWithHolder(ctx,nameTxt.toUpperCase(),S.nameColor||'#RAINBOW',showHolder);
 
   // ── Outer drop shadow ──
-  ctx.save();ctx.shadowColor='rgba(0,0,0,0.3)';ctx.shadowBlur=20;ctx.shadowOffsetY=7;
-  ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);
-  ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=2;ctx.stroke();ctx.restore();
+  if(!forPrint){
+    ctx.save();ctx.shadowColor='rgba(0,0,0,0.3)';ctx.shadowBlur=20;ctx.shadowOffsetY=7;
+    ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=2;ctx.stroke();ctx.restore();
+  }
 }
 function dEyes(ctx){const t=CATS.eyes.items[S.eyes].type;[{x:CX-26,y:CY-9},{x:CX+26,y:CY-9}].forEach(({x,y})=>{if(t==='normal'||t==='wide'){const r=t==='wide'?14:10;ctx.fillStyle='white';ctx.beginPath();ctx.ellipse(x,y,r,r*1.1,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#0D1B2A';ctx.beginPath();ctx.arc(x+2,y+2,r*0.55,0,Math.PI*2);ctx.fill();ctx.fillStyle='white';ctx.beginPath();ctx.arc(x+4,y,r*0.2,0,Math.PI*2);ctx.fill();}else if(t==='sleepy'){ctx.strokeStyle='#0D1B2A';ctx.lineWidth=3;ctx.lineCap='round';ctx.beginPath();ctx.arc(x,y+4,10,Math.PI,0);ctx.stroke();}else if(t==='star'){ctx.fillStyle='#FFD166';mStar(ctx,x,y,5,12,5);}else if(t==='heart'){ctx.fillStyle='#FF5E5B';ctx.font='20px serif';ctx.textAlign='center';ctx.fillText('♥',x,y+7);}});}
 function dMouth(ctx){const t=CATS.mouth.items[S.mouth].type;ctx.strokeStyle='#0D1B2A';ctx.lineWidth=3;ctx.lineCap='round';ctx.fillStyle='#FF8FA3';if(t==='smile'){ctx.beginPath();ctx.arc(CX,CY+20,26,0.2,Math.PI-0.2);ctx.stroke();}else if(t==='grin'){ctx.beginPath();ctx.arc(CX,CY+16,30,0.1,Math.PI-0.1);ctx.closePath();ctx.fill();ctx.stroke();}else if(t==='smirk'){ctx.beginPath();ctx.moveTo(CX-11,CY+22);ctx.quadraticCurveTo(CX+7,CY+20,CX+22,CY+15);ctx.stroke();}else if(t==='open'){ctx.fillStyle='#8B0000';ctx.beginPath();ctx.ellipse(CX,CY+24,20,14,0,0,Math.PI*2);ctx.fill();ctx.stroke();}else{ctx.beginPath();ctx.arc(CX,CY+20,26,0.2,Math.PI-0.2);ctx.stroke();ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(CX+15,CY-13);ctx.lineTo(CX+37,CY-4);ctx.stroke();}}
@@ -855,9 +860,19 @@ function arcText(ctx,text,top,color){
 S.profColor = '#RAINBOW';
 S.nameColor = '#RAINBOW';
 
+function toggleHolder(){
+  showHolder=!showHolder;
+  const t=document.getElementById('holderToggle');
+  const k=document.getElementById('holderToggleKnob');
+  const w=document.getElementById('holderColorsWrap');
+  if(t) t.style.background=showHolder?'var(--pink)':'rgba(255,255,255,0.2)';
+  if(k) k.style.left=showHolder?'18px':'2px';
+  if(w) w.style.opacity=showHolder?'1':'0.3';
+  drawPin();
+}
 function setHolderColor(val,el){
   holderColor=val;
-  document.querySelectorAll('#holderColors .color-dot').forEach(d=>d.classList.remove('active'));
+  document.querySelectorAll('#holderColorsWrap .color-dot').forEach(d=>d.classList.remove('active'));
   el.classList.add('active');
   drawPin();
 }
@@ -876,7 +891,7 @@ function setNameColor(hex, el){
 
 // ══ PATTERN SYSTEM ══
 // ══ NAME HOLDER BANNER ══
-function arcTextWithHolder(ctx, text, color){
+function arcTextWithHolder(ctx, text, color, useHolder){
   if(!text.trim())return;
   const MAX=16*1.6*1.2,MIN=16*0.6,arcR=R-34,maxArc=Math.PI*0.76;
   const chars=text.split(''),n=chars.length;
@@ -884,7 +899,6 @@ function arcTextWithHolder(ctx, text, color){
   for(let s=MAX;s>=MIN;s-=0.5){if((s*0.62/arcR)*n<=maxArc){fs=s;break;}fs=MIN;}
   const fontFace=(document.getElementById('nameFont')||document.getElementById('textFont')||{}).value||'Nunito';
   ctx.save();ctx.font='900 '+fs+'px '+fontFace;
-  // Measure total arc width
   const charWidths=chars.map(ch=>ch===' '?fs*0.3:ctx.measureText(ch).width+2);
   ctx.restore();
   const totalWidth=charWidths.reduce((a,b)=>a+b,0);
@@ -894,42 +908,33 @@ function arcTextWithHolder(ctx, text, color){
   const startAngle=(Math.PI/2)+(totalArc/2);
 
   // ── Draw holder banner ──
-  const padH=fs*0.38; // vertical padding (1/3 of font height)
-  const padW=fs*0.55; // horizontal padding on each side
-  const bannerArc=totalArc+padW*2/arcR;
-  const bannerR1=arcR+padH*1.1; // outer edge
-  const bannerR2=arcR-padH*1.2; // inner edge
-
-  ctx.save();
-  // Holder shape — arc segment path
-  ctx.beginPath();
-  ctx.arc(CX,CY,bannerR1,Math.PI/2-bannerArc/2,Math.PI/2+bannerArc/2);
-  ctx.arc(CX,CY,bannerR2,Math.PI/2+bannerArc/2,Math.PI/2-bannerArc/2,true);
-  ctx.closePath();
-  // Solid shadow offset (no blur — print safe)
-  ctx.shadowColor='rgba(0,0,0,0.0)';
-  // Draw shadow manually as a shifted filled path
-  ctx.save();
-  ctx.translate(2,3);
-  ctx.beginPath();
-  ctx.arc(CX,CY,bannerR1,Math.PI/2-bannerArc/2,Math.PI/2+bannerArc/2);
-  ctx.arc(CX,CY,bannerR2,Math.PI/2+bannerArc/2,Math.PI/2-bannerArc/2,true);
-  ctx.closePath();
-  ctx.fillStyle='rgba(0,0,0,0.22)';
-  ctx.fill();
-  ctx.restore();
-  // Banner fill
-  ctx.beginPath();
-  ctx.arc(CX,CY,bannerR1,Math.PI/2-bannerArc/2,Math.PI/2+bannerArc/2);
-  ctx.arc(CX,CY,bannerR2,Math.PI/2+bannerArc/2,Math.PI/2-bannerArc/2,true);
-  ctx.closePath();
-  ctx.fillStyle=holderColor;
-  ctx.fill();
-  // Subtle border
-  ctx.strokeStyle='rgba(255,255,255,0.95)';
-  ctx.lineWidth=1.5;
-  ctx.stroke();
-  ctx.restore();
+  if(useHolder){
+    const padH=fs*0.38;
+    const padW=fs*0.55;
+    const bannerArc=totalArc+padW*2/arcR;
+    const bannerR1=arcR+padH*1.1;
+    const bannerR2=arcR-padH*1.2;
+    ctx.save();
+    ctx.save();
+    ctx.translate(2,3);
+    ctx.beginPath();
+    ctx.arc(CX,CY,bannerR1,Math.PI/2-bannerArc/2,Math.PI/2+bannerArc/2);
+    ctx.arc(CX,CY,bannerR2,Math.PI/2+bannerArc/2,Math.PI/2-bannerArc/2,true);
+    ctx.closePath();
+    ctx.fillStyle='rgba(0,0,0,0.22)';
+    ctx.fill();
+    ctx.restore();
+    ctx.beginPath();
+    ctx.arc(CX,CY,bannerR1,Math.PI/2-bannerArc/2,Math.PI/2+bannerArc/2);
+    ctx.arc(CX,CY,bannerR2,Math.PI/2+bannerArc/2,Math.PI/2-bannerArc/2,true);
+    ctx.closePath();
+    ctx.fillStyle=holderColor;
+    ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.95)';
+    ctx.lineWidth=1.5;
+    ctx.stroke();
+    ctx.restore();
+  }
 
   // ── Draw arc text on top ──
   const palette=RAINBOW_BOT;
@@ -944,8 +949,6 @@ function arcTextWithHolder(ctx, text, color){
     ctx.rotate(angle-Math.PI/2);
     ctx.font='900 '+fs+'px '+fontFace;
     ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.lineWidth=fs*0.22;ctx.strokeStyle='rgba(255,255,255,0.95)';ctx.lineJoin='round';
-    ctx.strokeText(ch,0,0);
     ctx.fillStyle=useRainbow?palette[i%palette.length]:color;
     ctx.fillText(ch,0,0);
     ctx.restore();
@@ -979,7 +982,11 @@ function saveSubmission(){
   const name = document.getElementById('nameInput').value || 'Alex Rivera';
   const prof = document.getElementById('profInput').value || 'Future Doctor';
   const canvas = document.getElementById('pinCanvas');
+  // Draw print-clean version to capture thumb without gloss/depth
+  if(canvas) drawPin(true);
   const thumb = canvas ? canvas.toDataURL('image/png') : '';
+  // Restore display version
+  if(canvas) drawPin(false);
   const subs = getSubmissions();
   const entry = {
     id: Date.now().toString(),
