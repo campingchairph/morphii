@@ -257,72 +257,155 @@ const CATS={
     {label:'Brown',color:'#8D5524'},{label:'Deep',color:'#4A2810'},
     {label:'Rosy',color:'#FFECD2'},{label:'Warm',color:'#FFB347'},
   ]},
-  face:{title:'FACE SHAPE',items:[
-    {label:'Round',shape:'round'},{label:'Oval',shape:'oval'},
-    {label:'Square',shape:'square'},{label:'Heart',shape:'heart'},
-    {label:'Diamond',shape:'diamond'},
+  face:{title:'FACE',items:[
+    {label:'Face 1',shape:'round'},
+    {label:'Face 2',shape:'oval'},
+    {label:'Face 3',shape:'square'},
+    {label:'Face 4',shape:'heart'},
   ]},
   eyes:{title:'EYES',items:[
-    {label:'Classic',type:'normal'},{label:'Wide',type:'wide'},
-    {label:'Sleepy',type:'sleepy'},{label:'Star',type:'star'},
-    {label:'Heart',type:'heart'},
+    {label:'Eyes 1',type:'e1'},{label:'Eyes 2',type:'e2'},{label:'Eyes 3',type:'e3'},{label:'Eyes 4',type:'e4'},{label:'Eyes 5',type:'e5'},
+    {label:'Eyes 6',type:'e6'},{label:'Eyes 7',type:'e7'},{label:'Eyes 8',type:'e8'},{label:'Eyes 9',type:'e9'},{label:'Eyes 10',type:'e10'},
+    {label:'Eyes 11',type:'e11'},{label:'Eyes 12',type:'e12'},{label:'Eyes 13',type:'e13'},{label:'Eyes 14',type:'e14'},{label:'Eyes 15',type:'e15'},
+    {label:'Eyes 16',type:'e16'},{label:'Eyes 17',type:'e17'},{label:'Eyes 18',type:'e18'},{label:'Eyes 19',type:'e19'},{label:'Eyes 20',type:'e20'},
   ]},
   mouth:{title:'MOUTH',items:[
-    {label:'Smile',type:'smile'},{label:'Grin',type:'grin'},
-    {label:'Smirk',type:'smirk'},{label:'Open',type:'open'},
-    {label:'Wink',type:'wink'},
+    {label:'Mouth 1',type:'m1'},{label:'Mouth 2',type:'m2'},{label:'Mouth 3',type:'m3'},{label:'Mouth 4',type:'m4'},{label:'Mouth 5',type:'m5'},
+    {label:'Mouth 6',type:'m6'},{label:'Mouth 7',type:'m7'},{label:'Mouth 8',type:'m8'},{label:'Mouth 9',type:'m9'},{label:'Mouth 10',type:'m10'},
+    {label:'Mouth 11',type:'m11'},{label:'Mouth 12',type:'m12'},{label:'Mouth 13',type:'m13'},{label:'Mouth 14',type:'m14'},{label:'Mouth 15',type:'m15'},
+    {label:'Mouth 16',type:'m16'},{label:'Mouth 17',type:'m17'},{label:'Mouth 18',type:'m18'},{label:'Mouth 19',type:'m19'},{label:'Mouth 20',type:'m20'},
   ]},
   hair:{title:'HAIR',items:[
-    {label:'None',type:'none'},{label:'Short',type:'short'},
-    {label:'Long',type:'long'},{label:'Curly',type:'curly'},
-    {label:'Bun',type:'bun'},{label:'Spiky',type:'spiky'},
+    {label:'Hair 1',type:'h1'},{label:'Hair 2',type:'h2'},{label:'Hair 3',type:'h3'},{label:'Hair 4',type:'h4'},{label:'Hair 5',type:'h5'},
+    {label:'Hair 6',type:'h6'},{label:'Hair 7',type:'h7'},{label:'Hair 8',type:'h8'},{label:'Hair 9',type:'h9'},{label:'Hair 10',type:'h10'},
+    {label:'Hair 11',type:'h11'},{label:'Hair 12',type:'h12'},{label:'Hair 13',type:'h13'},{label:'Hair 14',type:'h14'},{label:'Hair 15',type:'h15'},
+    {label:'Hair 16',type:'h16'},{label:'Hair 17',type:'h17'},{label:'Hair 18',type:'h18'},{label:'Hair 19',type:'h19'},{label:'Hair 20',type:'h20'},
+    {label:'Hair 21',type:'h21'},{label:'Hair 22',type:'h22'},{label:'Hair 23',type:'h23'},{label:'Hair 24',type:'h24'},{label:'Hair 25',type:'h25'},
+    {label:'Hair 26',type:'h26'},{label:'Hair 27',type:'h27'},{label:'Hair 28',type:'h28'},{label:'Hair 29',type:'h29'},{label:'Hair 30',type:'h30'},
+    {label:'Hair 31',type:'h31'},{label:'Hair 32',type:'h32'},{label:'Hair 33',type:'h33'},{label:'Hair 34',type:'h34'},{label:'Hair 35',type:'h35'},
+    {label:'Hair 36',type:'h36'},{label:'Hair 37',type:'h37'},{label:'Hair 38',type:'h38'},{label:'Hair 39',type:'h39'},{label:'Hair 40',type:'h40'},
   ]},
   pattern:{title:'PATTERN',items:[
-    {label:'None',    type:'none'},
-    // sticker scatter backgrounds (30% opacity scattered over entire pin)
-    {label:'❤ Hearts', type:'scatter_hearts'},
-    {label:'⭐ Stars',  type:'scatter_stars'},
-    {label:'🌸 Flowers',type:'scatter_flowers'},
-    {label:'✦ Gems',   type:'scatter_gems'},
-    {label:'🍰 Sweets', type:'scatter_food'},
-    {label:'Dots',    type:'dots'},
-    {label:'Confetti',type:'confetti'},
-    {label:'Stars',   type:'stars'},
-    {label:'Hearts',  type:'hearts'},
-    {label:'Stripes', type:'stripes'},
-    {label:'Checks',  type:'checks'},
-    {label:'Bubbles', type:'bubbles'},
-    {label:'Flowers', type:'flowers'},
-    {label:'Zigzag',  type:'zigzag'},
+    {label:'None',type:'none'},
+    {label:'Pattern 1',type:'p1'},{label:'Pattern 2',type:'p2'},{label:'Pattern 3',type:'p3'},{label:'Pattern 4',type:'p4'},{label:'Pattern 5',type:'p5'},
+    {label:'Pattern 6',type:'p6'},{label:'Pattern 7',type:'p7'},{label:'Pattern 8',type:'p8'},{label:'Pattern 9',type:'p9'},{label:'Pattern 10',type:'p10'},
+    {label:'Pattern 11',type:'p11'},{label:'Pattern 12',type:'p12'},{label:'Pattern 13',type:'p13'},{label:'Pattern 14',type:'p14'},{label:'Pattern 15',type:'p15'},
+    {label:'Pattern 16',type:'p16'},{label:'Pattern 17',type:'p17'},{label:'Pattern 18',type:'p18'},{label:'Pattern 19',type:'p19'},{label:'Pattern 20',type:'p20'},
   ]},
   sticker:{title:'STICKERS',items:[
     {label:'None',type:'none',emoji:'—'},
-    // hearts
-    {label:'💗',emoji:'💗',type:'heart1'},{label:'💕',emoji:'💕',type:'heart2'},{label:'🩷',emoji:'🩷',type:'heart3'},{label:'❤️',emoji:'❤️',type:'heart4'},
-    // stars
-    {label:'⭐',emoji:'⭐',type:'star1'},{label:'✨',emoji:'✨',type:'star2'},{label:'🌟',emoji:'🌟',type:'star3'},{label:'💫',emoji:'💫',type:'star4'},
-    // flowers
-    {label:'🌸',emoji:'🌸',type:'fl1'},{label:'🌺',emoji:'🌺',type:'fl2'},{label:'🌼',emoji:'🌼',type:'fl3'},{label:'🌷',emoji:'🌷',type:'fl4'},
-    // food
-    {label:'🍰',emoji:'🍰',type:'fd1'},{label:'🍭',emoji:'🍭',type:'fd2'},{label:'🧁',emoji:'🧁',type:'fd3'},{label:'🍬',emoji:'🍬',type:'fd4'},
-    // school
-    {label:'📚',emoji:'📚',type:'sc1'},{label:'🎓',emoji:'🎓',type:'sc2'},{label:'✏️',emoji:'✏️',type:'sc3'},{label:'🔬',emoji:'🔬',type:'sc4'},
-    // fun
-    {label:'🌈',emoji:'🌈',type:'fn1'},{label:'🎉',emoji:'🎉',type:'fn2'},{label:'🏆',emoji:'🏆',type:'fn3'},{label:'🎨',emoji:'🎨',type:'fn4'},
-    // sparkle shapes
-    {label:'✦',emoji:'✦',type:'sp1'},{label:'✧',emoji:'✧',type:'sp2'},{label:'◆',emoji:'◆',type:'sp3'},{label:'●',emoji:'●',type:'sp4'},
-    // nature
-    {label:'🦋',emoji:'🦋',type:'nt1'},{label:'🌙',emoji:'🌙',type:'nt2'},{label:'☁️',emoji:'☁️',type:'nt3'},{label:'❄️',emoji:'❄️',type:'nt4'},
+    {label:'Sticker 1',type:'s1',emoji:'s1'},{label:'Sticker 2',type:'s2',emoji:'s2'},{label:'Sticker 3',type:'s3',emoji:'s3'},{label:'Sticker 4',type:'s4',emoji:'s4'},{label:'Sticker 5',type:'s5',emoji:'s5'},
+    {label:'Sticker 6',type:'s6',emoji:'s6'},{label:'Sticker 7',type:'s7',emoji:'s7'},{label:'Sticker 8',type:'s8',emoji:'s8'},{label:'Sticker 9',type:'s9',emoji:'s9'},{label:'Sticker 10',type:'s10',emoji:'s10'},
+    {label:'Sticker 11',type:'s11',emoji:'s11'},{label:'Sticker 12',type:'s12',emoji:'s12'},{label:'Sticker 13',type:'s13',emoji:'s13'},{label:'Sticker 14',type:'s14',emoji:'s14'},{label:'Sticker 15',type:'s15',emoji:'s15'},
+    {label:'Sticker 16',type:'s16',emoji:'s16'},{label:'Sticker 17',type:'s17',emoji:'s17'},{label:'Sticker 18',type:'s18',emoji:'s18'},{label:'Sticker 19',type:'s19',emoji:'s19'},{label:'Sticker 20',type:'s20',emoji:'s20'},
+    {label:'Sticker 21',type:'s21',emoji:'s21'},{label:'Sticker 22',type:'s22',emoji:'s22'},{label:'Sticker 23',type:'s23',emoji:'s23'},{label:'Sticker 24',type:'s24',emoji:'s24'},{label:'Sticker 25',type:'s25',emoji:'s25'},
+    {label:'Sticker 26',type:'s26',emoji:'s26'},{label:'Sticker 27',type:'s27',emoji:'s27'},{label:'Sticker 28',type:'s28',emoji:'s28'},{label:'Sticker 29',type:'s29',emoji:'s29'},{label:'Sticker 30',type:'s30',emoji:'s30'},
+    {label:'Sticker 31',type:'s31',emoji:'s31'},{label:'Sticker 32',type:'s32',emoji:'s32'},{label:'Sticker 33',type:'s33',emoji:'s33'},{label:'Sticker 34',type:'s34',emoji:'s34'},{label:'Sticker 35',type:'s35',emoji:'s35'},
+    {label:'Sticker 36',type:'s36',emoji:'s36'},{label:'Sticker 37',type:'s37',emoji:'s37'},{label:'Sticker 38',type:'s38',emoji:'s38'},{label:'Sticker 39',type:'s39',emoji:'s39'},{label:'Sticker 40',type:'s40',emoji:'s40'},
+    {label:'Sticker 41',type:'s41',emoji:'s41'},{label:'Sticker 42',type:'s42',emoji:'s42'},{label:'Sticker 43',type:'s43',emoji:'s43'},{label:'Sticker 44',type:'s44',emoji:'s44'},{label:'Sticker 45',type:'s45',emoji:'s45'},
+    {label:'Sticker 46',type:'s46',emoji:'s46'},{label:'Sticker 47',type:'s47',emoji:'s47'},{label:'Sticker 48',type:'s48',emoji:'s48'},{label:'Sticker 49',type:'s49',emoji:'s49'},{label:'Sticker 50',type:'s50',emoji:'s50'},
   ]},
   outfit:{title:'PROFESSION',items:[
-    {label:'Casual',type:'tshirt',color:'#FF5E5B'},
-    {label:'Doctor',type:'doctor',color:'#E8F4FD'},
-    {label:'Engineer',type:'engineer',color:'#FFD166'},
-    {label:'Teacher',type:'teacher',color:'#06D6A0'},
-    {label:'Chef',type:'chef',color:'#FFFFFF'},
-    {label:'Astronaut',type:'astronaut',color:'#C0C0C0'},
-    {label:'Business',type:'businessman',color:'#2C3E50'},
-    {label:'Police',type:'police',color:'#1A3A5C'},
+    {label:'Outfit 1',type:'o1',color:'#FF5E5B'},
+    {label:'Outfit 2',type:'o2',color:'#FF5E5B'},
+    {label:'Outfit 3',type:'o3',color:'#FF5E5B'},
+    {label:'Outfit 4',type:'o4',color:'#FF5E5B'},
+    {label:'Outfit 5',type:'o5',color:'#FF5E5B'},
+    {label:'Outfit 6',type:'o6',color:'#FF5E5B'},
+    {label:'Outfit 7',type:'o7',color:'#FF5E5B'},
+    {label:'Outfit 8',type:'o8',color:'#FF5E5B'},
+    {label:'Outfit 9',type:'o9',color:'#FF5E5B'},
+    {label:'Outfit 10',type:'o10',color:'#FF5E5B'},
+    {label:'Outfit 11',type:'o11',color:'#FF5E5B'},
+    {label:'Outfit 12',type:'o12',color:'#FF5E5B'},
+    {label:'Outfit 13',type:'o13',color:'#FF5E5B'},
+    {label:'Outfit 14',type:'o14',color:'#FF5E5B'},
+    {label:'Outfit 15',type:'o15',color:'#FF5E5B'},
+    {label:'Outfit 16',type:'o16',color:'#FF5E5B'},
+    {label:'Outfit 17',type:'o17',color:'#FF5E5B'},
+    {label:'Outfit 18',type:'o18',color:'#FF5E5B'},
+    {label:'Outfit 19',type:'o19',color:'#FF5E5B'},
+    {label:'Outfit 20',type:'o20',color:'#FF5E5B'},
+    {label:'Outfit 21',type:'o21',color:'#FF5E5B'},
+    {label:'Outfit 22',type:'o22',color:'#FF5E5B'},
+    {label:'Outfit 23',type:'o23',color:'#FF5E5B'},
+    {label:'Outfit 24',type:'o24',color:'#FF5E5B'},
+    {label:'Outfit 25',type:'o25',color:'#FF5E5B'},
+    {label:'Outfit 26',type:'o26',color:'#FF5E5B'},
+    {label:'Outfit 27',type:'o27',color:'#FF5E5B'},
+    {label:'Outfit 28',type:'o28',color:'#FF5E5B'},
+    {label:'Outfit 29',type:'o29',color:'#FF5E5B'},
+    {label:'Outfit 30',type:'o30',color:'#FF5E5B'},
+    {label:'Outfit 31',type:'o31',color:'#FF5E5B'},
+    {label:'Outfit 32',type:'o32',color:'#FF5E5B'},
+    {label:'Outfit 33',type:'o33',color:'#FF5E5B'},
+    {label:'Outfit 34',type:'o34',color:'#FF5E5B'},
+    {label:'Outfit 35',type:'o35',color:'#FF5E5B'},
+    {label:'Outfit 36',type:'o36',color:'#FF5E5B'},
+    {label:'Outfit 37',type:'o37',color:'#FF5E5B'},
+    {label:'Outfit 38',type:'o38',color:'#FF5E5B'},
+    {label:'Outfit 39',type:'o39',color:'#FF5E5B'},
+    {label:'Outfit 40',type:'o40',color:'#FF5E5B'},
+    {label:'Outfit 41',type:'o41',color:'#FF5E5B'},
+    {label:'Outfit 42',type:'o42',color:'#FF5E5B'},
+    {label:'Outfit 43',type:'o43',color:'#FF5E5B'},
+    {label:'Outfit 44',type:'o44',color:'#FF5E5B'},
+    {label:'Outfit 45',type:'o45',color:'#FF5E5B'},
+    {label:'Outfit 46',type:'o46',color:'#FF5E5B'},
+    {label:'Outfit 47',type:'o47',color:'#FF5E5B'},
+    {label:'Outfit 48',type:'o48',color:'#FF5E5B'},
+    {label:'Outfit 49',type:'o49',color:'#FF5E5B'},
+    {label:'Outfit 50',type:'o50',color:'#FF5E5B'},
+    {label:'Outfit 51',type:'o51',color:'#FF5E5B'},
+    {label:'Outfit 52',type:'o52',color:'#FF5E5B'},
+    {label:'Outfit 53',type:'o53',color:'#FF5E5B'},
+    {label:'Outfit 54',type:'o54',color:'#FF5E5B'},
+    {label:'Outfit 55',type:'o55',color:'#FF5E5B'},
+    {label:'Outfit 56',type:'o56',color:'#FF5E5B'},
+    {label:'Outfit 57',type:'o57',color:'#FF5E5B'},
+    {label:'Outfit 58',type:'o58',color:'#FF5E5B'},
+    {label:'Outfit 59',type:'o59',color:'#FF5E5B'},
+    {label:'Outfit 60',type:'o60',color:'#FF5E5B'},
+    {label:'Outfit 61',type:'o61',color:'#FF5E5B'},
+    {label:'Outfit 62',type:'o62',color:'#FF5E5B'},
+    {label:'Outfit 63',type:'o63',color:'#FF5E5B'},
+    {label:'Outfit 64',type:'o64',color:'#FF5E5B'},
+    {label:'Outfit 65',type:'o65',color:'#FF5E5B'},
+    {label:'Outfit 66',type:'o66',color:'#FF5E5B'},
+    {label:'Outfit 67',type:'o67',color:'#FF5E5B'},
+    {label:'Outfit 68',type:'o68',color:'#FF5E5B'},
+    {label:'Outfit 69',type:'o69',color:'#FF5E5B'},
+    {label:'Outfit 70',type:'o70',color:'#FF5E5B'},
+    {label:'Outfit 71',type:'o71',color:'#FF5E5B'},
+    {label:'Outfit 72',type:'o72',color:'#FF5E5B'},
+    {label:'Outfit 73',type:'o73',color:'#FF5E5B'},
+    {label:'Outfit 74',type:'o74',color:'#FF5E5B'},
+    {label:'Outfit 75',type:'o75',color:'#FF5E5B'},
+    {label:'Outfit 76',type:'o76',color:'#FF5E5B'},
+    {label:'Outfit 77',type:'o77',color:'#FF5E5B'},
+    {label:'Outfit 78',type:'o78',color:'#FF5E5B'},
+    {label:'Outfit 79',type:'o79',color:'#FF5E5B'},
+    {label:'Outfit 80',type:'o80',color:'#FF5E5B'},
+    {label:'Outfit 81',type:'o81',color:'#FF5E5B'},
+    {label:'Outfit 82',type:'o82',color:'#FF5E5B'},
+    {label:'Outfit 83',type:'o83',color:'#FF5E5B'},
+    {label:'Outfit 84',type:'o84',color:'#FF5E5B'},
+    {label:'Outfit 85',type:'o85',color:'#FF5E5B'},
+    {label:'Outfit 86',type:'o86',color:'#FF5E5B'},
+    {label:'Outfit 87',type:'o87',color:'#FF5E5B'},
+    {label:'Outfit 88',type:'o88',color:'#FF5E5B'},
+    {label:'Outfit 89',type:'o89',color:'#FF5E5B'},
+    {label:'Outfit 90',type:'o90',color:'#FF5E5B'},
+    {label:'Outfit 91',type:'o91',color:'#FF5E5B'},
+    {label:'Outfit 92',type:'o92',color:'#FF5E5B'},
+    {label:'Outfit 93',type:'o93',color:'#FF5E5B'},
+    {label:'Outfit 94',type:'o94',color:'#FF5E5B'},
+    {label:'Outfit 95',type:'o95',color:'#FF5E5B'},
+    {label:'Outfit 96',type:'o96',color:'#FF5E5B'},
+    {label:'Outfit 97',type:'o97',color:'#FF5E5B'},
+    {label:'Outfit 98',type:'o98',color:'#FF5E5B'},
+    {label:'Outfit 99',type:'o99',color:'#FF5E5B'},
+    {label:'Outfit 100',type:'o100',color:'#FF5E5B'},
   ]}
 };
 const S={bg:0,skin:0,face:0,eyes:0,mouth:0,hair:0,outfit:0,pattern:0,cat:'bg'};
@@ -457,32 +540,35 @@ function renderStickerUI(gridId){
   if(titleEl)titleEl.textContent='STICKERS';
   grid.innerHTML='';
 
-  // Grid of stickers to check/uncheck
   CATS.sticker.items.filter(it=>it.type!=='none').forEach(item=>{
+    const key=item.url||item.emoji;
     const card=document.createElement('div');
-    const sel=selectedStickerEmojis.has(item.emoji);
-    const atMax = selectedStickerEmojis.size>=8;
-    const disabled = !sel && atMax;
+    const sel=selectedStickerEmojis.has(key);
+    const atMax=selectedStickerEmojis.size>=8;
+    const disabled=!sel&&atMax;
     card.className='asset-card'+(sel?' active':'')+(disabled?' disabled':'');
     if(disabled) card.style.opacity='0.35';
-    card.style.fontSize='24px';
-    card.style.display='flex';card.style.alignItems='center';card.style.justifyContent='center';
-    card.textContent=item.emoji;
+    card.style.cssText+='display:flex;align-items:center;justify-content:center;';
     card.title=item.label;
+    if(item.url && loadedImages[item.url]){
+      const img=document.createElement('img');
+      img.src=item.url;img.style.cssText='width:40px;height:40px;object-fit:contain;';
+      card.appendChild(img);
+    } else if(item.url){
+      // show label while loading
+      card.textContent=item.label;card.style.fontSize='10px';
+    } else {
+      card.textContent=item.emoji;card.style.fontSize='24px';
+    }
     card.onclick=()=>{
-      if(selectedStickerEmojis.has(item.emoji)){
-        selectedStickerEmojis.delete(item.emoji);
-      } else if(selectedStickerEmojis.size < 8){
-        selectedStickerEmojis.add(item.emoji);
-      }
+      if(selectedStickerEmojis.has(key)) selectedStickerEmojis.delete(key);
+      else if(selectedStickerEmojis.size<8) selectedStickerEmojis.add(key);
       renderStickerUI(gridId);
-      const other=gridId==='assetGrid'?'mobAssetGrid':'assetGrid';
-      renderStickerUI(other);
+      renderStickerUI(gridId==='assetGrid'?'mobAssetGrid':'assetGrid');
     };
     grid.appendChild(card);
   });
 
-  // Place button
   if(selectedStickerEmojis.size>0){
     const wrap=document.createElement('div');
     wrap.style.cssText='grid-column:1/-1;margin-top:8px;';
@@ -496,23 +582,25 @@ function renderStickerUI(gridId){
   }
 }
 
-// ── Sticker Placer Overlay ──
 function openStickerPlacer(){
   if(selectedStickerEmojis.size===0)return;
   const overlay=document.getElementById('stickerPlacer');
   if(!overlay)return;
   overlay.style.display='flex';
   setTimeout(initStickerDrag,50);
-  // Randomly place selected stickers
   const toPlace=[...selectedStickerEmojis].slice(0,8);
-  const newStickers=toPlace.map(emoji=>({
-    emoji,
-    x: CX + (Math.random()-0.5)*(R*1.2),
-    y: CY + (Math.random()-0.5)*(R*1.2),
-    size: 20+Math.floor(Math.random()*14),
-    rot: (Math.random()-0.5)*0.8,
-    id: Date.now()+Math.random()
-  }));
+  const newStickers=toPlace.map(key=>{
+    const item=CATS.sticker.items.find(it=>(it.url||it.emoji)===key)||{emoji:key};
+    return {
+      emoji: item.emoji||key,
+      url: item.url||null,
+      x: CX+(Math.random()-0.5)*(R*1.2),
+      y: CY+(Math.random()-0.5)*(R*1.2),
+      size: 32+Math.floor(Math.random()*20),
+      rot: (Math.random()-0.5)*0.8,
+      id: Date.now()+Math.random()
+    };
+  });
   newStickers.forEach(s=>{ if(placedStickers.length<8) placedStickers.push(s); });
   selectedStickerEmojis.clear();
   renderStickerUI('assetGrid');
