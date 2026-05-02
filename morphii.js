@@ -1,4 +1,3 @@
-
 // ══════════════════════════════════════════════
 // GITHUB ASSET LOADER
 // Base: campingchairph/morphii/main/assets/avatar/
@@ -36,16 +35,19 @@ async function loadAssetManifest(){
       hair:'hair', eyes:'eyes', mouth:'mouth', face:'face',
       skin:'skin', outfit:'outfit', stickers:'sticker', patterns:'pattern'
     };
+    const preloads = [];
     for(const [key, catKey] of Object.entries(catMap)){
       if(!manifest[key] || !CATS[catKey]) continue;
       manifest[key].forEach((item, i)=>{
         if(CATS[catKey].items[i]){
-          CATS[catKey].items[i].url = item.url;
-          if(item.url) preloadImage(item.url);
+          CATS[catKey].items[i].url = item?.url || null;
+          if(item?.url) preloads.push(preloadImage(item.url));
         }
       });
     }
+    await Promise.all(preloads);
     console.log('Morphii assets loaded from GitHub');
+    if(typeof drawPin === 'function') drawPin();
   } catch(e){
     console.log('No manifest found — using CSS drawing');
   }
@@ -1432,4 +1434,3 @@ function addDemoData(){
 }
 
 setTimeout(addDemoData, 800);
-
