@@ -1,20 +1,6 @@
 {
-  "hair": [
-    null,
-    null,
-    null,
-    null,
-    null,
-    null
-  ],
-  "outfit": [
-    null,
-    null,
-    null,
-    null,
-    { "label": "Chef", "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/chef.png" },
-    null
-  ],
+  "hair": [null, null, null, null, null, null],
+  "outfit": [null, null, null, null, {"label":"Chef","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/chef.png"}, null],
   "eyes": [],
   "mouth": [],
   "stickers": [],
