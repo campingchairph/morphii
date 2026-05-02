@@ -258,10 +258,10 @@ const CATS={
     {label:'Rosy',color:'#FFECD2'},{label:'Warm',color:'#FFB347'},
   ]},
   face:{title:'FACE',items:[
-    {label:'Face 1',shape:'round'},
-    {label:'Face 2',shape:'oval'},
-    {label:'Face 3',shape:'square'},
-    {label:'Face 4',shape:'heart'},
+    {label:'Face 1'},
+    {label:'Face 2'},
+    {label:'Face 3'},
+    {label:'Face 4'},
   ]},
   eyes:{title:'EYES',items:[
     {label:'Eyes 1',type:'e1'},{label:'Eyes 2',type:'e2'},{label:'Eyes 3',type:'e3'},{label:'Eyes 4',type:'e4'},{label:'Eyes 5',type:'e5'},
@@ -940,23 +940,16 @@ function drawPin(forPrint){
   const skinItem=CATS.skin.items[S.skin];
   const faceItem=CATS.face.items[S.face];
   if(skinItem?.url && drawImageLayer(ctx,skinItem.url,0,0,320,320)){
-    // PNG skin — drawn as full layer, skip CSS face shape
-  } else {
+    // PNG skin layer
+  } else if(!faceItem?.url){
+    // no face PNG yet — draw skin circle placeholder so avatar is visible
     const sk=skinItem.color;
-    const fs2=faceItem.shape;
-    ctx.fillStyle=sk;ctx.beginPath();
-    if(fs2==='round')ctx.arc(CX,CY+10,74,0,Math.PI*2);
-    else if(fs2==='oval')ctx.ellipse(CX,CY+10,58,82,0,0,Math.PI*2);
-    else if(fs2==='square')ctx.roundRect(CX-64,CY-54,128,128,16);
-    else if(fs2==='heart'){ctx.arc(CX-30,CY-20,40,Math.PI,0);ctx.arc(CX+30,CY-20,40,Math.PI,0);ctx.lineTo(CX,CY+82);ctx.closePath();}
-    else{ctx.moveTo(CX,CY-84);ctx.lineTo(CX+64,CY+10);ctx.lineTo(CX,CY+92);ctx.lineTo(CX-64,CY+10);ctx.closePath();}
-    ctx.fill();
-    // cheeks
+    ctx.fillStyle=sk;
+    ctx.beginPath();ctx.arc(CX,CY+10,74,0,Math.PI*2);ctx.fill();
     ctx.fillStyle='rgba(255,150,150,0.28)';
     ctx.beginPath();ctx.ellipse(CX-46,CY+24,17,10,0,0,Math.PI*2);ctx.fill();
     ctx.beginPath();ctx.ellipse(CX+46,CY+24,17,10,0,0,Math.PI*2);ctx.fill();
   }
-  // face shape PNG overlay (drawn on top of skin if available)
   if(faceItem?.url) drawImageLayer(ctx,faceItem.url,0,0,320,320);
   const oi=CATS.outfit.items[S.outfit];
   const hairItem=CATS.hair.items[S.hair];
