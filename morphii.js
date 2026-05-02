@@ -748,21 +748,32 @@ function drawPin(forPrint){
   ctx.fillStyle=g;ctx.fillRect(0,0,320,320);
   ctx.fillStyle='rgba(0,0,0,0.03)';
   for(let x=10;x<320;x+=20)for(let y=10;y<320;y+=20){ctx.beginPath();ctx.arc(x,y,1.5,0,Math.PI*2);ctx.fill();}
-  if(S.pattern>0&&CATS.pattern){drawPattern(ctx,CATS.pattern.items[S.pattern].type);}
-  const sk=CATS.skin.items[S.skin].color;
-  const fs2=CATS.face.items[S.face].shape;
-  ctx.fillStyle=sk;ctx.beginPath();
-  if(fs2==='round')ctx.arc(CX,CY+10,74,0,Math.PI*2);
-  else if(fs2==='oval')ctx.ellipse(CX,CY+10,58,82,0,0,Math.PI*2);
-  else if(fs2==='square')ctx.roundRect(CX-64,CY-54,128,128,16);
-  else if(fs2==='heart'){ctx.arc(CX-30,CY-20,40,Math.PI,0);ctx.arc(CX+30,CY-20,40,Math.PI,0);ctx.lineTo(CX,CY+82);ctx.closePath();}
-  else{ctx.moveTo(CX,CY-84);ctx.lineTo(CX+64,CY+10);ctx.lineTo(CX,CY+92);ctx.lineTo(CX-64,CY+10);ctx.closePath();}
-  ctx.fill();
-  ctx.fillStyle='rgba(255,150,150,0.28)';
-  ctx.beginPath();ctx.ellipse(CX-46,CY+24,17,10,0,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.ellipse(CX+46,CY+24,17,10,0,0,Math.PI*2);ctx.fill();
+  if(S.pattern>0&&CATS.pattern){
+    const pi=CATS.pattern.items[S.pattern];
+    if(!pi?.url || !drawImageLayer(ctx,pi.url,0,0,320,320)) drawPattern(ctx,pi.type);
+  }
+  const skinItem=CATS.skin.items[S.skin];
+  const faceItem=CATS.face.items[S.face];
+  if(skinItem?.url && drawImageLayer(ctx,skinItem.url,0,0,320,320)){
+    // PNG skin — drawn as full layer, skip CSS face shape
+  } else {
+    const sk=skinItem.color;
+    const fs2=faceItem.shape;
+    ctx.fillStyle=sk;ctx.beginPath();
+    if(fs2==='round')ctx.arc(CX,CY+10,74,0,Math.PI*2);
+    else if(fs2==='oval')ctx.ellipse(CX,CY+10,58,82,0,0,Math.PI*2);
+    else if(fs2==='square')ctx.roundRect(CX-64,CY-54,128,128,16);
+    else if(fs2==='heart'){ctx.arc(CX-30,CY-20,40,Math.PI,0);ctx.arc(CX+30,CY-20,40,Math.PI,0);ctx.lineTo(CX,CY+82);ctx.closePath();}
+    else{ctx.moveTo(CX,CY-84);ctx.lineTo(CX+64,CY+10);ctx.lineTo(CX,CY+92);ctx.lineTo(CX-64,CY+10);ctx.closePath();}
+    ctx.fill();
+    // cheeks
+    ctx.fillStyle='rgba(255,150,150,0.28)';
+    ctx.beginPath();ctx.ellipse(CX-46,CY+24,17,10,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(CX+46,CY+24,17,10,0,0,Math.PI*2);ctx.fill();
+  }
+  // face shape PNG overlay (drawn on top of skin if available)
+  if(faceItem?.url) drawImageLayer(ctx,faceItem.url,0,0,320,320);
   const oi=CATS.outfit.items[S.outfit];
-  // Use PNG asset if available, else CSS fallback
   const hairItem=CATS.hair.items[S.hair];
   const eyeItem=CATS.eyes.items[S.eyes];
   const mouthItem=CATS.mouth.items[S.mouth];
@@ -777,8 +788,15 @@ function drawPin(forPrint){
     ctx.save();
     ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);ctx.clip();
     placedStickers.forEach(st=>{
-      ctx.save();ctx.font=st.size+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.translate(st.x,st.y);ctx.rotate(st.rot);ctx.fillText(st.emoji,0,0);ctx.restore();
+      if(st.url && loadedImages[st.url]){
+        ctx.save();ctx.translate(st.x,st.y);ctx.rotate(st.rot);
+        const hw=st.size/2;
+        ctx.drawImage(loadedImages[st.url],-hw,-hw,st.size,st.size);
+        ctx.restore();
+      } else {
+        ctx.save();ctx.font=st.size+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.translate(st.x,st.y);ctx.rotate(st.rot);ctx.fillText(st.emoji,0,0);ctx.restore();
+      }
     });
     ctx.restore();
   }
@@ -837,7 +855,7 @@ function arcText(ctx,text,top,color){
   const totalWidth=charWidths.reduce((a,b)=>a+b,0);
   const totalArc=totalWidth/arcR;
   const clampedArc=Math.min(totalArc,maxArc);
-  const scale=clampedArc/totalArc;
+  const scale=Math.min(1,clampedArc/totalArc);
   const scaledWidths=charWidths.map(w=>w*scale);
   const startAngle=top?-(Math.PI/2)-(clampedArc/2):(Math.PI/2)+(clampedArc/2);
   const dir=top?1:-1;
@@ -921,7 +939,7 @@ function arcTextWithHolder(ctx, text, color, useHolder){
   ctx.restore();
   const totalWidth=charWidths.reduce((a,b)=>a+b,0);
   const totalArc=Math.min(totalWidth/arcR,maxArc);
-  const scale=totalArc/(totalWidth/arcR);
+  const scale=Math.min(1, totalArc/(totalWidth/arcR));
   const scaledWidths=charWidths.map(w=>w*scale);
   const startAngle=(Math.PI/2)+(totalArc/2);
 
