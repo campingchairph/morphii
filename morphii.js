@@ -1,5 +1,9 @@
 // ══════════════════════════════════════════════
-// GITHUB ASSET LOADER
+// MODE DETECTION
+// ══════════════════════════════════════════════
+const isMobile = new URLSearchParams(window.location.search).get('mode') === 'mobile';
+
+
 // Base: campingchairph/morphii/main/assets/avatar/
 // ══════════════════════════════════════════════
 const GITHUB_BASE = 'https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/';
@@ -57,16 +61,41 @@ async function loadAssetManifest(){
 // SCREEN TRANSITIONS
 // ═══════════════════════════════════════════
 function goToBuilder(){
-  clearInterval(landingAnimTimer); // stop landing animation loop
+  clearInterval(landingAnimTimer);
   document.getElementById('landing-screen').classList.add('hidden');
   document.getElementById('builder-screen').classList.add('active');
+  if(isMobile){
+    // hide booth-only elements
+    document.querySelector('.back-to-landing')?.style.setProperty('display','none');
+    document.getElementById('qrPill')?.style.setProperty('display','none');
+    document.getElementById('adminAccessBtn')?.style.setProperty('display','none');
+  }
   setTimeout(()=>{ drawPin(); renderGrid('assetGrid',S.cat||'bg'); renderGrid('mobAssetGrid',S.cat||'bg'); },150);
-  resetIdle();
+  if(!isMobile) resetIdle();
 }
 function goToLanding(){
   document.getElementById('builder-screen').classList.remove('active');
   document.getElementById('landing-screen').classList.remove('hidden');
-  startLandingAnim(); // restart 15s loop only when on landing
+  startLandingAnim();
+}
+function startMobileBuilder(){
+  document.getElementById('mobile-splash').style.display='none';
+  goToBuilder();
+}
+function toggleQRPopup(){
+  const popup=document.getElementById('qrPopup');
+  const isVisible=popup.style.display==='flex';
+  if(isVisible){ popup.style.display='none'; return; }
+  popup.style.display='flex';
+  const container=document.getElementById('qrCodeImg');
+  if(!container.hasChildNodes()){
+    new QRCode(container,{
+      text:'https://campingchairph.github.io/morphii/?mode=mobile',
+      width:200,height:200,
+      colorDark:'#0B2E4E',colorLight:'#ffffff',
+      correctLevel:QRCode.CorrectLevel.H
+    });
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -474,15 +503,16 @@ function showCelebration(){
       You just made<br>your future <span style="color:#FF6FAE">official!</span> ✨
     </h1>
     <p style="font-family:'Nunito',sans-serif;font-weight:800;font-size:15px;color:#888;margin-bottom:28px;line-height:1.5;">
-      Your pin is being sent to print.<br>Go collect it and wear it with pride! 📌
+      ${isMobile
+        ? '📌 Your pin design is saved!<br><strong style="color:#FF6FAE">Head to the booth, pay, and watch it come to life.</strong>'
+        : 'Your pin is queued for printing.<br>Go collect it and wear it with pride! 📌'
+      }
     </p>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
       <button onclick="document.getElementById('celebOverlay').remove()" style="padding:13px 28px;background:#FFFF00;color:#0B2E4E;border:none;border-radius:50px;font-family:'Fredoka One',cursive;font-size:17px;cursor:pointer;box-shadow:0 5px 0 #B8B800;">
         🎨 Make Another
       </button>
-      <button onclick="document.getElementById('celebOverlay').remove();goToLanding();" style="padding:13px 28px;background:#0B2E4E;color:white;border:none;border-radius:50px;font-family:'Fredoka One',cursive;font-size:17px;cursor:pointer;box-shadow:0 5px 0 #071929;">
-        🏠 Done!
-      </button>
+      ${isMobile ? '' : `<button onclick="document.getElementById('celebOverlay').remove();goToLanding();" style="padding:13px 28px;background:#0B2E4E;color:white;border:none;border-radius:50px;font-family:'Fredoka One',cursive;font-size:17px;cursor:pointer;box-shadow:0 5px 0 #071929;">🏠 Done!</button>`}
     </div>
   `;
 
@@ -1643,20 +1673,26 @@ function doPrint(){
 // Add admin access: long-press on landing logo (3 sec) or hidden button
 document.addEventListener('DOMContentLoaded',()=>{
   injectSizePicker();
-  // Add secret admin button to builder header
-  const adminBtn = document.createElement('button');
-  adminBtn.className = 'back-to-landing';
-  adminBtn.style.cssText = 'opacity:0.4;font-size:11px;padding:4px 10px;';
-  adminBtn.textContent = '⚙ Admin';
-  adminBtn.onclick = (e)=>{ e.stopPropagation(); goToAdmin(); };
-  const hdr = document.querySelector('#admin-screen')?.previousElementSibling;
-  // Attach to builder header
-  setTimeout(()=>{
-    const builderNav = document.querySelector('#builder-screen header');
-    if(builderNav){
-      builderNav.appendChild(adminBtn);
-    }
-  },500);
+
+  // Mobile mode — show splash, skip landing
+  if(isMobile){
+    document.getElementById('landing-screen').classList.add('hidden');
+    document.getElementById('mobile-splash').style.display='flex';
+  }
+
+  // Add secret admin button to builder header (booth only)
+  if(!isMobile){
+    const adminBtn = document.createElement('button');
+    adminBtn.id = 'adminAccessBtn';
+    adminBtn.className = 'back-to-landing';
+    adminBtn.style.cssText = 'opacity:0.4;font-size:11px;padding:4px 10px;';
+    adminBtn.textContent = '⚙ Admin';
+    adminBtn.onclick = (e)=>{ e.stopPropagation(); goToAdmin(); };
+    setTimeout(()=>{
+      const builderNav = document.querySelector('#builder-screen header');
+      if(builderNav) builderNav.appendChild(adminBtn);
+    },500);
+  }
 });
 
 // Add demo data if empty
