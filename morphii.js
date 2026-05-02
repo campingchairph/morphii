@@ -885,6 +885,7 @@ function setStrokeColor(val,el){
   el.style.outline='2px solid var(--yellow)';
   drawPin();
 }
+function setHolderColor(val,el){
   holderColor=val;
   document.querySelectorAll('#holderColorsWrap .color-dot').forEach(d=>d.classList.remove('active'));
   el.classList.add('active');
