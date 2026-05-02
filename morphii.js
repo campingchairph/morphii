@@ -853,10 +853,16 @@ function renderGrid(id,cat){
       ctx2.fillStyle=g2;ctx2.fillRect(0,0,56,56);
       if(item.url && loadedImages[item.url]){
         ctx2.drawImage(loadedImages[item.url],4,4,48,48);
+      } else if(item.url){
+        // loading — show label placeholder, redraw when ready
+        ctx2.fillStyle='rgba(255,255,255,0.15)';ctx2.fillRect(0,0,56,56);
+        ctx2.fillStyle='rgba(255,255,255,0.3)';ctx2.font='9px sans-serif';
+        ctx2.textAlign='center';ctx2.textBaseline='middle';ctx2.fillText(item.label,28,28);
+        preloadImage(item.url).then(()=>renderGrid(id,cat));
       } else {
-        // fallback shape
-        ctx2.fillStyle=CATS.skin.items[S.skin].color;
-        mF(ctx2,28,28,item.shape||'round');
+        ctx2.fillStyle='rgba(255,255,255,0.08)';ctx2.fillRect(0,0,56,56);
+        ctx2.fillStyle='rgba(255,255,255,0.2)';ctx2.font='9px sans-serif';
+        ctx2.textAlign='center';ctx2.textBaseline='middle';ctx2.fillText(item.label,28,28);
       }
       ctx2.restore();
       card.appendChild(c);
