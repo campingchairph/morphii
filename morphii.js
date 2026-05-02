@@ -955,10 +955,10 @@ function drawPin(forPrint){
   const hairItem=CATS.hair.items[S.hair];
   const eyeItem=CATS.eyes.items[S.eyes];
   const mouthItem=CATS.mouth.items[S.mouth];
-  if(!hairItem?.url || !drawImageLayer(ctx,hairItem.url,0,0,320,320)) dHair(ctx);
-  if(!eyeItem?.url  || !drawImageLayer(ctx,eyeItem.url,0,0,320,320))  dEyes(ctx);
-  if(!mouthItem?.url|| !drawImageLayer(ctx,mouthItem.url,0,0,320,320))dMouth(ctx);
-  if(!oi?.url       || !drawImageLayer(ctx,oi.url,0,0,320,320))       dOutfit(ctx,oi.type,oi.color);
+  if(hairItem?.url) drawImageLayer(ctx,hairItem.url,0,0,320,320);
+  if(eyeItem?.url)  drawImageLayer(ctx,eyeItem.url,0,0,320,320);
+  if(mouthItem?.url)drawImageLayer(ctx,mouthItem.url,0,0,320,320);
+  if(oi?.url)       drawImageLayer(ctx,oi.url,0,0,320,320);
   ctx.restore();
 
   // ── LAYER 2: placed stickers (clipped, above avatar) ──
