@@ -945,7 +945,8 @@ function arcTextWithHolder(ctx, text, color, useHolder){
     const angle=startAngle-(cursor+scaledWidths[i]/2)/arcR;
     cursor+=scaledWidths[i];
     ctx.save();
-    ctx.translate(CX+arcR*Math.cos(angle),CY+arcR*Math.sin(angle));
+    const tR=arcR+fs*0.12;
+    ctx.translate(CX+tR*Math.cos(angle),CY+tR*Math.sin(angle));
     ctx.rotate(angle-Math.PI/2);
     ctx.font='900 '+fs+'px '+fontFace;
     ctx.textAlign='center';ctx.textBaseline='middle';
