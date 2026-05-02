@@ -12,10 +12,24 @@
 @font-face{font-family:'Cute Maple';src:url('https://raw.githubusercontent.com/campingchairph/morphii/main/assets/fonts/CuteMaple.ttf');}
 </style>
 <link rel="stylesheet" href="morphii.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
 <!-- ══ LANDING SCREEN ══ -->
+<!-- ══ MOBILE SPLASH (mode=mobile only) ══ -->
+<div id="mobile-splash" style="display:none;position:fixed;inset:0;z-index:99999;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#0B2E4E,#1a4a72);padding:32px;text-align:center;">
+  <div style="font-size:72px;margin-bottom:16px;animation:spinIn 0.8s both;">🌟</div>
+  <div style="font-family:'Fredoka One',cursive;font-size:13px;letter-spacing:3px;color:#FF6FAE;text-transform:uppercase;margin-bottom:12px;">Welcome to</div>
+  <div style="font-family:'Fredoka One',cursive;font-size:56px;color:white;line-height:1;margin-bottom:8px;">Morphii<span style="color:#FF6FAE">.</span></div>
+  <p style="font-family:'Nunito',sans-serif;font-weight:800;font-size:15px;color:rgba(255,255,255,0.6);margin-bottom:40px;line-height:1.6;">Build your future self.<br>Turn it into a real pin. 📌</p>
+  <button onclick="startMobileBuilder()" style="padding:18px 48px;background:#FF6FAE;color:white;border:none;border-radius:50px;font-family:'Fredoka One',cursive;font-size:22px;cursor:pointer;box-shadow:0 6px 0 #c0437e;transform:translateY(0);transition:transform 0.1s,box-shadow 0.1s;"
+    onmousedown="this.style.transform='translateY(3px)';this.style.boxShadow='0 3px 0 #c0437e'"
+    onmouseup="this.style.transform='translateY(0)';this.style.boxShadow='0 6px 0 #c0437e'">
+    ▶ Let's Go!
+  </button>
+</div>
+
 <div id="landing-screen" onclick="goToBuilder()">
 
 
@@ -261,11 +275,20 @@
     <div class="logo-text fredoka">Morphii<span>.</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:10px;"><button class="back-to-landing" onclick="event.stopPropagation();goToLanding()">← Back</button><div class="header-badge fredoka">✦ Build Your Future Self ✦</div></div>
-  <div class="qr-pill">
+  <div class="qr-pill" id="qrPill" onclick="toggleQRPopup()" style="cursor:pointer;">
     <div class="qr-icon">📱</div>
     <div class="qr-text nunito">
-      Scan to submit on your phone
-      <small>Link valid for 5 hours</small>
+      Share via QR
+      <small>Tap to show code</small>
+    </div>
+  </div>
+  <div id="qrPopup" style="display:none;position:fixed;inset:0;z-index:9998;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);" onclick="toggleQRPopup()">
+    <div style="background:white;border-radius:24px;padding:32px;text-align:center;max-width:320px;width:90%;" onclick="event.stopPropagation()">
+      <div style="font-family:'Fredoka One',cursive;font-size:20px;color:#0B2E4E;margin-bottom:4px;">Scan to Build on Mobile</div>
+      <p style="font-family:'Nunito',sans-serif;font-size:12px;color:#888;margin-bottom:16px;">Users scan this to create their avatar on their phone</p>
+      <div id="qrCodeImg" style="display:flex;justify-content:center;margin-bottom:16px;"></div>
+      <div style="font-family:'Nunito',sans-serif;font-size:11px;color:#aaa;word-break:break-all;">campingchairph.github.io/morphii/?mode=mobile</div>
+      <button onclick="toggleQRPopup()" style="margin-top:16px;padding:10px 24px;background:#0B2E4E;color:white;border:none;border-radius:50px;font-family:'Fredoka One',cursive;font-size:15px;cursor:pointer;">Close</button>
     </div>
   </div>
 </header>
