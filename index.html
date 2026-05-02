@@ -288,6 +288,14 @@
         <button class="cat-btn" onclick="setCat('sticker',this)"><span class="ci">🌸</span>Stickers</button>
         <button class="cat-btn" onclick="setCat('outfit',this)"><span class="ci">👔</span>Outfit</button>
       </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:10px;padding:0 2px;">
+        <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;">Filter</span>
+        <div id="genderBtns" style="display:flex;gap:4px;">
+          <button onclick="setGender('g',this)" style="padding:4px 10px;border-radius:20px;border:2px solid rgba(255,111,174,0.6);background:rgba(255,111,174,0.15);color:white;font-size:11px;font-weight:800;cursor:pointer;font-family:'Fredoka One',cursive;">👧 Girl</button>
+          <button onclick="setGender('b',this)" style="padding:4px 10px;border-radius:20px;border:2px solid rgba(77,200,240,0.6);background:rgba(77,200,240,0.15);color:white;font-size:11px;font-weight:800;cursor:pointer;font-family:'Fredoka One',cursive;">👦 Boy</button>
+          <button onclick="setGender('x',this)" class="gender-active" style="padding:4px 10px;border-radius:20px;border:2px solid rgba(255,255,255,0.6);background:rgba(255,255,255,0.2);color:white;font-size:11px;font-weight:800;cursor:pointer;font-family:'Fredoka One',cursive;">All</button>
+        </div>
+      </div>
     </div>
 
     <div class="asset-wrap">
