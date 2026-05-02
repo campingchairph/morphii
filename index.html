@@ -337,16 +337,34 @@
         </div>
       </div>
       <div class="inp-group">
-        <label>Name Holder Color</label>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;" id="holderColors">
-            <div class="color-dot active" data-color="rgba(255,255,255,0.82)" style="background:rgba(255,255,255,0.82);border:2px solid #ccc" onclick="setHolderColor('rgba(255,255,255,0.82)',this)"></div>
-            <div class="color-dot" data-color="#FFFF00" style="background:#FFFF00" onclick="setHolderColor('#FFFF00',this)"></div>
-            <div class="color-dot" data-color="#FF6FAE" style="background:#FF6FAE" onclick="setHolderColor('#FF6FAE',this)"></div>
-            <div class="color-dot" data-color="#0B2E4E" style="background:#0B2E4E" onclick="setHolderColor('#0B2E4E',this)"></div>
-            <div class="color-dot" data-color="#4DC8F0" style="background:#4DC8F0" onclick="setHolderColor('#4DC8F0',this)"></div>
-            <div class="color-dot" data-color="#A29BFE" style="background:#A29BFE" onclick="setHolderColor('#A29BFE',this)"></div>
-            <div class="color-dot" data-color="#55EFC4" style="background:#55EFC4" onclick="setHolderColor('#55EFC4',this)"></div>
-            <div class="color-dot" data-color="transparent" style="background:transparent;border:2px dashed rgba(255,255,255,0.4)" onclick="setHolderColor('transparent',this)" title="No holder"></div>
+        <label>Name Holder</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <label style="font-size:11px;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:1px;">Show</label>
+          <div id="holderToggle" onclick="toggleHolder()" style="width:36px;height:20px;border-radius:10px;background:var(--pink);cursor:pointer;position:relative;transition:background 0.2s;">
+            <div id="holderToggleKnob" style="width:16px;height:16px;border-radius:50%;background:white;position:absolute;top:2px;left:18px;transition:left 0.2s;"></div>
+          </div>
+        </div>
+        <div id="holderColorsWrap" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;" id="holderColors">
+            <div class="color-dot active" data-color="#87CEEB" style="background:#87CEEB" onclick="setHolderColor('#87CEEB',this)"></div>
+            <div class="color-dot" data-color="#FFD6E0" style="background:#FFD6E0" onclick="setHolderColor('#FFD6E0',this)"></div>
+            <div class="color-dot" data-color="#B8F0D8" style="background:#B8F0D8" onclick="setHolderColor('#B8F0D8',this)"></div>
+            <div class="color-dot" data-color="#E8D5FF" style="background:#E8D5FF" onclick="setHolderColor('#E8D5FF',this)"></div>
+            <div class="color-dot" data-color="#FFD6A5" style="background:#FFD6A5" onclick="setHolderColor('#FFD6A5',this)"></div>
+            <div class="color-dot" data-color="#FFFACD" style="background:#FFFACD" onclick="setHolderColor('#FFFACD',this)"></div>
+            <div class="color-dot" data-color="#FFD6D6" style="background:#FFD6D6" onclick="setHolderColor('#FFD6D6',this)"></div>
+            <div class="color-dot" data-color="#B8EDD8" style="background:#B8EDD8" onclick="setHolderColor('#B8EDD8',this)"></div>
+            <div class="color-dot" data-color="#DDD0FF" style="background:#DDD0FF" onclick="setHolderColor('#DDD0FF',this)"></div>
+            <div class="color-dot" data-color="#FFE0B2" style="background:#FFE0B2" onclick="setHolderColor('#FFE0B2',this)"></div>
+            <div class="color-dot" data-color="#E0F7FA" style="background:#E0F7FA" onclick="setHolderColor('#E0F7FA',this)"></div>
+            <div class="color-dot" data-color="#FCE4EC" style="background:#FCE4EC" onclick="setHolderColor('#FCE4EC',this)"></div>
+            <div class="color-dot" data-color="#FF9A9E" style="background:#FF9A9E" onclick="setHolderColor('#FF9A9E',this)"></div>
+            <div class="color-dot" data-color="#A8E063" style="background:#A8E063" onclick="setHolderColor('#A8E063',this)"></div>
+            <div class="color-dot" data-color="#E0AAFF" style="background:#E0AAFF" onclick="setHolderColor('#E0AAFF',this)"></div>
+            <div class="color-dot" data-color="#FF9A76" style="background:#FF9A76" onclick="setHolderColor('#FF9A76',this)"></div>
+            <div class="color-dot" data-color="#A0F0C0" style="background:#A0F0C0" onclick="setHolderColor('#A0F0C0',this)"></div>
+            <div class="color-dot" data-color="#FFD580" style="background:#FFD580" onclick="setHolderColor('#FFD580',this)"></div>
+            <div class="color-dot" data-color="#FF758C" style="background:#FF758C" onclick="setHolderColor('#FF758C',this)"></div>
+            <div class="color-dot" data-color="#B0E2FF" style="background:#B0E2FF" onclick="setHolderColor('#B0E2FF',this)"></div>
         </div>
       </div>
       <div style="display:flex;gap:8px;">
