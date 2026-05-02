@@ -321,6 +321,8 @@ const CATS={
     {label:'Teacher',type:'teacher',color:'#06D6A0'},
     {label:'Chef',type:'chef',color:'#FFFFFF'},
     {label:'Astronaut',type:'astronaut',color:'#C0C0C0'},
+    {label:'Business',type:'businessman',color:'#2C3E50'},
+    {label:'Police',type:'police',color:'#1A3A5C'},
   ]}
 };
 const S={bg:0,skin:0,face:0,eyes:0,mouth:0,hair:0,outfit:0,pattern:0,cat:'bg'};
