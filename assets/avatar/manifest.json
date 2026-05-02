@@ -15,10 +15,10 @@
     null,
     null,
     null,
-    {"label":"Chef","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/face/skin1.png"},
-    {"label":"Astronaut","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/face/skin2.png"},
-    {"label":"Business","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/face/skin3.png"},
-    {"label":"Police","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/face/skin4.png"}
+    {"label":"Round","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/face/skin1.png"},
+    {"label":"Oval","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/face/skin2.png"},
+    {"label":"Square","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/face/skin3.png"},
+    {"label":"Triangle","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/face/skin4.png"}
   ],
   "eyes": [],
   "mouth": [],
