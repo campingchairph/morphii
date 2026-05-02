@@ -329,6 +329,8 @@ const S={bg:0,skin:0,face:0,eyes:0,mouth:0,hair:0,outfit:0,pattern:0,cat:'bg'};
 let placedStickers=[];
 let holderColor='#87CEEB';
 let showHolder=true;
+let showStroke=false;
+let strokeColor='white';
 let selectedStickerEmojis=new Set(); // checked stickers in panel
 let dragSt=null; // currently dragged sticker {idx,offX,offY}
 
@@ -819,14 +821,16 @@ const RAINBOW_TOP=['#FF6B9D','#FF9F43','#FECA57','#48DBFB','#A29BFE','#55EFC4','
 const RAINBOW_BOT=['#A29BFE','#FD79A8','#FF6B9D','#FECA57','#55EFC4','#FF9F43','#48DBFB','#A29BFE'];
 function arcText(ctx,text,top,color){
   if(!text.trim())return;
-  const MAX=16*1.6*1.2,MIN=16*0.6,arcR=R-34,maxArc=top?Math.PI*0.80:Math.PI*0.76;
+  const sizeScale=parseFloat(document.getElementById('profSize')?.value||1);
+  const BASE_MAX=16*1.6*1.2,BASE_MIN=16*0.6;
+  const MAX=BASE_MAX*sizeScale,MIN=BASE_MIN*sizeScale;
+  const arcR=R-34,maxArc=top?Math.PI*0.80:Math.PI*0.76;
   const chars=text.split(''),n=chars.length;
   let fs=MAX;
   for(let s=MAX;s>=MIN;s-=0.5){if((s*0.62/arcR)*n<=maxArc){fs=s;break;}fs=MIN;}
-  const fontFace=(document.getElementById('profFont')||document.getElementById('textFont')||{}).value||'Nunito';
+  const fontFace=(document.getElementById('profFont')||document.getElementById('textFont')||{}).value||'Cute Jellyfish';
   const palette=top?RAINBOW_TOP:RAINBOW_BOT;
   const useRainbow=color==='#RAINBOW';
-  // Measure actual text width for tight kerning
   ctx.save();ctx.font='900 '+fs+'px '+fontFace;
   const charWidths=chars.map(ch=>ch===' '?fs*0.3:ctx.measureText(ch).width+2);
   ctx.restore();
@@ -847,12 +851,8 @@ function arcText(ctx,text,top,color){
     ctx.rotate(angle+(top?Math.PI/2:-Math.PI/2));
     ctx.font='900 '+fs+'px '+fontFace;
     ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.lineWidth=fs*0.22;ctx.strokeStyle='rgba(255,255,255,0.95)';ctx.lineJoin='round';
-    ctx.strokeText(ch,0,0);
-    ctx.shadowColor='rgba(0,0,0,0.15)';ctx.shadowBlur=2;ctx.shadowOffsetX=1;ctx.shadowOffsetY=1;
     ctx.fillStyle=useRainbow?palette[i%palette.length]:color;
     ctx.fillText(ch,0,0);
-    ctx.shadowColor='transparent';
     ctx.restore();
   });
 }
@@ -870,7 +870,21 @@ function toggleHolder(){
   if(w) w.style.opacity=showHolder?'1':'0.3';
   drawPin();
 }
-function setHolderColor(val,el){
+function toggleStroke(){
+  showStroke=!showStroke;
+  const t=document.getElementById('strokeToggle');
+  const k=document.getElementById('strokeKnob');
+  if(t) t.style.background=showStroke?'var(--pink)':'rgba(255,255,255,0.2)';
+  if(k) k.style.left=showStroke?'16px':'2px';
+  drawPin();
+}
+function setStrokeColor(val,el){
+  strokeColor=val;
+  document.getElementById('strokeWhite').style.outline='none';
+  document.getElementById('strokeBlack').style.outline='none';
+  el.style.outline='2px solid var(--yellow)';
+  drawPin();
+}
   holderColor=val;
   document.querySelectorAll('#holderColorsWrap .color-dot').forEach(d=>d.classList.remove('active'));
   el.classList.add('active');
@@ -893,11 +907,14 @@ function setNameColor(hex, el){
 // ══ NAME HOLDER BANNER ══
 function arcTextWithHolder(ctx, text, color, useHolder){
   if(!text.trim())return;
-  const MAX=16*1.6*1.2,MIN=16*0.6,arcR=R-34,maxArc=Math.PI*0.76;
+  const sizeScale=parseFloat(document.getElementById('nameSize')?.value||1);
+  const BASE_MAX=16*1.6*1.2,BASE_MIN=16*0.6;
+  const MAX=BASE_MAX*sizeScale,MIN=BASE_MIN*sizeScale;
+  const arcR=R-34,maxArc=Math.PI*0.76;
   const chars=text.split(''),n=chars.length;
   let fs=MAX;
   for(let s=MAX;s>=MIN;s-=0.5){if((s*0.62/arcR)*n<=maxArc){fs=s;break;}fs=MIN;}
-  const fontFace=(document.getElementById('nameFont')||document.getElementById('textFont')||{}).value||'Nunito';
+  const fontFace=(document.getElementById('nameFont')||document.getElementById('textFont')||{}).value||'Cute Jellyfish';
   ctx.save();ctx.font='900 '+fs+'px '+fontFace;
   const charWidths=chars.map(ch=>ch===' '?fs*0.3:ctx.measureText(ch).width+2);
   ctx.restore();
@@ -912,7 +929,7 @@ function arcTextWithHolder(ctx, text, color, useHolder){
     const padH=fs*0.38;
     const padW=fs*0.55;
     const bannerArc=totalArc+padW*2/arcR;
-    const bannerR1=arcR+padH*1.2;
+    const bannerR1=arcR+padH*1.1;
     const bannerR2=arcR-padH*1.2;
     ctx.save();
     ctx.save();
@@ -945,11 +962,15 @@ function arcTextWithHolder(ctx, text, color, useHolder){
     const angle=startAngle-(cursor+scaledWidths[i]/2)/arcR;
     cursor+=scaledWidths[i];
     ctx.save();
-    const tR=arcR+fs*0.12;
-    ctx.translate(CX+tR*Math.cos(angle),CY+tR*Math.sin(angle));
+    ctx.translate(CX+arcR*Math.cos(angle),CY+arcR*Math.sin(angle));
     ctx.rotate(angle-Math.PI/2);
     ctx.font='900 '+fs+'px '+fontFace;
     ctx.textAlign='center';ctx.textBaseline='middle';
+    if(showStroke){
+      const sc=strokeColor==='white'?'rgba(255,255,255,0.7)':'rgba(0,0,0,0.7)';
+      ctx.lineWidth=fs*0.18;ctx.strokeStyle=sc;ctx.lineJoin='round';
+      ctx.strokeText(ch,0,0);
+    }
     ctx.fillStyle=useRainbow?palette[i%palette.length]:color;
     ctx.fillText(ch,0,0);
     ctx.restore();
