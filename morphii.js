@@ -912,7 +912,7 @@ function arcTextWithHolder(ctx, text, color, useHolder){
     const padH=fs*0.38;
     const padW=fs*0.55;
     const bannerArc=totalArc+padW*2/arcR;
-    const bannerR1=arcR+padH*1.1;
+    const bannerR1=arcR+padH*1.2;
     const bannerR2=arcR-padH*1.2;
     ctx.save();
     ctx.save();
