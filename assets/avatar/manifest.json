@@ -1,10 +1,17 @@
-"outfit": [
-  null,
-  null,
-  null,
-  null,
-  {"label":"Chef","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/chef.png"},
-  {"label":"Astronaut","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/astraunaught.png"},
-  {"label":"Business","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/businessman.png"},
-  {"label":"Police","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/police.png"}
-]
+{
+  "hair": [null, null, null, null, null, null],
+  "outfit": [
+    null,
+    null,
+    null,
+    null,
+    {"label":"Chef","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/chef.png"},
+    {"label":"Astronaut","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/astraunaught.png"},
+    {"label":"Business","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/businessman.png"},
+    {"label":"Police","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/police.png"}
+  ],
+  "eyes": [],
+  "mouth": [],
+  "stickers": [],
+  "patterns": []
+}
