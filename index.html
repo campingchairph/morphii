@@ -4,7 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Morphii — Build Your Future Self</title>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;800;900&family=Bubblegum+Sans&family=Baloo+2:wght@700;800&family=Righteous&family=Titan+One&family=Lilita+One&family=Pacifico&family=Boogaloo&family=Grandstander:wght@700;800&family=Chewy&family=Patrick+Hand:wght@700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.cdnfonts.com/css/cute-jellyfish" rel="stylesheet">
+<link href="https://fonts.cdnfonts.com/css/cute-stitch" rel="stylesheet">
+<link href="https://fonts.cdnfonts.com/css/cute-lovely-125898" rel="stylesheet">
+<link href="https://fonts.cdnfonts.com/css/deadly-cute" rel="stylesheet">
+<style>
+@font-face{font-family:'Cute Roti';src:url('https://raw.githubusercontent.com/campingchairph/morphii/main/assets/fonts/CuteRoti.ttf');}
+@font-face{font-family:'Cute Maple';src:url('https://raw.githubusercontent.com/campingchairph/morphii/main/assets/fonts/CuteMaple.ttf');}
+@font-face{font-family:'Cute Pola';src:url('https://raw.githubusercontent.com/campingchairph/morphii/main/assets/fonts/CutePola.ttf');}
+@font-face{font-family:'Cute Crafts';src:url('https://raw.githubusercontent.com/campingchairph/morphii/main/assets/fonts/CuteCrafts.ttf');}
+@font-face{font-family:'Rack Cute';src:url('https://raw.githubusercontent.com/campingchairph/morphii/main/assets/fonts/RackCute.ttf');}
+</style>
 <link rel="stylesheet" href="morphii.css">
 </head>
 <body>
@@ -302,38 +313,50 @@
         <div class="inp-group" style="flex:1">
           <label>Profession Font</label>
           <select id="profFont" onchange="drawPin()" style="width:100%;padding:8px 10px;border-radius:10px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);font-family:'Fredoka One',cursive;font-size:13px;color:white;outline:none;cursor:pointer;">
-          <option value="Nunito" style="color:#000">Nunito</option>
-          <option value="Fredoka One" style="color:#000">Fredoka One</option>
-          <option value="Bubblegum Sans" style="color:#000">Bubblegum Sans</option>
-          <option value="Baloo 2" style="color:#000">Baloo 2</option>
-          <option value="Righteous" style="color:#000">Righteous</option>
-          <option value="Titan One" style="color:#000">Titan One</option>
-          <option value="Lilita One" style="color:#000">Lilita One</option>
-          <option value="Pacifico" style="color:#000">Pacifico</option>
-          <option value="Boogaloo" style="color:#000">Boogaloo</option>
-          <option value="Grandstander" style="color:#000">Grandstander</option>
-          <option value="Chewy" style="color:#000">Chewy</option>
-          <option value="Patrick Hand" style="color:#000">Patrick Hand</option>
-          <option value="Arial Rounded MT Bold" style="color:#000">System Rounded</option>
+            <option value="Cute Jellyfish" style="color:#000">Cute Jellyfish</option>
+            <option value="Cute Stitch" style="color:#000">Cute Stitch</option>
+            <option value="Cute Lovely" style="color:#000">Cute Lovely</option>
+            <option value="Deadly Cute" style="color:#000">Deadly Cute</option>
+            <option value="Cute Roti" style="color:#000">Cute Roti</option>
+            <option value="Cute Maple" style="color:#000">Cute Maple</option>
+            <option value="Cute Pola" style="color:#000">Cute Pola</option>
+            <option value="Cute Crafts" style="color:#000">Cute Crafts</option>
+            <option value="Rack Cute" style="color:#000">Rack Cute</option>
+            <option value="Fredoka One" style="color:#000">Fredoka One</option>
+            <option value="Nunito" style="color:#000">Nunito</option>
           </select>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+            <label style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Size</label>
+            <input type="range" id="profSize" min="0.5" max="1.5" step="0.05" value="1" oninput="drawPin()" style="flex:1;accent-color:var(--pink);">
+          </div>
         </div>
         <div class="inp-group" style="flex:1">
           <label>Name Font</label>
           <select id="nameFont" onchange="drawPin()" style="width:100%;padding:8px 10px;border-radius:10px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);font-family:'Fredoka One',cursive;font-size:13px;color:white;outline:none;cursor:pointer;">
-          <option value="Nunito" style="color:#000">Nunito</option>
-          <option value="Fredoka One" style="color:#000">Fredoka One</option>
-          <option value="Bubblegum Sans" style="color:#000">Bubblegum Sans</option>
-          <option value="Baloo 2" style="color:#000">Baloo 2</option>
-          <option value="Righteous" style="color:#000">Righteous</option>
-          <option value="Titan One" style="color:#000">Titan One</option>
-          <option value="Lilita One" style="color:#000">Lilita One</option>
-          <option value="Pacifico" style="color:#000">Pacifico</option>
-          <option value="Boogaloo" style="color:#000">Boogaloo</option>
-          <option value="Grandstander" style="color:#000">Grandstander</option>
-          <option value="Chewy" style="color:#000">Chewy</option>
-          <option value="Patrick Hand" style="color:#000">Patrick Hand</option>
-          <option value="Arial Rounded MT Bold" style="color:#000">System Rounded</option>
+            <option value="Cute Jellyfish" style="color:#000">Cute Jellyfish</option>
+            <option value="Cute Stitch" style="color:#000">Cute Stitch</option>
+            <option value="Cute Lovely" style="color:#000">Cute Lovely</option>
+            <option value="Deadly Cute" style="color:#000">Deadly Cute</option>
+            <option value="Cute Roti" style="color:#000">Cute Roti</option>
+            <option value="Cute Maple" style="color:#000">Cute Maple</option>
+            <option value="Cute Pola" style="color:#000">Cute Pola</option>
+            <option value="Cute Crafts" style="color:#000">Cute Crafts</option>
+            <option value="Rack Cute" style="color:#000">Rack Cute</option>
+            <option value="Fredoka One" style="color:#000">Fredoka One</option>
+            <option value="Nunito" style="color:#000">Nunito</option>
           </select>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+            <label style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Size</label>
+            <input type="range" id="nameSize" min="0.5" max="1.5" step="0.05" value="1" oninput="drawPin()" style="flex:1;accent-color:var(--pink);">
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+            <label style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Stroke</label>
+            <div id="strokeToggle" onclick="toggleStroke()" style="width:32px;height:18px;border-radius:9px;background:rgba(255,255,255,0.2);cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0;">
+              <div id="strokeKnob" style="width:14px;height:14px;border-radius:50%;background:white;position:absolute;top:2px;left:2px;transition:left 0.2s;"></div>
+            </div>
+            <div class="color-dot" id="strokeWhite" onclick="setStrokeColor('white',this)" style="background:white;width:18px;height:18px;border:2px solid rgba(255,255,255,0.4);" title="White"></div>
+            <div class="color-dot" id="strokeBlack" onclick="setStrokeColor('black',this)" style="background:#111;width:18px;height:18px;" title="Black"></div>
+          </div>
         </div>
       </div>
       <div class="inp-group">
