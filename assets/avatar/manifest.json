@@ -1,27 +1,1043 @@
 {
-  "hair": [null, null, null, null, null, null],
-  "outfit": [
-    null,
-    null,
-    null,
-    null,
-    {"label":"Chef","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/chef.png"},
-    {"label":"Astronaut","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/astraunaught.png"},
-    {"label":"Business","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/businessman.png"},
-    {"label":"Police","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/police.png"}
-  ],
   "face": [
-    null,
-    null,
-    null,
-    null,
-    {"label":"Round","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/face/skin1.png"},
-    {"label":"Oval","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/face/skin2.png"},
-    {"label":"Square","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/face/skin3.png"},
-    {"label":"Triangle","url":"https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/face/skin4.png"}
+    {
+      "label": "face 1",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/face/face1.png"
+    },
+    {
+      "label": "face 2",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/face/face2.png"
+    },
+    {
+      "label": "face 3",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/face/face3.png"
+    },
+    {
+      "label": "face 4",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/face/face4.png"
+    }
   ],
-  "eyes": [],
-  "mouth": [],
-  "stickers": [],
-  "patterns": []
+  "eyes": [
+    {
+      "label": "eyes 1",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/eyes/eyes1.png"
+    },
+    {
+      "label": "eyes 2",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/eyes/eyes2.png"
+    },
+    {
+      "label": "eyes 3",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/eyes/eyes3.png"
+    },
+    {
+      "label": "eyes 4",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/eyes/eyes4.png"
+    },
+    {
+      "label": "eyes 5",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/eyes/eyes5.png"
+    },
+    {
+      "label": "eyes 6",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/eyes/eyes6.png"
+    },
+    {
+      "label": "eyes 7",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/eyes/eyes7.png"
+    },
+    {
+      "label": "eyes 8",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/eyes/eyes8.png"
+    },
+    {
+      "label": "eyes 9",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/eyes/eyes9.png"
+    },
+    {
+      "label": "eyes 10",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/eyes/eyes10.png"
+    },
+    {
+      "label": "eyes 11",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/eyes/eyes11.png"
+    },
+    {
+      "label": "eyes 12",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/eyes/eyes12.png"
+    },
+    {
+      "label": "eyes 13",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/eyes/eyes13.png"
+    },
+    {
+      "label": "eyes 14",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/eyes/eyes14.png"
+    },
+    {
+      "label": "eyes 15",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/eyes/eyes15.png"
+    },
+    {
+      "label": "eyes 16",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/eyes/eyes16.png"
+    },
+    {
+      "label": "eyes 17",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/eyes/eyes17.png"
+    },
+    {
+      "label": "eyes 18",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/eyes/eyes18.png"
+    },
+    {
+      "label": "eyes 19",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/eyes/eyes19.png"
+    },
+    {
+      "label": "eyes 20",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/eyes/eyes20.png"
+    }
+  ],
+  "mouth": [
+    {
+      "label": "mouth 1",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/mouth/mouth1.png"
+    },
+    {
+      "label": "mouth 2",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/mouth/mouth2.png"
+    },
+    {
+      "label": "mouth 3",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/mouth/mouth3.png"
+    },
+    {
+      "label": "mouth 4",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/mouth/mouth4.png"
+    },
+    {
+      "label": "mouth 5",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/mouth/mouth5.png"
+    },
+    {
+      "label": "mouth 6",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/mouth/mouth6.png"
+    },
+    {
+      "label": "mouth 7",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/mouth/mouth7.png"
+    },
+    {
+      "label": "mouth 8",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/mouth/mouth8.png"
+    },
+    {
+      "label": "mouth 9",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/mouth/mouth9.png"
+    },
+    {
+      "label": "mouth 10",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/mouth/mouth10.png"
+    },
+    {
+      "label": "mouth 11",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/mouth/mouth11.png"
+    },
+    {
+      "label": "mouth 12",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/mouth/mouth12.png"
+    },
+    {
+      "label": "mouth 13",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/mouth/mouth13.png"
+    },
+    {
+      "label": "mouth 14",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/mouth/mouth14.png"
+    },
+    {
+      "label": "mouth 15",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/mouth/mouth15.png"
+    },
+    {
+      "label": "mouth 16",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/mouth/mouth16.png"
+    },
+    {
+      "label": "mouth 17",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/mouth/mouth17.png"
+    },
+    {
+      "label": "mouth 18",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/mouth/mouth18.png"
+    },
+    {
+      "label": "mouth 19",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/mouth/mouth19.png"
+    },
+    {
+      "label": "mouth 20",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/mouth/mouth20.png"
+    }
+  ],
+  "hair": [
+    {
+      "label": "hair 1",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair1.png"
+    },
+    {
+      "label": "hair 2",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair2.png"
+    },
+    {
+      "label": "hair 3",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair3.png"
+    },
+    {
+      "label": "hair 4",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair4.png"
+    },
+    {
+      "label": "hair 5",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair5.png"
+    },
+    {
+      "label": "hair 6",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair6.png"
+    },
+    {
+      "label": "hair 7",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair7.png"
+    },
+    {
+      "label": "hair 8",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair8.png"
+    },
+    {
+      "label": "hair 9",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair9.png"
+    },
+    {
+      "label": "hair 10",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair10.png"
+    },
+    {
+      "label": "hair 11",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair11.png"
+    },
+    {
+      "label": "hair 12",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair12.png"
+    },
+    {
+      "label": "hair 13",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair13.png"
+    },
+    {
+      "label": "hair 14",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair14.png"
+    },
+    {
+      "label": "hair 15",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair15.png"
+    },
+    {
+      "label": "hair 16",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair16.png"
+    },
+    {
+      "label": "hair 17",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair17.png"
+    },
+    {
+      "label": "hair 18",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair18.png"
+    },
+    {
+      "label": "hair 19",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair19.png"
+    },
+    {
+      "label": "hair 20",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair20.png"
+    },
+    {
+      "label": "hair 21",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair21.png"
+    },
+    {
+      "label": "hair 22",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair22.png"
+    },
+    {
+      "label": "hair 23",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair23.png"
+    },
+    {
+      "label": "hair 24",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair24.png"
+    },
+    {
+      "label": "hair 25",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair25.png"
+    },
+    {
+      "label": "hair 26",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair26.png"
+    },
+    {
+      "label": "hair 27",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair27.png"
+    },
+    {
+      "label": "hair 28",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair28.png"
+    },
+    {
+      "label": "hair 29",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair29.png"
+    },
+    {
+      "label": "hair 30",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair30.png"
+    },
+    {
+      "label": "hair 31",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair31.png"
+    },
+    {
+      "label": "hair 32",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair32.png"
+    },
+    {
+      "label": "hair 33",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair33.png"
+    },
+    {
+      "label": "hair 34",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair34.png"
+    },
+    {
+      "label": "hair 35",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair35.png"
+    },
+    {
+      "label": "hair 36",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair36.png"
+    },
+    {
+      "label": "hair 37",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair37.png"
+    },
+    {
+      "label": "hair 38",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair38.png"
+    },
+    {
+      "label": "hair 39",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair39.png"
+    },
+    {
+      "label": "hair 40",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/hair/hair40.png"
+    }
+  ],
+  "skin": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "outfit": [
+    {
+      "label": "outfit 1",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit1.png"
+    },
+    {
+      "label": "outfit 2",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit2.png"
+    },
+    {
+      "label": "outfit 3",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit3.png"
+    },
+    {
+      "label": "outfit 4",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit4.png"
+    },
+    {
+      "label": "outfit 5",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit5.png"
+    },
+    {
+      "label": "outfit 6",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit6.png"
+    },
+    {
+      "label": "outfit 7",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit7.png"
+    },
+    {
+      "label": "outfit 8",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit8.png"
+    },
+    {
+      "label": "outfit 9",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit9.png"
+    },
+    {
+      "label": "outfit 10",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit10.png"
+    },
+    {
+      "label": "outfit 11",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit11.png"
+    },
+    {
+      "label": "outfit 12",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit12.png"
+    },
+    {
+      "label": "outfit 13",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit13.png"
+    },
+    {
+      "label": "outfit 14",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit14.png"
+    },
+    {
+      "label": "outfit 15",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit15.png"
+    },
+    {
+      "label": "outfit 16",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit16.png"
+    },
+    {
+      "label": "outfit 17",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit17.png"
+    },
+    {
+      "label": "outfit 18",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit18.png"
+    },
+    {
+      "label": "outfit 19",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit19.png"
+    },
+    {
+      "label": "outfit 20",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit20.png"
+    },
+    {
+      "label": "outfit 21",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit21.png"
+    },
+    {
+      "label": "outfit 22",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit22.png"
+    },
+    {
+      "label": "outfit 23",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit23.png"
+    },
+    {
+      "label": "outfit 24",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit24.png"
+    },
+    {
+      "label": "outfit 25",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit25.png"
+    },
+    {
+      "label": "outfit 26",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit26.png"
+    },
+    {
+      "label": "outfit 27",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit27.png"
+    },
+    {
+      "label": "outfit 28",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit28.png"
+    },
+    {
+      "label": "outfit 29",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit29.png"
+    },
+    {
+      "label": "outfit 30",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit30.png"
+    },
+    {
+      "label": "outfit 31",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit31.png"
+    },
+    {
+      "label": "outfit 32",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit32.png"
+    },
+    {
+      "label": "outfit 33",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit33.png"
+    },
+    {
+      "label": "outfit 34",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit34.png"
+    },
+    {
+      "label": "outfit 35",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit35.png"
+    },
+    {
+      "label": "outfit 36",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit36.png"
+    },
+    {
+      "label": "outfit 37",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit37.png"
+    },
+    {
+      "label": "outfit 38",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit38.png"
+    },
+    {
+      "label": "outfit 39",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit39.png"
+    },
+    {
+      "label": "outfit 40",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit40.png"
+    },
+    {
+      "label": "outfit 41",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit41.png"
+    },
+    {
+      "label": "outfit 42",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit42.png"
+    },
+    {
+      "label": "outfit 43",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit43.png"
+    },
+    {
+      "label": "outfit 44",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit44.png"
+    },
+    {
+      "label": "outfit 45",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit45.png"
+    },
+    {
+      "label": "outfit 46",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit46.png"
+    },
+    {
+      "label": "outfit 47",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit47.png"
+    },
+    {
+      "label": "outfit 48",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit48.png"
+    },
+    {
+      "label": "outfit 49",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit49.png"
+    },
+    {
+      "label": "outfit 50",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit50.png"
+    },
+    {
+      "label": "outfit 51",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit51.png"
+    },
+    {
+      "label": "outfit 52",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit52.png"
+    },
+    {
+      "label": "outfit 53",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit53.png"
+    },
+    {
+      "label": "outfit 54",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit54.png"
+    },
+    {
+      "label": "outfit 55",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit55.png"
+    },
+    {
+      "label": "outfit 56",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit56.png"
+    },
+    {
+      "label": "outfit 57",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit57.png"
+    },
+    {
+      "label": "outfit 58",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit58.png"
+    },
+    {
+      "label": "outfit 59",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit59.png"
+    },
+    {
+      "label": "outfit 60",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit60.png"
+    },
+    {
+      "label": "outfit 61",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit61.png"
+    },
+    {
+      "label": "outfit 62",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit62.png"
+    },
+    {
+      "label": "outfit 63",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit63.png"
+    },
+    {
+      "label": "outfit 64",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit64.png"
+    },
+    {
+      "label": "outfit 65",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit65.png"
+    },
+    {
+      "label": "outfit 66",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit66.png"
+    },
+    {
+      "label": "outfit 67",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit67.png"
+    },
+    {
+      "label": "outfit 68",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit68.png"
+    },
+    {
+      "label": "outfit 69",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit69.png"
+    },
+    {
+      "label": "outfit 70",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit70.png"
+    },
+    {
+      "label": "outfit 71",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit71.png"
+    },
+    {
+      "label": "outfit 72",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit72.png"
+    },
+    {
+      "label": "outfit 73",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit73.png"
+    },
+    {
+      "label": "outfit 74",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit74.png"
+    },
+    {
+      "label": "outfit 75",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit75.png"
+    },
+    {
+      "label": "outfit 76",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit76.png"
+    },
+    {
+      "label": "outfit 77",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit77.png"
+    },
+    {
+      "label": "outfit 78",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit78.png"
+    },
+    {
+      "label": "outfit 79",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit79.png"
+    },
+    {
+      "label": "outfit 80",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit80.png"
+    },
+    {
+      "label": "outfit 81",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit81.png"
+    },
+    {
+      "label": "outfit 82",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit82.png"
+    },
+    {
+      "label": "outfit 83",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit83.png"
+    },
+    {
+      "label": "outfit 84",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit84.png"
+    },
+    {
+      "label": "outfit 85",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit85.png"
+    },
+    {
+      "label": "outfit 86",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit86.png"
+    },
+    {
+      "label": "outfit 87",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit87.png"
+    },
+    {
+      "label": "outfit 88",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit88.png"
+    },
+    {
+      "label": "outfit 89",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit89.png"
+    },
+    {
+      "label": "outfit 90",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit90.png"
+    },
+    {
+      "label": "outfit 91",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit91.png"
+    },
+    {
+      "label": "outfit 92",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit92.png"
+    },
+    {
+      "label": "outfit 93",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit93.png"
+    },
+    {
+      "label": "outfit 94",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit94.png"
+    },
+    {
+      "label": "outfit 95",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit95.png"
+    },
+    {
+      "label": "outfit 96",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit96.png"
+    },
+    {
+      "label": "outfit 97",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit97.png"
+    },
+    {
+      "label": "outfit 98",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit98.png"
+    },
+    {
+      "label": "outfit 99",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit99.png"
+    },
+    {
+      "label": "outfit 100",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/outfit/outfit100.png"
+    }
+  ],
+  "patterns": [
+    null,
+    {
+      "label": "pattern 1",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/patterns/pattern1.png"
+    },
+    {
+      "label": "pattern 2",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/patterns/pattern2.png"
+    },
+    {
+      "label": "pattern 3",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/patterns/pattern3.png"
+    },
+    {
+      "label": "pattern 4",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/patterns/pattern4.png"
+    },
+    {
+      "label": "pattern 5",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/patterns/pattern5.png"
+    },
+    {
+      "label": "pattern 6",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/patterns/pattern6.png"
+    },
+    {
+      "label": "pattern 7",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/patterns/pattern7.png"
+    },
+    {
+      "label": "pattern 8",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/patterns/pattern8.png"
+    },
+    {
+      "label": "pattern 9",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/patterns/pattern9.png"
+    },
+    {
+      "label": "pattern 10",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/patterns/pattern10.png"
+    },
+    {
+      "label": "pattern 11",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/patterns/pattern11.png"
+    },
+    {
+      "label": "pattern 12",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/patterns/pattern12.png"
+    },
+    {
+      "label": "pattern 13",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/patterns/pattern13.png"
+    },
+    {
+      "label": "pattern 14",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/patterns/pattern14.png"
+    },
+    {
+      "label": "pattern 15",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/patterns/pattern15.png"
+    },
+    {
+      "label": "pattern 16",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/patterns/pattern16.png"
+    },
+    {
+      "label": "pattern 17",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/patterns/pattern17.png"
+    },
+    {
+      "label": "pattern 18",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/patterns/pattern18.png"
+    },
+    {
+      "label": "pattern 19",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/patterns/pattern19.png"
+    },
+    {
+      "label": "pattern 20",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/patterns/pattern20.png"
+    }
+  ],
+  "stickers": [
+    {
+      "label": "sticker 1",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker1.png"
+    },
+    {
+      "label": "sticker 2",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker2.png"
+    },
+    {
+      "label": "sticker 3",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker3.png"
+    },
+    {
+      "label": "sticker 4",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker4.png"
+    },
+    {
+      "label": "sticker 5",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker5.png"
+    },
+    {
+      "label": "sticker 6",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker6.png"
+    },
+    {
+      "label": "sticker 7",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker7.png"
+    },
+    {
+      "label": "sticker 8",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker8.png"
+    },
+    {
+      "label": "sticker 9",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker9.png"
+    },
+    {
+      "label": "sticker 10",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker10.png"
+    },
+    {
+      "label": "sticker 11",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker11.png"
+    },
+    {
+      "label": "sticker 12",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker12.png"
+    },
+    {
+      "label": "sticker 13",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker13.png"
+    },
+    {
+      "label": "sticker 14",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker14.png"
+    },
+    {
+      "label": "sticker 15",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker15.png"
+    },
+    {
+      "label": "sticker 16",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker16.png"
+    },
+    {
+      "label": "sticker 17",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker17.png"
+    },
+    {
+      "label": "sticker 18",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker18.png"
+    },
+    {
+      "label": "sticker 19",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker19.png"
+    },
+    {
+      "label": "sticker 20",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker20.png"
+    },
+    {
+      "label": "sticker 21",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker21.png"
+    },
+    {
+      "label": "sticker 22",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker22.png"
+    },
+    {
+      "label": "sticker 23",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker23.png"
+    },
+    {
+      "label": "sticker 24",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker24.png"
+    },
+    {
+      "label": "sticker 25",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker25.png"
+    },
+    {
+      "label": "sticker 26",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker26.png"
+    },
+    {
+      "label": "sticker 27",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker27.png"
+    },
+    {
+      "label": "sticker 28",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker28.png"
+    },
+    {
+      "label": "sticker 29",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker29.png"
+    },
+    {
+      "label": "sticker 30",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker30.png"
+    },
+    {
+      "label": "sticker 31",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker31.png"
+    },
+    {
+      "label": "sticker 32",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker32.png"
+    },
+    {
+      "label": "sticker 33",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker33.png"
+    },
+    {
+      "label": "sticker 34",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker34.png"
+    },
+    {
+      "label": "sticker 35",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker35.png"
+    },
+    {
+      "label": "sticker 36",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker36.png"
+    },
+    {
+      "label": "sticker 37",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker37.png"
+    },
+    {
+      "label": "sticker 38",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker38.png"
+    },
+    {
+      "label": "sticker 39",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker39.png"
+    },
+    {
+      "label": "sticker 40",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker40.png"
+    },
+    {
+      "label": "sticker 41",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker41.png"
+    },
+    {
+      "label": "sticker 42",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker42.png"
+    },
+    {
+      "label": "sticker 43",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker43.png"
+    },
+    {
+      "label": "sticker 44",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker44.png"
+    },
+    {
+      "label": "sticker 45",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker45.png"
+    },
+    {
+      "label": "sticker 46",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker46.png"
+    },
+    {
+      "label": "sticker 47",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker47.png"
+    },
+    {
+      "label": "sticker 48",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker48.png"
+    },
+    {
+      "label": "sticker 49",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker49.png"
+    },
+    {
+      "label": "sticker 50",
+      "url": "https://raw.githubusercontent.com/campingchairph/morphii/main/assets/avatar/stickers/sticker50.png"
+    }
+  ]
 }
