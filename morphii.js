@@ -1835,15 +1835,17 @@ document.addEventListener('DOMContentLoaded',()=>{
     const adminBtn = document.createElement('button');
     adminBtn.id = 'adminAccessBtn';
     adminBtn.className = 'back-to-landing';
-    adminBtn.style.cssText = 'opacity:0.4;font-size:11px;padding:4px 10px;';
-    adminBtn.textContent = '⚙ Admin';
+    adminBtn.style.cssText = 'opacity:0.5;font-size:18px;padding:5px 10px;';
+    adminBtn.textContent = '👤';
+    adminBtn.title = 'Admin';
     adminBtn.onclick = (e)=>{ e.stopPropagation(); goToAdmin(); };
 
     const subsBtn = document.createElement('button');
     subsBtn.id = 'subsAccessBtn';
     subsBtn.className = 'back-to-landing';
-    subsBtn.style.cssText = 'opacity:0.6;font-size:11px;padding:4px 10px;background:rgba(255,111,174,0.2);';
-    subsBtn.textContent = '📋 Submissions';
+    subsBtn.style.cssText = 'opacity:0.6;font-size:18px;padding:5px 10px;background:rgba(255,111,174,0.15);';
+    subsBtn.textContent = '📋';
+    subsBtn.title = 'Submissions';
     subsBtn.onclick = (e)=>{ e.stopPropagation(); openSubmissionsOverlay(); };
 
     setTimeout(()=>{
