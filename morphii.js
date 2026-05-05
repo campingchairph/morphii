@@ -1565,9 +1565,8 @@ function updatePrintBar(){
 // ── Size select in builder ──
 // Inject size picker next to approve button
 function injectSizePicker(){
-  const inp = document.querySelector('.inputs-section');
-  if(!inp||document.getElementById('pinSizeSelect'))return;
-  const wrap = document.createElement('div');
+  const wrap = document.getElementById('pinSizeWrap');
+  if(!wrap||document.getElementById('pinSizeSelect'))return;
   wrap.className = 'inp-group';
   wrap.innerHTML = `<label>Pin Size</label>
     <select id="pinSizeSelect" style="width:100%;padding:9px 12px;border-radius:12px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);font-family:'Fredoka One',cursive;font-size:14px;color:white;outline:none;cursor:pointer;">
@@ -1575,7 +1574,6 @@ function injectSizePicker(){
       <option value="2.25" selected>Regular — 2.25"</option>
       <option value="3">Large — 3"</option>
     </select>`;
-  inp.insertBefore(wrap, inp.querySelector('.approve-btn'));
 }
 
 // ══ PRINT LAYOUT ══
