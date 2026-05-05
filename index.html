@@ -337,7 +337,6 @@
       <div class="cat-section-label">Customize</div>
       <div class="cats" id="catBtns">
         <button class="cat-btn active" onclick="setCat('bg',this)"><span class="ci">🌈</span>BG</button>
-
         <button class="cat-btn" onclick="setCat('face',this)"><span class="ci">😶</span>Face</button>
         <button class="cat-btn" onclick="setCat('eyes',this)"><span class="ci">👁</span>Eyes</button>
         <button class="cat-btn" onclick="setCat('mouth',this)"><span class="ci">😊</span>Mouth</button>
@@ -361,19 +360,63 @@
       <div class="asset-grid" id="assetGrid"></div>
     </div>
 
-    <div class="inputs-section">
-      <div class="inp-group">
-        <label>Profession (top arc)</label>
-        <input type="text" id="profInput" value="Future Doctor" maxlength="22" placeholder="e.g. Future Doctor" oninput="drawPin()">
+    <div class="left-panel-bottom">
+      <div id="pinSizeWrap"></div>
+      <button class="approve-btn" onclick="handleApprove()">✓ Approve &amp; Print</button>
+    </div>
+  </div>
+
+  <!-- RIGHT SIDE: canvas + bottom bar -->
+  <div class="right-side">
+
+    <!-- CENTER PREVIEW -->
+    <div class="preview-area">
+      <div class="blob-corner blob-tl"></div>
+      <div class="blob-corner blob-br"></div>
+      <div class="blob-corner blob-bl"></div>
+      <div class="blob-corner blob-tr"></div>
+      <div class="wave wave-1"></div>
+      <div class="wave wave-2"></div>
+      <svg class="halftone" style="top:5%;right:5%" viewBox="0 0 120 80"><g>
+        <circle cx="10" cy="10" r="3"/><circle cx="25" cy="10" r="3"/><circle cx="40" cy="10" r="3"/><circle cx="55" cy="10" r="3"/>
+        <circle cx="10" cy="25" r="3"/><circle cx="25" cy="25" r="3"/><circle cx="40" cy="25" r="3"/><circle cx="55" cy="25" r="3"/>
+        <circle cx="10" cy="40" r="3"/><circle cx="25" cy="40" r="3"/><circle cx="40" cy="40" r="3"/>
+      </g></svg>
+      <svg class="halftone" style="bottom:15%;left:3%;transform:rotate(10deg)" viewBox="0 0 120 80"><g>
+        <circle cx="10" cy="10" r="3"/><circle cx="25" cy="10" r="3"/><circle cx="40" cy="10" r="3"/>
+        <circle cx="10" cy="25" r="3"/><circle cx="25" cy="25" r="3"/><circle cx="40" cy="25" r="3"/><circle cx="55" cy="25" r="3"/>
+        <circle cx="10" cy="40" r="3"/><circle cx="25" cy="40" r="3"/>
+      </g></svg>
+      <div class="cloud cloud-1"><div class="cloud-body"></div></div>
+      <div class="cloud cloud-2"><div class="cloud-body"></div></div>
+      <div class="cloud cloud-3"><div class="cloud-body"></div></div>
+      <div class="cloud cloud-4"><div class="cloud-body"></div></div>
+      <div class="fshape fshape-star" style="top:9%;left:22%;animation-delay:0s;">⭐</div>
+      <div class="fshape fshape-star" style="top:6%;right:22%;font-size:16px;animation-delay:0.8s;">✨</div>
+      <div class="fshape fshape-star" style="bottom:26%;left:18%;font-size:18px;animation-delay:1.5s;">⭐</div>
+      <div class="fshape fshape-star" style="bottom:18%;right:16%;font-size:14px;animation-delay:0.4s;">✨</div>
+      <div class="fshape fshape-ring" style="top:28%;left:12%;animation-delay:0.6s;"></div>
+      <div class="fshape fshape-ring" style="bottom:35%;right:10%;animation-delay:1.2s;"></div>
+      <div class="fshape fshape-dot" style="top:40%;left:8%;animation-delay:0.3s;"></div>
+      <div class="fshape fshape-dot" style="top:20%;right:12%;animation-delay:1s;"></div>
+      <div class="fshape fshape-sq" style="bottom:42%;left:6%;animation-delay:0.7s;"></div>
+      <div class="fshape fshape-sq" style="top:50%;right:7%;animation-delay:1.6s;"></div>
+      <div class="pin-stage">
+        <canvas id="pinCanvas" width="320" height="320"></canvas>
       </div>
-      <div class="inp-group">
-        <label>Your Name (bottom arc)</label>
-        <input type="text" id="nameInput" value="Alex Rivera" maxlength="20" placeholder="Your name" oninput="drawPin()">
+      <div class="ice-platform-wrap">
+        <div class="ice-shadow"></div>
       </div>
-      <div style="display:flex;gap:8px;">
-        <div class="inp-group" style="flex:1">
-          <label>Profession Font</label>
-          <select id="profFont" onchange="drawPin()" style="width:100%;padding:8px 10px;border-radius:10px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);font-family:'Fredoka One',cursive;font-size:13px;color:white;outline:none;cursor:pointer;">
+    </div>
+
+    <!-- BOTTOM BAR: text arc controls -->
+    <div class="text-bar">
+      <!-- LEFT COL: Profession -->
+      <div class="text-col">
+        <div class="text-col-label">🎓 Profession Arc</div>
+        <input type="text" id="profInput" value="Future Doctor" maxlength="22" placeholder="e.g. Future Doctor" oninput="drawPin()" class="text-bar-input">
+        <div class="text-bar-row">
+          <select id="profFont" onchange="drawPin()" class="text-bar-select">
             <option value="Cute Jellyfish" style="color:#000">Cute Jellyfish</option>
             <option value="Cute Stitch" style="color:#000">Cute Stitch</option>
             <option value="Cute Roti" style="color:#000">Cute Roti</option>
@@ -381,14 +424,36 @@
             <option value="Fredoka One" style="color:#000">Fredoka One</option>
             <option value="Nunito" style="color:#000">Nunito</option>
           </select>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
-            <label style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Size</label>
+          <div style="display:flex;align-items:center;gap:6px;flex:1;">
+            <span class="text-bar-micro">Size</span>
             <input type="range" id="profSize" min="0.5" max="1.5" step="0.05" value="1" oninput="drawPin()" style="flex:1;accent-color:var(--pink);">
           </div>
         </div>
-        <div class="inp-group" style="flex:1">
-          <label>Name Font</label>
-          <select id="nameFont" onchange="drawPin()" style="width:100%;padding:8px 10px;border-radius:10px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);font-family:'Fredoka One',cursive;font-size:13px;color:white;outline:none;cursor:pointer;">
+        <div class="text-bar-colors" id="profColors">
+          <div class="color-dot active" data-color="#RAINBOW" style="background:conic-gradient(#FF6B9D,#FECA57,#48DBFB,#A29BFE,#55EFC4,#FF6B9D)" onclick="setProfColor('#RAINBOW',this)" title="Rainbow"></div>
+          <div class="color-dot" data-color="#0B2E4E" style="background:#0B2E4E" onclick="setProfColor('#0B2E4E',this)"></div>
+          <div class="color-dot" data-color="#FF6FAE" style="background:#FF6FAE" onclick="setProfColor('#FF6FAE',this)"></div>
+          <div class="color-dot" data-color="#FFFFFF" style="background:#FFFFFF;border-color:rgba(255,255,255,0.4)" onclick="setProfColor('#FFFFFF',this)"></div>
+          <div class="color-dot" data-color="#FFFF00" style="background:#FFFF00" onclick="setProfColor('#FFFF00',this)"></div>
+          <div class="color-dot" data-color="#FF5E5B" style="background:#FF5E5B" onclick="setProfColor('#FF5E5B',this)"></div>
+          <div class="color-dot" data-color="#06D6A0" style="background:#06D6A0" onclick="setProfColor('#06D6A0',this)"></div>
+          <div class="color-dot" data-color="#A29BFE" style="background:#A29BFE" onclick="setProfColor('#A29BFE',this)"></div>
+          <div class="color-dot" data-color="#FDCB6E" style="background:#FDCB6E" onclick="setProfColor('#FDCB6E',this)"></div>
+          <div class="color-dot" data-color="#74B9FF" style="background:#74B9FF" onclick="setProfColor('#74B9FF',this)"></div>
+          <div class="color-dot" data-color="#55EFC4" style="background:#55EFC4" onclick="setProfColor('#55EFC4',this)"></div>
+          <div class="color-dot" data-color="#6C5CE7" style="background:#6C5CE7" onclick="setProfColor('#6C5CE7',this)"></div>
+        </div>
+      </div>
+
+      <!-- DIVIDER -->
+      <div class="text-col-divider"></div>
+
+      <!-- RIGHT COL: Name -->
+      <div class="text-col">
+        <div class="text-col-label">📛 Name Arc</div>
+        <input type="text" id="nameInput" value="Alex Rivera" maxlength="20" placeholder="Your name" oninput="drawPin()" class="text-bar-input">
+        <div class="text-bar-row">
+          <select id="nameFont" onchange="drawPin()" class="text-bar-select">
             <option value="Cute Jellyfish" style="color:#000">Cute Jellyfish</option>
             <option value="Cute Stitch" style="color:#000">Cute Stitch</option>
             <option value="Cute Roti" style="color:#000">Cute Roti</option>
@@ -396,140 +461,66 @@
             <option value="Fredoka One" style="color:#000">Fredoka One</option>
             <option value="Nunito" style="color:#000">Nunito</option>
           </select>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
-            <label style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Size</label>
+          <div style="display:flex;align-items:center;gap:6px;flex:1;">
+            <span class="text-bar-micro">Size</span>
             <input type="range" id="nameSize" min="0.5" max="1.5" step="0.05" value="1" oninput="drawPin()" style="flex:1;accent-color:var(--pink);">
           </div>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
-            <label style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Stroke</label>
+        </div>
+        <div class="text-bar-row" style="margin-top:4px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="text-bar-micro">Stroke</span>
             <div id="strokeToggle" onclick="toggleStroke()" style="width:32px;height:18px;border-radius:9px;background:rgba(255,255,255,0.2);cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0;">
               <div id="strokeKnob" style="width:14px;height:14px;border-radius:50%;background:white;position:absolute;top:2px;left:2px;transition:left 0.2s;"></div>
             </div>
             <div class="color-dot" id="strokeWhite" onclick="setStrokeColor('white',this)" style="background:white;width:18px;height:18px;border:2px solid rgba(255,255,255,0.4);" title="White"></div>
             <div class="color-dot" id="strokeBlack" onclick="setStrokeColor('black',this)" style="background:#111;width:18px;height:18px;" title="Black"></div>
           </div>
-        </div>
-      </div>
-      <div class="inp-group">
-        <label>Name Holder</label>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-          <label style="font-size:11px;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:1px;">Show</label>
-          <div id="holderToggle" onclick="toggleHolder()" style="width:36px;height:20px;border-radius:10px;background:var(--pink);cursor:pointer;position:relative;transition:background 0.2s;">
-            <div id="holderToggleKnob" style="width:16px;height:16px;border-radius:50%;background:white;position:absolute;top:2px;left:18px;transition:left 0.2s;"></div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="text-bar-micro">Holder</span>
+            <div id="holderToggle" onclick="toggleHolder()" style="width:32px;height:18px;border-radius:9px;background:var(--pink);cursor:pointer;position:relative;transition:background 0.2s;">
+              <div id="holderToggleKnob" style="width:14px;height:14px;border-radius:50%;background:white;position:absolute;top:2px;left:16px;transition:left 0.2s;"></div>
+            </div>
           </div>
         </div>
-        <div id="holderColorsWrap" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;" id="holderColors">
-            <div class="color-dot active" data-color="#87CEEB" style="background:#87CEEB" onclick="setHolderColor('#87CEEB',this)"></div>
-            <div class="color-dot" data-color="#FFD6E0" style="background:#FFD6E0" onclick="setHolderColor('#FFD6E0',this)"></div>
-            <div class="color-dot" data-color="#B8F0D8" style="background:#B8F0D8" onclick="setHolderColor('#B8F0D8',this)"></div>
-            <div class="color-dot" data-color="#E8D5FF" style="background:#E8D5FF" onclick="setHolderColor('#E8D5FF',this)"></div>
-            <div class="color-dot" data-color="#FFD6A5" style="background:#FFD6A5" onclick="setHolderColor('#FFD6A5',this)"></div>
-            <div class="color-dot" data-color="#FFFACD" style="background:#FFFACD" onclick="setHolderColor('#FFFACD',this)"></div>
-            <div class="color-dot" data-color="#FFD6D6" style="background:#FFD6D6" onclick="setHolderColor('#FFD6D6',this)"></div>
-            <div class="color-dot" data-color="#B8EDD8" style="background:#B8EDD8" onclick="setHolderColor('#B8EDD8',this)"></div>
-            <div class="color-dot" data-color="#DDD0FF" style="background:#DDD0FF" onclick="setHolderColor('#DDD0FF',this)"></div>
-            <div class="color-dot" data-color="#FFE0B2" style="background:#FFE0B2" onclick="setHolderColor('#FFE0B2',this)"></div>
-            <div class="color-dot" data-color="#E0F7FA" style="background:#E0F7FA" onclick="setHolderColor('#E0F7FA',this)"></div>
-            <div class="color-dot" data-color="#FCE4EC" style="background:#FCE4EC" onclick="setHolderColor('#FCE4EC',this)"></div>
-            <div class="color-dot" data-color="#FF9A9E" style="background:#FF9A9E" onclick="setHolderColor('#FF9A9E',this)"></div>
-            <div class="color-dot" data-color="#A8E063" style="background:#A8E063" onclick="setHolderColor('#A8E063',this)"></div>
-            <div class="color-dot" data-color="#E0AAFF" style="background:#E0AAFF" onclick="setHolderColor('#E0AAFF',this)"></div>
-            <div class="color-dot" data-color="#FF9A76" style="background:#FF9A76" onclick="setHolderColor('#FF9A76',this)"></div>
-            <div class="color-dot" data-color="#A0F0C0" style="background:#A0F0C0" onclick="setHolderColor('#A0F0C0',this)"></div>
-            <div class="color-dot" data-color="#FFD580" style="background:#FFD580" onclick="setHolderColor('#FFD580',this)"></div>
-            <div class="color-dot" data-color="#FF758C" style="background:#FF758C" onclick="setHolderColor('#FF758C',this)"></div>
-            <div class="color-dot" data-color="#B0E2FF" style="background:#B0E2FF" onclick="setHolderColor('#B0E2FF',this)"></div>
+        <div class="text-bar-colors" id="nameColors">
+          <div class="color-dot active" data-color="#RAINBOW" style="background:conic-gradient(#A29BFE,#FD79A8,#FECA57,#55EFC4,#FF9F43,#A29BFE)" onclick="setNameColor('#RAINBOW',this)" title="Rainbow"></div>
+          <div class="color-dot" data-color="#0B2E4E" style="background:#0B2E4E" onclick="setNameColor('#0B2E4E',this)"></div>
+          <div class="color-dot" data-color="#FF6FAE" style="background:#FF6FAE" onclick="setNameColor('#FF6FAE',this)"></div>
+          <div class="color-dot" data-color="#FFFFFF" style="background:#FFFFFF;border-color:rgba(255,255,255,0.4)" onclick="setNameColor('#FFFFFF',this)"></div>
+          <div class="color-dot" data-color="#FFFF00" style="background:#FFFF00" onclick="setNameColor('#FFFF00',this)"></div>
+          <div class="color-dot" data-color="#FF5E5B" style="background:#FF5E5B" onclick="setNameColor('#FF5E5B',this)"></div>
+          <div class="color-dot" data-color="#06D6A0" style="background:#06D6A0" onclick="setNameColor('#06D6A0',this)"></div>
+          <div class="color-dot" data-color="#A29BFE" style="background:#A29BFE" onclick="setNameColor('#A29BFE',this)"></div>
+          <div class="color-dot" data-color="#FDCB6E" style="background:#FDCB6E" onclick="setNameColor('#FDCB6E',this)"></div>
+          <div class="color-dot" data-color="#74B9FF" style="background:#74B9FF" onclick="setNameColor('#74B9FF',this)"></div>
+          <div class="color-dot" data-color="#55EFC4" style="background:#55EFC4" onclick="setNameColor('#55EFC4',this)"></div>
+          <div class="color-dot" data-color="#6C5CE7" style="background:#6C5CE7" onclick="setNameColor('#6C5CE7',this)"></div>
+        </div>
+        <!-- Holder colors inline -->
+        <div id="holderColorsWrap" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;">
+          <div class="color-dot active" data-color="#87CEEB" style="background:#87CEEB;width:18px;height:18px;" onclick="setHolderColor('#87CEEB',this)"></div>
+          <div class="color-dot" data-color="#FFD6E0" style="background:#FFD6E0;width:18px;height:18px;" onclick="setHolderColor('#FFD6E0',this)"></div>
+          <div class="color-dot" data-color="#B8F0D8" style="background:#B8F0D8;width:18px;height:18px;" onclick="setHolderColor('#B8F0D8',this)"></div>
+          <div class="color-dot" data-color="#E8D5FF" style="background:#E8D5FF;width:18px;height:18px;" onclick="setHolderColor('#E8D5FF',this)"></div>
+          <div class="color-dot" data-color="#FFD6A5" style="background:#FFD6A5;width:18px;height:18px;" onclick="setHolderColor('#FFD6A5',this)"></div>
+          <div class="color-dot" data-color="#FFFACD" style="background:#FFFACD;width:18px;height:18px;" onclick="setHolderColor('#FFFACD',this)"></div>
+          <div class="color-dot" data-color="#B8EDD8" style="background:#B8EDD8;width:18px;height:18px;" onclick="setHolderColor('#B8EDD8',this)"></div>
+          <div class="color-dot" data-color="#DDD0FF" style="background:#DDD0FF;width:18px;height:18px;" onclick="setHolderColor('#DDD0FF',this)"></div>
+          <div class="color-dot" data-color="#FFE0B2" style="background:#FFE0B2;width:18px;height:18px;" onclick="setHolderColor('#FFE0B2',this)"></div>
+          <div class="color-dot" data-color="#E0F7FA" style="background:#E0F7FA;width:18px;height:18px;" onclick="setHolderColor('#E0F7FA',this)"></div>
+          <div class="color-dot" data-color="#FCE4EC" style="background:#FCE4EC;width:18px;height:18px;" onclick="setHolderColor('#FCE4EC',this)"></div>
+          <div class="color-dot" data-color="#FF9A9E" style="background:#FF9A9E;width:18px;height:18px;" onclick="setHolderColor('#FF9A9E',this)"></div>
+          <div class="color-dot" data-color="#A8E063" style="background:#A8E063;width:18px;height:18px;" onclick="setHolderColor('#A8E063',this)"></div>
+          <div class="color-dot" data-color="#E0AAFF" style="background:#E0AAFF;width:18px;height:18px;" onclick="setHolderColor('#E0AAFF',this)"></div>
+          <div class="color-dot" data-color="#FF9A76" style="background:#FF9A76;width:18px;height:18px;" onclick="setHolderColor('#FF9A76',this)"></div>
+          <div class="color-dot" data-color="#A0F0C0" style="background:#A0F0C0;width:18px;height:18px;" onclick="setHolderColor('#A0F0C0',this)"></div>
+          <div class="color-dot" data-color="#FFD580" style="background:#FFD580;width:18px;height:18px;" onclick="setHolderColor('#FFD580',this)"></div>
+          <div class="color-dot" data-color="#B0E2FF" style="background:#B0E2FF;width:18px;height:18px;" onclick="setHolderColor('#B0E2FF',this)"></div>
         </div>
       </div>
-      <div style="display:flex;gap:8px;">
-        <div class="inp-group" style="flex:1">
-          <label>Profession Color</label>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;" id="profColors">
-            <div class="color-dot active" data-color="#RAINBOW" style="background:conic-gradient(#FF6B9D,#FECA57,#48DBFB,#A29BFE,#55EFC4,#FF6B9D)" onclick="setProfColor('#RAINBOW',this)" title="Rainbow"></div>
-            <div class="color-dot" data-color="#0B2E4E" style="background:#0B2E4E" onclick="setProfColor('#0B2E4E',this)"></div>
-            <div class="color-dot" data-color="#FF6FAE" style="background:#FF6FAE" onclick="setProfColor('#FF6FAE',this)"></div>
-            <div class="color-dot" data-color="#FFFFFF" style="background:#FFFFFF;border-color:rgba(255,255,255,0.4)" onclick="setProfColor('#FFFFFF',this)"></div>
-            <div class="color-dot" data-color="#FFFF00" style="background:#FFFF00" onclick="setProfColor('#FFFF00',this)"></div>
-            <div class="color-dot" data-color="#FF5E5B" style="background:#FF5E5B" onclick="setProfColor('#FF5E5B',this)"></div>
-            <div class="color-dot" data-color="#06D6A0" style="background:#06D6A0" onclick="setProfColor('#06D6A0',this)"></div>
-            <div class="color-dot" data-color="#A29BFE" style="background:#A29BFE" onclick="setProfColor('#A29BFE',this)"></div>
-            <div class="color-dot" data-color="#FD79A8" style="background:#FD79A8" onclick="setProfColor('#FD79A8',this)"></div>
-            <div class="color-dot" data-color="#FDCB6E" style="background:#FDCB6E" onclick="setProfColor('#FDCB6E',this)"></div>
-            <div class="color-dot" data-color="#74B9FF" style="background:#74B9FF" onclick="setProfColor('#74B9FF',this)"></div>
-            <div class="color-dot" data-color="#55EFC4" style="background:#55EFC4" onclick="setProfColor('#55EFC4',this)"></div>
-            <div class="color-dot" data-color="#E17055" style="background:#E17055" onclick="setProfColor('#E17055',this)"></div>
-            <div class="color-dot" data-color="#6C5CE7" style="background:#6C5CE7" onclick="setProfColor('#6C5CE7',this)"></div>
-          </div>
-        </div>
-        <div class="inp-group" style="flex:1">
-          <label>Name Color</label>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;" id="nameColors">
-            <div class="color-dot active" data-color="#RAINBOW" style="background:conic-gradient(#A29BFE,#FD79A8,#FECA57,#55EFC4,#FF9F43,#A29BFE)" onclick="setNameColor('#RAINBOW',this)" title="Rainbow"></div>
-            <div class="color-dot" data-color="#0B2E4E" style="background:#0B2E4E" onclick="setNameColor('#0B2E4E',this)"></div>
-            <div class="color-dot" data-color="#FF6FAE" style="background:#FF6FAE" onclick="setNameColor('#FF6FAE',this)"></div>
-            <div class="color-dot" data-color="#FFFFFF" style="background:#FFFFFF;border-color:rgba(255,255,255,0.4)" onclick="setNameColor('#FFFFFF',this)"></div>
-            <div class="color-dot" data-color="#FFFF00" style="background:#FFFF00" onclick="setNameColor('#FFFF00',this)"></div>
-            <div class="color-dot" data-color="#FF5E5B" style="background:#FF5E5B" onclick="setNameColor('#FF5E5B',this)"></div>
-            <div class="color-dot" data-color="#06D6A0" style="background:#06D6A0" onclick="setNameColor('#06D6A0',this)"></div>
-            <div class="color-dot" data-color="#A29BFE" style="background:#A29BFE" onclick="setNameColor('#A29BFE',this)"></div>
-            <div class="color-dot" data-color="#FD79A8" style="background:#FD79A8" onclick="setNameColor('#FD79A8',this)"></div>
-            <div class="color-dot" data-color="#FDCB6E" style="background:#FDCB6E" onclick="setNameColor('#FDCB6E',this)"></div>
-            <div class="color-dot" data-color="#74B9FF" style="background:#74B9FF" onclick="setNameColor('#74B9FF',this)"></div>
-            <div class="color-dot" data-color="#55EFC4" style="background:#55EFC4" onclick="setNameColor('#55EFC4',this)"></div>
-            <div class="color-dot" data-color="#E17055" style="background:#E17055" onclick="setNameColor('#E17055',this)"></div>
-            <div class="color-dot" data-color="#6C5CE7" style="background:#6C5CE7" onclick="setNameColor('#6C5CE7',this)"></div>
-          </div>
-        </div>
-      </div>
-      <button class="approve-btn" onclick="handleApprove()">✓ Approve &amp; Print</button>
     </div>
-  </div>
 
-  <!-- CENTER PREVIEW -->
-  <div class="preview-area">
-    <!-- corner blobs -->
-    <div class="blob-corner blob-tl"></div>
-    <div class="blob-corner blob-br"></div>
-    <div class="blob-corner blob-bl"></div>
-    <div class="blob-corner blob-tr"></div>
-    <!-- waves -->
-    <div class="wave wave-1"></div>
-    <div class="wave wave-2"></div>
-    <!-- halftone dots (SVG) -->
-    <svg class="halftone" style="top:5%;right:5%" viewBox="0 0 120 80"><g>
-      <circle cx="10" cy="10" r="3"/><circle cx="25" cy="10" r="3"/><circle cx="40" cy="10" r="3"/><circle cx="55" cy="10" r="3"/>
-      <circle cx="10" cy="25" r="3"/><circle cx="25" cy="25" r="3"/><circle cx="40" cy="25" r="3"/><circle cx="55" cy="25" r="3"/>
-      <circle cx="10" cy="40" r="3"/><circle cx="25" cy="40" r="3"/><circle cx="40" cy="40" r="3"/>
-    </g></svg>
-    <svg class="halftone" style="bottom:15%;left:3%;transform:rotate(10deg)" viewBox="0 0 120 80"><g>
-      <circle cx="10" cy="10" r="3"/><circle cx="25" cy="10" r="3"/><circle cx="40" cy="10" r="3"/>
-      <circle cx="10" cy="25" r="3"/><circle cx="25" cy="25" r="3"/><circle cx="40" cy="25" r="3"/><circle cx="55" cy="25" r="3"/>
-      <circle cx="10" cy="40" r="3"/><circle cx="25" cy="40" r="3"/>
-    </g></svg>
-    <!-- CSS clouds -->
-    <div class="cloud cloud-1"><div class="cloud-body"></div></div>
-    <div class="cloud cloud-2"><div class="cloud-body"></div></div>
-    <div class="cloud cloud-3"><div class="cloud-body"></div></div>
-    <div class="cloud cloud-4"><div class="cloud-body"></div></div>
-    <!-- floating shapes -->
-    <div class="fshape fshape-star" style="top:9%;left:22%;animation-delay:0s;">⭐</div>
-    <div class="fshape fshape-star" style="top:6%;right:22%;font-size:16px;animation-delay:0.8s;">✨</div>
-    <div class="fshape fshape-star" style="bottom:26%;left:18%;font-size:18px;animation-delay:1.5s;">⭐</div>
-    <div class="fshape fshape-star" style="bottom:18%;right:16%;font-size:14px;animation-delay:0.4s;">✨</div>
-    <div class="fshape fshape-ring" style="top:28%;left:12%;animation-delay:0.6s;"></div>
-    <div class="fshape fshape-ring" style="bottom:35%;right:10%;animation-delay:1.2s;"></div>
-    <div class="fshape fshape-dot" style="top:40%;left:8%;animation-delay:0.3s;"></div>
-    <div class="fshape fshape-dot" style="top:20%;right:12%;animation-delay:1s;"></div>
-    <div class="fshape fshape-sq" style="bottom:42%;left:6%;animation-delay:0.7s;"></div>
-    <div class="fshape fshape-sq" style="top:50%;right:7%;animation-delay:1.6s;"></div>
-
-    <div class="pin-stage">
-      <canvas id="pinCanvas" width="320" height="320"></canvas>
-    </div>
-    <div class="ice-platform-wrap">
-      <div class="ice-shadow"></div>
-    </div>
-  </div>
+  </div><!-- end right-side -->
 </div>
 
 <!-- MOBILE BOTTOM -->
