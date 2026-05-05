@@ -1809,6 +1809,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(isMobile){
     document.getElementById('landing-screen').classList.add('hidden');
     document.getElementById('mobile-splash').style.display='flex';
+    document.getElementById('mobileSplashBtn').onclick = startMobileBuilder;
   }
 
   // Add secret admin button to builder header (booth only)
