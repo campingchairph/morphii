@@ -452,6 +452,24 @@ function setCat(cat,el){
   document.querySelectorAll('#catBtns .cat-btn').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('assetTitle').textContent=CATS[cat].title;
+  // Show/hide outfit search
+  let searchEl=document.getElementById('outfitSearch');
+  if(cat==='outfit'){
+    if(!searchEl){
+      searchEl=document.createElement('input');
+      searchEl.id='outfitSearch';
+      searchEl.type='text';
+      searchEl.placeholder='🔍 Search outfit…';
+      searchEl.style.cssText='width:100%;padding:7px 10px;border-radius:10px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);font-family:\'Fredoka One\',cursive;font-size:13px;color:white;outline:none;margin-bottom:8px;box-sizing:border-box;';
+      searchEl.oninput=()=>{renderGrid('assetGrid','outfit');renderGrid('mobAssetGrid','outfit');};
+      const wrap=document.getElementById('assetGrid').parentElement;
+      wrap.insertBefore(searchEl,document.getElementById('assetGrid'));
+    }
+    searchEl.style.display='block';
+    searchEl.value='';
+  } else if(searchEl){
+    searchEl.style.display='none';
+  }
   if(cat==='sticker'){renderStickerUI('assetGrid');}
   else if(cat==='pattern'){renderPatternUI('assetGrid');}
   else{renderGrid('assetGrid',cat);}
@@ -856,7 +874,9 @@ function renderGrid(id,cat){
   let items=CATS[cat].items;
 
   // For gender-filtered cats, filter but keep original indices
+  const searchQ = cat==='outfit' ? (document.getElementById('outfitSearch')?.value||'').toLowerCase().trim() : '';
   const filtered=items.map((item,i)=>({item,i})).filter(({item})=>{
+    if(cat==='outfit' && searchQ) return item.label.toLowerCase().includes(searchQ);
     if(!GENDER_CATS.includes(cat)) return true;
     return itemMatchesGender(item);
   });
