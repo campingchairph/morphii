@@ -274,13 +274,8 @@
     <div class="logo-icon">🌟</div>
     <div class="logo-text fredoka">Morphii<span>.</span></div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;"><button class="back-to-landing" onclick="event.stopPropagation();goToLanding()">← Back</button><div class="header-badge fredoka">✦ Build Your Future Self ✦</div></div>
-  <div class="qr-pill" id="qrPill" onclick="toggleQRPopup()" style="cursor:pointer;">
+  <div class="qr-pill" id="qrPill" onclick="toggleQRPopup()" style="cursor:pointer;padding:7px 10px;">
     <div class="qr-icon">📱</div>
-    <div class="qr-text nunito">
-      Share via QR
-      <small>Tap to show code</small>
-    </div>
   </div>
   <div id="qrPopup" style="display:none;position:fixed;inset:0;z-index:9998;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);" onclick="toggleQRPopup()">
     <div style="background:white;border-radius:24px;padding:32px;text-align:center;max-width:320px;width:90%;" onclick="event.stopPropagation()">
@@ -401,6 +396,10 @@
       <div class="fshape fshape-dot" style="top:20%;right:12%;animation-delay:1s;"></div>
       <div class="fshape fshape-sq" style="bottom:42%;left:6%;animation-delay:0.7s;"></div>
       <div class="fshape fshape-sq" style="top:50%;right:7%;animation-delay:1.6s;"></div>
+      <div class="pin-label-wrap">
+        <div class="pin-label fredoka">Build your</div>
+        <div class="pin-label pin-label-accent fredoka">future self</div>
+      </div>
       <div class="pin-stage">
         <canvas id="pinCanvas" width="320" height="320"></canvas>
       </div>
