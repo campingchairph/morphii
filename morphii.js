@@ -1280,6 +1280,137 @@ handleApprove = function(){
 };
 
 // ── Admin navigation ──
+// ══════════════════════════════════════════════
+// SUBMISSIONS OVERLAY
+// ══════════════════════════════════════════════
+let previewSub = null; // currently previewed submission
+
+function openSubmissionsOverlay(){
+  const el = document.getElementById('submissionsOverlay');
+  el.style.display = 'flex';
+  document.getElementById('subSearch').value = '';
+  renderSubmissionsList();
+}
+function closeSubmissionsOverlay(){
+  document.getElementById('submissionsOverlay').style.display = 'none';
+}
+
+function renderSubmissionsList(){
+  const list = document.getElementById('submissionsList');
+  const q = (document.getElementById('subSearch').value||'').toLowerCase().trim();
+  const subs = getSubmissions().filter(s => !q || s.name.toLowerCase().includes(q));
+  list.innerHTML = '';
+
+  if(!subs.length){
+    list.innerHTML = `<div style="text-align:center;padding:32px;font-family:'Nunito',sans-serif;font-weight:700;color:rgba(255,255,255,0.3);font-size:14px;">${q?'No results found':'No submissions yet'}</div>`;
+    return;
+  }
+
+  subs.forEach(sub=>{
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.06);border-radius:14px;padding:12px 16px;cursor:pointer;transition:background 0.15s;border:2px solid transparent;';
+    row.onmouseenter = ()=>row.style.background='rgba(255,255,255,0.12)';
+    row.onmouseleave = ()=>row.style.background='rgba(255,255,255,0.06)';
+
+    // thumb or placeholder
+    const thumb = document.createElement('div');
+    thumb.style.cssText = 'width:48px;height:48px;border-radius:50%;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;';
+    if(sub.thumb){
+      const img = document.createElement('img');
+      img.src = sub.thumb; img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+      thumb.appendChild(img);
+    } else {
+      thumb.innerHTML = '<span style="font-size:20px;">📌</span>';
+    }
+
+    const info = document.createElement('div');
+    info.style.cssText = 'flex:1;min-width:0;';
+    const ts = new Date(sub.timestamp).toLocaleString('en-PH',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    info.innerHTML = `
+      <div style="font-family:'Fredoka One',cursive;font-size:16px;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${sub.name}</div>
+      <div style="font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);">${sub.prof} · ${sub.size}" · ${ts}</div>
+    `;
+
+    const badge = document.createElement('div');
+    const statusColor = sub.paid ? '#55EFC4' : '#FF6FAE';
+    const statusLabel = sub.printed ? 'Printed' : sub.paid ? 'Paid' : 'Pending';
+    badge.style.cssText = `font-family:'Fredoka One',cursive;font-size:11px;padding:4px 10px;border-radius:20px;background:${statusColor}22;color:${statusColor};white-space:nowrap;`;
+    badge.textContent = statusLabel;
+
+    row.appendChild(thumb); row.appendChild(info); row.appendChild(badge);
+    row.onclick = ()=>openPinPreview(sub);
+    list.appendChild(row);
+  });
+}
+
+function openPinPreview(sub){
+  previewSub = sub;
+  document.getElementById('previewName').textContent = sub.name;
+  document.getElementById('previewProf').textContent = sub.prof + ' · ' + sub.size + '"';
+  document.getElementById('pinPreviewPopup').style.display = 'flex';
+
+  // Draw pin from saved state onto preview canvas
+  const canvas = document.getElementById('previewCanvas');
+  const prevCanvas = document.getElementById('pinCanvas');
+  const savedState = JSON.parse(JSON.stringify(S));
+  const savedPlaced = JSON.parse(JSON.stringify(placedStickers));
+  const savedName = document.getElementById('nameInput').value;
+  const savedProf = document.getElementById('profInput').value;
+
+  // Load sub state temporarily
+  Object.assign(S, sub.state);
+  placedStickers = sub.state.placedStickers || [];
+  document.getElementById('nameInput').value = sub.name;
+  document.getElementById('profInput').value = sub.prof;
+
+  drawPin(true); // draw clean version to main canvas
+  // Copy to preview canvas
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,240,240);
+  ctx.save();
+  ctx.beginPath();ctx.arc(120,120,120,0,Math.PI*2);ctx.clip();
+  ctx.drawImage(prevCanvas,0,0,320,320,0,0,240,240);
+  ctx.restore();
+
+  // Restore original state
+  Object.assign(S, savedState);
+  placedStickers = savedPlaced;
+  document.getElementById('nameInput').value = savedName;
+  document.getElementById('profInput').value = savedProf;
+  drawPin();
+}
+
+function closePinPreview(){
+  document.getElementById('pinPreviewPopup').style.display = 'none';
+  previewSub = null;
+}
+
+function editSubmission(){
+  if(!previewSub) return;
+  // Load submission state into builder
+  Object.assign(S, previewSub.state);
+  placedStickers = previewSub.state.placedStickers || [];
+  document.getElementById('nameInput').value = previewSub.name;
+  document.getElementById('profInput').value = previewSub.prof;
+  if(document.getElementById('pinSizeSelect')) document.getElementById('pinSizeSelect').value = previewSub.size;
+  // Remove old submission so re-submit creates a fresh one
+  const subs = getSubmissions().filter(s=>s.id !== previewSub.id);
+  saveSubmissions(subs);
+  closePinPreview();
+  closeSubmissionsOverlay();
+  drawPin();
+  renderGrid('assetGrid', S.cat||'bg');
+}
+
+function approveFromPreview(){
+  if(!previewSub) return;
+  const subs = getSubmissions();
+  const idx = subs.findIndex(s=>s.id===previewSub.id);
+  if(idx>-1){ subs[idx].verified = true; saveSubmissions(subs); }
+  closePinPreview();
+  renderSubmissionsList();
+}
+
 function goToAdmin(){
   adminPinEntry = '';
   updatePinDots();
@@ -1688,9 +1819,17 @@ document.addEventListener('DOMContentLoaded',()=>{
     adminBtn.style.cssText = 'opacity:0.4;font-size:11px;padding:4px 10px;';
     adminBtn.textContent = '⚙ Admin';
     adminBtn.onclick = (e)=>{ e.stopPropagation(); goToAdmin(); };
+
+    const subsBtn = document.createElement('button');
+    subsBtn.id = 'subsAccessBtn';
+    subsBtn.className = 'back-to-landing';
+    subsBtn.style.cssText = 'opacity:0.6;font-size:11px;padding:4px 10px;background:rgba(255,111,174,0.2);';
+    subsBtn.textContent = '📋 Submissions';
+    subsBtn.onclick = (e)=>{ e.stopPropagation(); openSubmissionsOverlay(); };
+
     setTimeout(()=>{
       const builderNav = document.querySelector('#builder-screen header');
-      if(builderNav) builderNav.appendChild(adminBtn);
+      if(builderNav){ builderNav.appendChild(subsBtn); builderNav.appendChild(adminBtn); }
     },500);
   }
 });
