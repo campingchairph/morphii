@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Design Your Pin — Morphii</title>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <link href="https://fonts.cdnfonts.com/css/cute-jellyfish" rel="stylesheet">
 <link href="https://fonts.cdnfonts.com/css/cute-stitch" rel="stylesheet">
 <style>
@@ -85,7 +85,11 @@
           <button class="cr-bg-tab" id="bgTabLink" onclick="setBgTab('link')">Image Link</button>
         </div>
         <div id="bgUploadPane">
-          <input type="file" id="bgFileInput" accept="image/*" onchange="onBgFileChosen(event)">
+          <label class="cr-upload-btn" for="bgFileInput">
+            <span class="cr-upload-icon">📤</span>
+            <span id="bgUploadLabelText">Choose a Photo</span>
+          </label>
+          <input type="file" id="bgFileInput" accept="image/*" onchange="onBgFileChosen(event)" class="cr-visually-hidden">
         </div>
         <div id="bgLinkPane" style="display:none">
           <input type="text" id="bgLinkInput" placeholder="https://example.com/image.jpg" class="cr-text-input">

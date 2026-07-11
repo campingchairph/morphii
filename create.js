@@ -170,6 +170,8 @@ window.setBgTab = setBgTab;
 function onBgFileChosen(e){
   const file = e.target.files[0];
   if (!file) return;
+  const labelEl = document.getElementById('bgUploadLabelText');
+  if (labelEl) labelEl.textContent = file.name.length > 26 ? file.name.slice(0,23)+'…' : file.name;
   const reader = new FileReader();
   reader.onload = ev => setBgImage(ev.target.result, false);
   reader.readAsDataURL(file);
@@ -265,24 +267,32 @@ function updateTextLine(id, field, value){
 }
 window.updateTextLine = updateTextLine;
 
+const TEXT_COLORS = ['#1E2A20','#FFFFFF','#FF6F91','#8FAE7C','#F2B441','#4D8FE0','#B25CE0','#E05C5C'];
+
 function renderTextLines(){
   const wrap = document.getElementById('textLinesWrap');
+  if (!state.textLines.length){
+    wrap.innerHTML = `<div class="cr-empty-hint">No text yet — add a line below.</div>`;
+    return;
+  }
   wrap.innerHTML = state.textLines.map(t=>`
     <div class="cr-text-line">
-      <input type="text" class="cr-text-input" style="margin-bottom:6px" value="${escHtml(t.text)}" maxlength="24"
+      <input type="text" class="cr-text-input" style="margin-bottom:10px" value="${escHtml(t.text)}" maxlength="24"
         oninput="updateTextLine(${t.id},'text',this.value)">
       <div class="cr-text-line-row">
-        <select onchange="updateTextLine(${t.id},'placement',this.value)">
+        <select class="cr-select" onchange="updateTextLine(${t.id},'placement',this.value)">
           <option value="straight" ${t.placement==='straight'?'selected':''}>Straight</option>
           <option value="top-arc" ${t.placement==='top-arc'?'selected':''}>Top Arc</option>
           <option value="bottom-arc" ${t.placement==='bottom-arc'?'selected':''}>Bottom Arc</option>
         </select>
-        <select onchange="updateTextLine(${t.id},'font',this.value)">
+        <select class="cr-select" onchange="updateTextLine(${t.id},'font',this.value)">
           ${FONTS.map(f=>`<option value="${f}" ${t.font===f?'selected':''}>${f}</option>`).join('')}
         </select>
-        <input type="color" value="${t.color}" onchange="updateTextLine(${t.id},'color',this.value)">
       </div>
-      <button class="cr-text-line-remove" onclick="removeTextLine(${t.id})">✕ Remove</button>
+      <div class="cr-swatch-row">
+        ${TEXT_COLORS.map(c=>`<button class="cr-swatch ${t.color===c?'active':''}" style="background:${c}" onclick="updateTextLine(${t.id},'color','${c}');renderTextLines()"></button>`).join('')}
+      </div>
+      <button class="cr-text-line-remove" onclick="removeTextLine(${t.id})">Remove line</button>
     </div>`).join('');
 }
 
