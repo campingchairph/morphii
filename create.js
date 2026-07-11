@@ -150,20 +150,12 @@ function safeInset(){
 }
 function setBleedMode(mode){
   state.bleedMode = mode;
-  document.getElementById('bleedWrapBtn').classList.toggle('active', mode==='wrap');
-  document.getElementById('bleedDiecutBtn').classList.toggle('active', mode==='diecut');
-  updateBleedNote();
+  // Font sizes were fit to the old safe area — re-check them against the new one.
+  state.textLines.forEach(clampTextSize);
+  if (state.selected && state.selected.kind==='print') renderSettingsPanel();
   drawPreview();
 }
 window.setBleedMode = setBleedMode;
-function updateBleedNote(){
-  const note = document.getElementById('bleedNote');
-  if (state.bleedMode==='wrap'){
-    note.textContent = `Wrap Mode: artwork extends past the blue safe line to the red cut line (${bleedPerSide().toFixed(3)}" bleed per side). That extra area wraps around the pin shell during assembly.`;
-  } else {
-    note.textContent = `Die-Cut Mode: artwork is cut to exact size along the red line (${bleedPerSide().toFixed(4)}" trim). Keep important content inside the blue safe line.`;
-  }
-}
 
 /* ── CANVAS SETUP ─────────────────────────────── */
 function setupCanvas(){
@@ -172,7 +164,9 @@ function setupCanvas(){
   canvas.height = CANVAS_PX;
   document.getElementById('previewLabel').textContent =
     `${state.product.label} · ${state.size.toFixed(2)}" Circle (${artboardDiameter().toFixed(2)}" with bleed)`;
-  updateBleedNote();
+  if (!state.selected) state.selected = { kind:'background' };
+  renderLayerStrip();
+  renderSettingsPanel();
   if (!canvas._boundEvents){
     bindCanvasInteractions(canvas);
     canvas._boundEvents = true;
@@ -196,58 +190,137 @@ window.addEventListener('resize', ()=>{
   if (document.getElementById('step-design').classList.contains('active')) sizeCanvasStage();
 });
 
-/* ── BOTTOM SHEETS ────────────────────────────── */
-const SHEET_NAMES = ['bg','stickers','character','text','print'];
-function openSheet(name){
-  document.getElementById('sheetOverlay').classList.add('show');
-  SHEET_NAMES.forEach(n=>{
-    document.getElementById('sheet'+n[0].toUpperCase()+n.slice(1)).classList.toggle('show', n===name);
-  });
-  if (name==='bg'){ renderGradientGrid(); syncBgOpacitySlider(); syncBgLayerToggles(); }
-  if (name==='stickers') renderStickerSheet();
-  if (name==='character') renderCharacterSheet();
-}
-function syncBgOpacitySlider(){
-  const el = document.getElementById('bgOpacitySlider');
-  if (el) el.value = state.bg.opacity;
-}
-window.openSheet = openSheet;
-function closeSheet(){
-  document.getElementById('sheetOverlay').classList.remove('show');
-}
-window.closeSheet = closeSheet;
-
-/* ── BACKGROUND: UPLOAD / LINK / GRADIENT ────── */
-function setBgTab(which){
-  ['upload','link','gradient'].forEach(w=>{
-    document.getElementById('bgTab'+capitalize(w)).classList.toggle('active', w===which);
-    document.getElementById('bg'+capitalize(w)+'Pane').style.display = w===which ? 'block' : 'none';
-  });
-}
-window.setBgTab = setBgTab;
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function capitalize(s){ return s[0].toUpperCase()+s.slice(1); }
 
-function renderGradientGrid(){
-  const grid = document.getElementById('gradientGrid');
-  if (!grid.dataset.rendered){
-    grid.dataset.rendered = '1';
-    grid.innerHTML = GRADIENTS.map((g,i)=>{
-      const css = g.grad4
-        ? `conic-gradient(from 45deg, ${g.grad4[0]}, ${g.grad4[1]}, ${g.grad4[3]}, ${g.grad4[2]}, ${g.grad4[0]})`
-        : `linear-gradient(135deg, ${g.grad[0]}, ${g.grad[1]})`;
-      return `<button class="cr-gradient-swatch" data-i="${i}" style="background:${css}" title="${g.label}" onclick="selectGradient(${i})"></button>`;
-    }).join('');
+/* ── ICONS (small inline line-style SVGs, reused by the layer strip) ── */
+const ICON_BG        = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
+const ICON_STICKER    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/></svg>';
+const ICON_CHARACTER  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>';
+const ICON_TEXT       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h7"/></svg>';
+const ICON_PRINT      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M6 16h12v5H6z"/></svg>';
+const ICON_PLUS       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>';
+const ICON_CLOSE      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+const ICON_UPLOAD      = '<svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M4 21h16"/></svg>';
+
+/* ── LAYER SELECTION (tap on the pin OR tap a chip — same result) ── */
+function layerKey(l){ return l ? l.kind + (l.id!=null ? ':'+l.id : '') : ''; }
+
+function selectLayer(descriptor){
+  state.selected = descriptor;
+  renderLayerStrip();
+  renderSettingsPanel();
+  drawPreview();
+}
+window.selectLayer = selectLayer;
+
+function renderLayerStrip(){
+  const strip = document.getElementById('layerStrip');
+  if (!strip) return;
+  const activeKey = layerKey(state.selected);
+  const chips = [];
+
+  chips.push({ d:{kind:'background'}, label:'Background', thumb: bgChipThumb() });
+  chips.push({ d:{kind:'character'}, label:'Character', thumb: state.character ? `<img src="${state.character.img.src}" alt="">` : ICON_CHARACTER });
+  state.stickers.forEach((s,i)=> chips.push({ d:{kind:'sticker', id:s.id}, label:'Sticker '+(i+1), thumb:`<img src="${s.img.src}" alt="">` }));
+  state.textLines.forEach((t,i)=> chips.push({ d:{kind:'text', id:t.id}, label: (t.text||'Text').slice(0,10), thumb: ICON_TEXT }));
+  chips.push({ d:{kind:'print'}, label:'Print', thumb: ICON_PRINT });
+
+  strip.innerHTML = chips.map(c => `
+    <button class="cr-layer-chip ${activeKey===layerKey(c.d)?'active':''}" onclick='selectLayer(${JSON.stringify(c.d)})'>
+      <span class="cr-layer-thumb">${c.thumb}</span>
+      <span class="cr-layer-label">${escHtml(c.label)}</span>
+    </button>`).join('') + `
+    <button class="cr-layer-chip cr-layer-add" onclick="quickAddText()">
+      <span class="cr-layer-thumb">${ICON_PLUS}</span>
+      <span class="cr-layer-label">Add Text</span>
+    </button>
+    <button class="cr-layer-chip cr-layer-add" onclick="promptUpload('sticker')">
+      <span class="cr-layer-thumb">${ICON_PLUS}</span>
+      <span class="cr-layer-label">Add Sticker</span>
+    </button>`;
+}
+
+function bgChipThumb(){
+  if (state.bg.imageOn && state.bg.img) return `<img src="${state.bg.img.src}" alt="">`;
+  if (state.bg.colorOn && state.bg.color){
+    const g = state.bg.color;
+    const css = g.grad4 ? `linear-gradient(135deg,${g.grad4[0]},${g.grad4[3]})` : `linear-gradient(135deg,${g.grad[0]},${g.grad[1]})`;
+    return `<span style="display:block;width:100%;height:100%;background:${css}"></span>`;
   }
-  grid.querySelectorAll('.cr-gradient-swatch').forEach(el=>{
-    el.classList.toggle('active', GRADIENTS[+el.dataset.i]===state.bg.color);
-  });
+  return ICON_BG;
+}
+
+function quickAddText(){ addTextLine(); }
+window.quickAddText = quickAddText;
+
+/* ── SETTINGS PANEL (inline, below the pin — not a popup) ─────────── */
+function renderSettingsPanel(){
+  const panel = document.getElementById('settingsPanel');
+  if (!panel) return;
+  if (!state.selected){ panel.innerHTML = ''; return; }
+  switch (state.selected.kind){
+    case 'background': panel.innerHTML = bgPanelHtml(); break;
+    case 'character':  panel.innerHTML = characterPanelHtml(); break;
+    case 'sticker':    panel.innerHTML = stickerPanelHtml(state.selected.id); break;
+    case 'text':       panel.innerHTML = textPanelHtml(state.selected.id); break;
+    case 'print':      panel.innerHTML = printPanelHtml(); break;
+    default:           panel.innerHTML = '';
+  }
+}
+
+/* ── BACKGROUND PANEL ─────────────────────────── */
+let _bgActiveTab = 'upload';
+function setBgTab(which){
+  _bgActiveTab = which;
+  renderSettingsPanel();
+}
+window.setBgTab = setBgTab;
+
+function bgPanelHtml(){
+  const tab = _bgActiveTab;
+  let tabBody = '';
+  if (tab==='upload'){
+    tabBody = `
+      <button type="button" class="cr-upload-btn" onclick="promptUpload('background')">
+        ${ICON_UPLOAD}<span id="bgUploadLabelText">Choose a Photo</span>
+      </button>
+      ${state.bg.img ? `<label class="cr-checkbox-row"><input type="checkbox" ${state.bg.imageOn?'checked':''} onchange="toggleImageLayer(this.checked)">Show the photo</label>` : ''}`;
+  } else if (tab==='link'){
+    tabBody = `
+      <input type="text" id="bgLinkInput" placeholder="https://example.com/image.jpg" class="cr-text-input">
+      <button class="cr-btn-secondary" onclick="loadBgFromLink()">Load Image</button>
+      ${state.bg.img ? `<label class="cr-checkbox-row"><input type="checkbox" ${state.bg.imageOn?'checked':''} onchange="toggleImageLayer(this.checked)">Show the photo</label>` : ''}`;
+  } else {
+    tabBody = `
+      <div class="cr-gradient-grid">${GRADIENTS.map((g,i)=>{
+        const css = g.grad4
+          ? `conic-gradient(from 45deg, ${g.grad4[0]}, ${g.grad4[1]}, ${g.grad4[3]}, ${g.grad4[2]}, ${g.grad4[0]})`
+          : `linear-gradient(135deg, ${g.grad[0]}, ${g.grad[1]})`;
+        return `<button class="cr-gradient-swatch ${state.bg.color===g?'active':''}" style="background:${css}" title="${g.label}" onclick="selectGradient(${i})"></button>`;
+      }).join('')}</div>
+      ${state.bg.color ? `<label class="cr-checkbox-row"><input type="checkbox" ${state.bg.colorOn?'checked':''} onchange="toggleColorLayer(this.checked)">Show this color</label>` : ''}`;
+  }
+
+  return `
+    <div class="cr-bg-tabs">
+      <button class="cr-bg-tab ${tab==='upload'?'active':''}" onclick="setBgTab('upload')">Upload</button>
+      <button class="cr-bg-tab ${tab==='link'?'active':''}" onclick="setBgTab('link')">Image Link</button>
+      <button class="cr-bg-tab ${tab==='gradient'?'active':''}" onclick="setBgTab('gradient')">Colors</button>
+    </div>
+    ${tabBody}
+    <div id="bgWarning" class="cr-warning" style="display:none"></div>
+    <div class="cr-hint">Turn on both a photo and a color to mix them — the color shows through anywhere the photo doesn't fully cover.</div>
+    <div class="cr-field-label" style="margin-top:16px">Opacity</div>
+    <input type="range" min="0.1" max="1" step="0.05" value="${state.bg.opacity}" oninput="setBgOpacity(this.value)" class="cr-range">
+    <div class="cr-hint">Drag the photo to reposition · scroll or pinch to zoom</div>`;
 }
 
 function selectGradient(i){
   state.bg.color = GRADIENTS[i];
   state.bg.colorOn = true;
-  renderGradientGrid();
-  syncBgLayerToggles();
+  renderLayerStrip();
+  renderSettingsPanel();
   drawPreview();
   updateSubmitAvailability();
 }
@@ -267,22 +340,9 @@ function toggleImageLayer(on){
 }
 window.toggleImageLayer = toggleImageLayer;
 
-function syncBgLayerToggles(){
-  const colorRow = document.getElementById('colorLayerRow');
-  const imageRow = document.getElementById('imageLayerRow');
-  if (colorRow) colorRow.style.display = state.bg.color ? 'flex' : 'none';
-  const colorChk = document.getElementById('colorLayerChk');
-  if (colorChk) colorChk.checked = state.bg.colorOn;
-  if (imageRow) imageRow.style.display = state.bg.img ? 'flex' : 'none';
-  const imageChk = document.getElementById('imageLayerChk');
-  if (imageChk) imageChk.checked = state.bg.imageOn;
-}
-
 function onBgFileChosen(e){
   const file = e.target.files[0];
   if (!file) return;
-  const labelEl = document.getElementById('bgUploadLabelText');
-  if (labelEl) labelEl.textContent = file.name.length > 26 ? file.name.slice(0,23)+'…' : file.name;
   const reader = new FileReader();
   reader.onload = ev => setBgImage(ev.target.result, false);
   reader.readAsDataURL(file);
@@ -297,8 +357,6 @@ function loadBgFromLink(){
 window.loadBgFromLink = loadBgFromLink;
 
 function setBgImage(src, isExternal){
-  const warnEl = document.getElementById('bgWarning');
-  warnEl.style.display = 'none';
   if (!isExternal){
     const img = new Image();
     img.onload = () => applyBgImage(img, false);
@@ -345,13 +403,15 @@ function applyBgImage(img, tainted){
   state.bg.img = img;
   state.bg.tainted = tainted;
   state.bg.offsetXFrac = 0; state.bg.offsetYFrac = 0; state.bg.scale = 1;
-  syncBgLayerToggles();
+  renderLayerStrip();
+  renderSettingsPanel();
   drawPreview();
   updateSubmitAvailability();
 }
 
 function showBgWarning(msg){
   const warnEl = document.getElementById('bgWarning');
+  if (!warnEl) return;
   warnEl.style.display = 'block';
   warnEl.textContent = msg;
 }
@@ -384,11 +444,12 @@ function clampBgTransform(){
   state.bg.offsetYFrac = Math.max(-maxY, Math.min(maxY, state.bg.offsetYFrac));
 }
 
-/* ── UPLOAD INSTRUCTIONS MODAL ────────────────── */
+/* ── UPLOAD INSTRUCTIONS MODAL (with PNG/transparency infographic) ── */
 function promptUpload(kind){
   document.getElementById('uploadHintText').textContent =
     `Your ${kind} file should be a PNG with a transparent (no) background, so it blends cleanly into the design.`;
-  document.getElementById('uploadHintInputId').value = kind==='sticker' ? 'stickerFileInput' : 'characterFileInput';
+  document.getElementById('uploadHintInputId').value =
+    kind==='sticker' ? 'stickerFileInput' : kind==='character' ? 'characterFileInput' : 'bgFileInput';
   document.getElementById('uploadHintOverlay').classList.add('show');
 }
 window.promptUpload = promptUpload;
@@ -403,13 +464,21 @@ function confirmUploadHint(){
 }
 window.confirmUploadHint = confirmUploadHint;
 
-/* ── STICKERS (freely placed, drag anywhere on the pin) ── */
-function renderStickerSheet(){
-  const presetsEl = document.getElementById('stickerPresets');
-  presetsEl.innerHTML = STICKER_PRESETS.length
-    ? STICKER_PRESETS.map((s,i)=>`<button class="cr-preset-thumb" onclick="addStickerFromPreset(${i})"><img src="${s.src}" alt="${escHtml(s.label||'')}"></button>`).join('')
-    : `<div class="cr-empty-hint">More stickers coming soon! Upload your own below in the meantime.</div>`;
-  renderPlacedStickerList();
+/* ── STICKERS PANEL (freely placed, drag anywhere on the pin) ────── */
+function stickerPanelHtml(id){
+  const s = state.stickers.find(x=>x.id===id);
+  if (!s) return `<div class="cr-empty-hint">This sticker was removed.</div>`;
+  return `
+    <div class="cr-preset-grid">${STICKER_PRESETS.length
+      ? STICKER_PRESETS.map((p,i)=>`<button class="cr-preset-thumb" onclick="addStickerFromPreset(${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`).join('')
+      : `<div class="cr-empty-hint">More stickers coming soon!</div>`}</div>
+    <button type="button" class="cr-upload-btn" style="margin-top:12px" onclick="promptUpload('sticker')">
+      ${ICON_UPLOAD}<span>Replace with a New Upload</span>
+    </button>
+    <div class="cr-field-label" style="margin-top:16px">Size</div>
+    <input type="range" class="cr-range" min="0.4" max="2.5" step="0.1" value="${s.scale}" oninput="setStickerScale(${s.id},this.value)">
+    <div class="cr-hint">Drag the sticker on the pin to reposition · use the handles to resize/rotate</div>
+    <button class="cr-text-line-remove" style="margin-top:10px" onclick="removeSticker(${s.id})">Remove this sticker</button>`;
 }
 
 function addStickerFromPreset(i){
@@ -417,9 +486,9 @@ function addStickerFromPreset(i){
   if (!preset) return;
   const img = new Image();
   img.onload = () => {
-    state.stickers.push({ id: state.nextStickerId++, img, xFrac:0.15, yFrac:-0.15, scale:1, rotation:0 });
-    renderPlacedStickerList();
-    drawPreview();
+    const s = { id: state.nextStickerId++, img, xFrac:0.15, yFrac:-0.15, scale:1, rotation:0 };
+    state.stickers.push(s);
+    selectLayer({ kind:'sticker', id:s.id });
   };
   img.src = preset.src;
 }
@@ -432,9 +501,9 @@ function onStickerFileChosen(e){
   reader.onload = ev => {
     const img = new Image();
     img.onload = () => {
-      state.stickers.push({ id: state.nextStickerId++, img, xFrac:0.15, yFrac:-0.15, scale:1, rotation:0 });
-      renderPlacedStickerList();
-      drawPreview();
+      const s = { id: state.nextStickerId++, img, xFrac:0.15, yFrac:-0.15, scale:1, rotation:0 };
+      state.stickers.push(s);
+      selectLayer({ kind:'sticker', id:s.id });
     };
     img.src = ev.target.result;
   };
@@ -445,8 +514,9 @@ window.onStickerFileChosen = onStickerFileChosen;
 
 function removeSticker(id){
   state.stickers = state.stickers.filter(s=>s.id!==id);
-  if (state.selected && state.selected.kind==='sticker' && state.selected.id===id) state.selected = null;
-  renderPlacedStickerList();
+  if (state.selected && state.selected.kind==='sticker' && state.selected.id===id) state.selected = { kind:'background' };
+  renderLayerStrip();
+  renderSettingsPanel();
   drawPreview();
 }
 window.removeSticker = removeSticker;
@@ -459,36 +529,34 @@ function setStickerScale(id, val){
 }
 window.setStickerScale = setStickerScale;
 
-function renderPlacedStickerList(){
-  const el = document.getElementById('placedStickerList');
-  if (!el) return;
-  if (!state.stickers.length){
-    el.innerHTML = '';
-    return;
+/* ── CENTER CHARACTER PANEL (single, big, always centered) ───────── */
+function characterPanelHtml(){
+  if (!state.character){
+    return `
+      <div class="cr-preset-grid">${CHARACTER_PRESETS.length
+        ? CHARACTER_PRESETS.map((c,i)=>`<button class="cr-preset-thumb" onclick="setCharacterFromPreset(${i})"><img src="${c.src}" alt="${escHtml(c.label||'')}"></button>`).join('')
+        : `<div class="cr-empty-hint">More characters coming soon! Upload your own below.</div>`}</div>
+      <button type="button" class="cr-upload-btn" style="margin-top:12px" onclick="promptUpload('character')">
+        ${ICON_UPLOAD}<span>Upload Your Own Character</span>
+      </button>
+      <div class="cr-hint">A bigger character or logo that sits in the middle of your pin.</div>`;
   }
-  el.innerHTML = `<div class="cr-hint" style="margin:12px 0 8px">Drag stickers directly on the pin to reposition.</div>` +
-    state.stickers.map(s=>`
-      <div class="cr-placed-row">
-        <img class="cr-placed-thumb" src="${s.img.src}" alt="">
-        <input type="range" min="0.4" max="2.5" step="0.1" value="${s.scale}" oninput="setStickerScale(${s.id},this.value)">
-        <button class="cr-remove-btn" onclick="removeSticker(${s.id})">Remove</button>
-      </div>`).join('');
-}
-
-/* ── CENTER CHARACTER (single, big, always centered) ── */
-function renderCharacterSheet(){
-  const presetsEl = document.getElementById('characterPresets');
-  presetsEl.innerHTML = CHARACTER_PRESETS.length
-    ? CHARACTER_PRESETS.map((c,i)=>`<button class="cr-preset-thumb" onclick="setCharacterFromPreset(${i})"><img src="${c.src}" alt="${escHtml(c.label||'')}"></button>`).join('')
-    : `<div class="cr-empty-hint">More characters coming soon! Upload your own below in the meantime.</div>`;
-  renderCharacterControls();
+  return `
+    <img src="${state.character.img.src}" alt="" style="width:64px;height:64px;object-fit:contain;border-radius:12px;background:var(--cream-deep);display:block;margin-bottom:12px">
+    <button type="button" class="cr-upload-btn" onclick="promptUpload('character')">
+      ${ICON_UPLOAD}<span>Replace with a New Upload</span>
+    </button>
+    <div class="cr-field-label" style="margin-top:16px">Size</div>
+    <input type="range" class="cr-range" min="0.5" max="2" step="0.1" value="${state.character.scale}" oninput="setCharacterScale(this.value)">
+    <div class="cr-hint">Tap it on the pin to select, then use the handles to resize/rotate — position is always centered</div>
+    <button class="cr-text-line-remove" style="margin-top:10px" onclick="removeCharacter()">Remove character</button>`;
 }
 
 function setCharacterFromPreset(i){
   const preset = CHARACTER_PRESETS[i];
   if (!preset) return;
   const img = new Image();
-  img.onload = () => { state.character = { img, scale:1, rotation:0, xFrac:0, yFrac:0 }; renderCharacterControls(); drawPreview(); };
+  img.onload = () => { state.character = { img, scale:1, rotation:0, xFrac:0, yFrac:0 }; selectLayer({kind:'character'}); };
   img.src = preset.src;
 }
 window.setCharacterFromPreset = setCharacterFromPreset;
@@ -499,7 +567,7 @@ function onCharacterFileChosen(e){
   const reader = new FileReader();
   reader.onload = ev => {
     const img = new Image();
-    img.onload = () => { state.character = { img, scale:1, rotation:0, xFrac:0, yFrac:0 }; renderCharacterControls(); drawPreview(); };
+    img.onload = () => { state.character = { img, scale:1, rotation:0, xFrac:0, yFrac:0 }; selectLayer({kind:'character'}); };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
@@ -509,8 +577,9 @@ window.onCharacterFileChosen = onCharacterFileChosen;
 
 function removeCharacter(){
   state.character = null;
-  if (state.selected && state.selected.kind==='character') state.selected = null;
-  renderCharacterControls();
+  if (state.selected && state.selected.kind==='character') state.selected = { kind:'background' };
+  renderLayerStrip();
+  renderSettingsPanel();
   drawPreview();
 }
 window.removeCharacter = removeCharacter;
@@ -522,30 +591,19 @@ function setCharacterScale(val){
 }
 window.setCharacterScale = setCharacterScale;
 
-function renderCharacterControls(){
-  const el = document.getElementById('characterControls');
-  if (!el) return;
-  if (!state.character){ el.innerHTML = ''; return; }
-  el.innerHTML = `
-    <div class="cr-placed-row">
-      <img class="cr-placed-thumb" src="${state.character.img.src}" alt="">
-      <input type="range" min="0.5" max="2" step="0.1" value="${state.character.scale}" oninput="setCharacterScale(this.value)">
-      <button class="cr-remove-btn" onclick="removeCharacter()">Remove</button>
-    </div>`;
-}
-
-/* ── TEXT LINES ───────────────────────────────── */
+/* ── TEXT PANEL ───────────────────────────────── */
 function addTextLine(){
   const line = { id: state.nextTextId++, text:'Your Text', font:FONTS[0], color:'#FFFFFF', placement:'straight', size:1, shadow:false };
   state.textLines.push(line);
-  renderTextLines();
-  drawPreview();
+  selectLayer({ kind:'text', id: line.id });
 }
 window.addTextLine = addTextLine;
 
 function removeTextLine(id){
   state.textLines = state.textLines.filter(t=>t.id!==id);
-  renderTextLines();
+  if (state.selected && state.selected.kind==='text' && state.selected.id===id) state.selected = { kind:'background' };
+  renderLayerStrip();
+  renderSettingsPanel();
   drawPreview();
 }
 window.removeTextLine = removeTextLine;
@@ -554,6 +612,17 @@ function updateTextLine(id, field, value){
   const line = state.textLines.find(t=>t.id===id);
   if (!line) return;
   line[field] = value;
+  if (field==='size' || field==='text' || field==='placement' || field==='font'){
+    clampTextSize(line);
+    if (field==='size'){
+      const slider = document.getElementById('textSizeSlider_'+id);
+      if (slider) slider.value = line.size;
+    }
+  }
+  if (field==='text' || field==='placement'){
+    // layer strip label / thumbnail may need to reflect the new text
+    renderLayerStrip();
+  }
   drawPreview();
 }
 window.updateTextLine = updateTextLine;
@@ -571,40 +640,57 @@ const TEXT_COLORS = [
   '#FF9E00','#00B894','#0984E3','#D63384','#6C5CE7','#00CEC9','#E17055','#2D3436',
 ];
 
-function renderTextLines(){
-  const wrap = document.getElementById('textLinesWrap');
-  if (!state.textLines.length){
-    wrap.innerHTML = `<div class="cr-empty-hint">No text yet — add a line below.</div>`;
-    return;
-  }
-  wrap.innerHTML = state.textLines.map(t=>`
-    <div class="cr-text-line">
-      <input type="text" class="cr-text-input" style="margin-bottom:10px" value="${escHtml(t.text)}" maxlength="24"
-        oninput="updateTextLine(${t.id},'text',this.value)">
-      <div class="cr-text-line-row">
-        <select class="cr-select" onchange="updateTextLine(${t.id},'placement',this.value)">
-          <option value="straight" ${t.placement==='straight'?'selected':''}>Straight</option>
-          <option value="top-arc" ${t.placement==='top-arc'?'selected':''}>Top Arc</option>
-          <option value="bottom-arc" ${t.placement==='bottom-arc'?'selected':''}>Bottom Arc</option>
-        </select>
-        <select class="cr-select" onchange="updateTextLine(${t.id},'font',this.value)">
-          ${FONTS.map(f=>`<option value="${f}" ${t.font===f?'selected':''}>${f}</option>`).join('')}
-        </select>
-      </div>
-      <div class="cr-field-label" style="margin-top:2px">Size</div>
-      <input type="range" class="cr-range" min="0.5" max="2.2" step="0.1" value="${t.size}" oninput="updateTextLine(${t.id},'size',+this.value)">
-      <div class="cr-swatch-row">
-        ${TEXT_COLORS.map(c=>`<button class="cr-swatch ${t.color===c?'active':''}" style="background:${c}" onclick="updateTextLine(${t.id},'color','${c}');renderTextLines()"></button>`).join('')}
-      </div>
-      <label class="cr-checkbox-row">
-        <input type="checkbox" ${t.shadow?'checked':''} onchange="toggleTextShadow(${t.id},this.checked)">
-        Drop shadow
-      </label>
-      <button class="cr-text-line-remove" onclick="removeTextLine(${t.id})">Remove line</button>
-    </div>`).join('');
+function textPanelHtml(id){
+  const t = state.textLines.find(x=>x.id===id);
+  if (!t) return `<div class="cr-empty-hint">This text line was removed.</div>`;
+  return `
+    <input type="text" class="cr-text-input" style="margin-bottom:10px" value="${escHtml(t.text)}" maxlength="24"
+      oninput="updateTextLine(${t.id},'text',this.value)">
+    <div class="cr-text-line-row">
+      <select class="cr-select" onchange="updateTextLine(${t.id},'placement',this.value)">
+        <option value="straight" ${t.placement==='straight'?'selected':''}>Straight</option>
+        <option value="top-arc" ${t.placement==='top-arc'?'selected':''}>Top Arc</option>
+        <option value="bottom-arc" ${t.placement==='bottom-arc'?'selected':''}>Bottom Arc</option>
+      </select>
+      <select class="cr-select" onchange="updateTextLine(${t.id},'font',this.value)">
+        ${FONTS.map(f=>`<option value="${f}" ${t.font===f?'selected':''}>${f}</option>`).join('')}
+      </select>
+    </div>
+    <div class="cr-field-label" style="margin-top:10px">Size</div>
+    <input type="range" id="textSizeSlider_${t.id}" class="cr-range" min="0.5" max="2.2" step="0.1" value="${t.size}"
+      oninput="updateTextLine(${t.id},'size',+this.value)">
+    <div class="cr-hint" style="margin-top:-6px">Size auto-shrinks so text always stays inside the safe area.</div>
+    <div class="cr-field-label" style="margin-top:10px">Color</div>
+    <div class="cr-swatch-row">
+      ${TEXT_COLORS.map(c=>`<button class="cr-swatch ${t.color===c?'active':''}" style="background:${c}" onclick="updateTextLine(${t.id},'color','${c}');renderSettingsPanel()"></button>`).join('')}
+    </div>
+    <label class="cr-checkbox-row">
+      <input type="checkbox" ${t.shadow?'checked':''} onchange="toggleTextShadow(${t.id},this.checked)">
+      Drop shadow
+    </label>
+    <button class="cr-text-line-remove" style="margin-top:10px" onclick="removeTextLine(${t.id})">Remove this text line</button>`;
 }
 
-function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+/* ── PRINT SETTINGS PANEL ─────────────────────── */
+function printPanelHtml(){
+  return `
+    <div class="cr-bleed-row">
+      <button class="cr-bleed-btn ${state.bleedMode==='wrap'?'active':''}" onclick="setBleedMode('wrap')">
+        <div class="cr-bleed-name">Wrap</div>
+        <div class="cr-bleed-sub">5% of size</div>
+      </button>
+      <button class="cr-bleed-btn ${state.bleedMode==='diecut'?'active':''}" onclick="setBleedMode('diecut')">
+        <div class="cr-bleed-name">Die-Cut</div>
+        <div class="cr-bleed-sub">0.0313" trim</div>
+      </button>
+    </div>
+    <div class="cr-bleed-note">${bleedNoteText()}</div>`;
+}
+function bleedNoteText(){
+  return state.bleedMode==='wrap'
+    ? `Wrap Mode: artwork extends past the blue safe line to the red cut line (${bleedPerSide().toFixed(3)}" bleed per side). That extra area wraps around the pin shell during assembly.`
+    : `Die-Cut Mode: artwork is cut to exact size along the red line (${bleedPerSide().toFixed(4)}" trim). Keep important content inside the blue safe line.`;
+}
 
 /* ── CANVAS INTERACTIONS: drag bg, move/resize/rotate stickers+character ── */
 function hitTestSticker(xFrac, yFrac){
@@ -645,7 +731,7 @@ function bindCanvasInteractions(canvas){
     const HANDLE_R = 0.05;
 
     // 1. Handles of the currently selected element take priority
-    if (state.selected){
+    if (state.selected && (state.selected.kind==='sticker' || state.selected.kind==='character')){
       const isChar = state.selected.kind==='character';
       const el = isChar ? state.character : state.stickers.find(s=>s.id===state.selected.id);
       if (el){
@@ -662,21 +748,17 @@ function bindCanvasInteractions(canvas){
     // 2. Stickers (topmost first), then the center character
     const sticker = hitTestSticker(p.x, p.y);
     if (sticker){
-      state.selected = { kind:'sticker', id: sticker.id };
+      if (layerKey(state.selected)!==layerKey({kind:'sticker',id:sticker.id})) selectLayer({ kind:'sticker', id: sticker.id });
       startElementDrag(canvas, e, 'move', sticker);
-      drawPreview();
       return;
     }
     if (state.character && dist2(p.x,p.y,0,0) <= Math.pow(elementRadiusFrac(state.character,true),2)){
-      state.selected = { kind:'character' };
-      drawPreview();
+      if (layerKey(state.selected)!==layerKey({kind:'character'})) selectLayer({ kind:'character' });
       return; // character position is fixed — select only, no move-drag
     }
 
-    // 3. Nothing hit — deselect, and fall back to dragging the background image
-    const hadSelection = !!state.selected;
-    state.selected = null;
-    if (hadSelection) drawPreview();
+    // 3. Nothing hit — fall back to the background layer, and drag the photo if there is one
+    if (layerKey(state.selected)!=='background') selectLayer({ kind:'background' });
     if (state.bg.imageOn && state.bg.img){
       state.dragging = true;
       state.dragTarget = 'bg';
@@ -715,8 +797,10 @@ function bindCanvasInteractions(canvas){
   canvas.addEventListener('pointerup', ()=>{ state.dragging=false; state.dragTarget=null; });
   canvas.addEventListener('pointercancel', ()=>{ state.dragging=false; state.dragTarget=null; });
 
+  const stickerOrCharSelected = () => state.selected && (state.selected.kind==='sticker' || state.selected.kind==='character');
+
   canvas.addEventListener('wheel', e=>{
-    if (!state.bg.imageOn || !state.bg.img || state.selected) return;
+    if (!state.bg.imageOn || !state.bg.img || stickerOrCharSelected()) return;
     e.preventDefault();
     const delta = e.deltaY > 0 ? 0.92 : 1.08;
     state.bg.scale = state.bg.scale*delta;
@@ -724,7 +808,7 @@ function bindCanvasInteractions(canvas){
     drawPreview();
   }, { passive:false });
 
-  // Basic pinch-to-zoom for touch (background only, when nothing selected)
+  // Basic pinch-to-zoom for touch (background only, when no sticker/character is selected)
   let pinchStartDist = null, pinchStartScale = 1;
   canvas.addEventListener('touchstart', e=>{
     if (e.touches.length===2){
@@ -733,7 +817,7 @@ function bindCanvasInteractions(canvas){
     }
   }, { passive:true });
   canvas.addEventListener('touchmove', e=>{
-    if (e.touches.length===2 && pinchStartDist && state.bg.imageOn && !state.selected){
+    if (e.touches.length===2 && pinchStartDist && state.bg.imageOn && !stickerOrCharSelected()){
       e.preventDefault();
       const d = touchDist(e.touches);
       state.bg.scale = pinchStartScale * (d/pinchStartDist);
@@ -829,6 +913,33 @@ function drawPlacedImage(ctx, artboardPx, img, xFrac, yFrac, dFrac, rotation){
   ctx.restore();
 }
 
+// Auto-shrinks a text line's size so it never renders past the safe-area
+// circle — called whenever text/size/font/placement changes.
+function clampTextSize(t){
+  const ctx = document.getElementById('designCanvas').getContext('2d');
+  const scalePxPerInch = CANVAS_PX / artboardDiameter();
+  const cutRadiusPx = (state.size/2) * scalePxPerInch;
+  const safeRadiusPx = cutRadiusPx - safeInset()*scalePxPerInch;
+  const text = t.text || 'Text';
+
+  for (let i=0; i<20; i++){
+    ctx.font = `bold ${28*t.size}px "${t.font}", 'Nunito', sans-serif`;
+    const width = ctx.measureText(text).width;
+    const height = 28*t.size*1.15;
+    let overflowRatio;
+    if (t.placement==='straight'){
+      const halfDiag = Math.hypot(width/2, height/2);
+      overflowRatio = halfDiag / safeRadiusPx;
+    } else {
+      const arcRadius = cutRadiusPx*0.78;
+      const outerEdge = arcRadius + height/2;
+      overflowRatio = outerEdge / safeRadiusPx;
+    }
+    if (overflowRatio <= 1.001) break;
+    t.size = Math.max(0.3, t.size / overflowRatio);
+  }
+}
+
 function drawTextLines(ctx, artboardPx){
   const scalePxPerInch = artboardPx / artboardDiameter();
   const cutRadiusPx = (state.size/2) * scalePxPerInch;
@@ -892,6 +1003,7 @@ function handlePositions(el, isCharacter){
 }
 function drawSelectionHandles(ctx, artboardPx){
   if (!state.selected) return;
+  if (state.selected.kind!=='sticker' && state.selected.kind!=='character') return;
   const isChar = state.selected.kind==='character';
   const el = isChar ? state.character : state.stickers.find(s=>s.id===state.selected.id);
   if (!el) return;
@@ -1004,16 +1116,30 @@ function renderSubmitSummary(){
     </div>`;
 }
 
+// 6 chars from a 32-symbol alphabet (no 0/O/1/I to avoid ambiguity) ≈ 1 billion
+// combinations — collision risk is negligible at any realistic order volume,
+// so no Firestore uniqueness check is needed (customers can't read the orders
+// collection anyway; the security rules only allow admin reads).
+function generateSaveCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:6}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+
 async function submitDesign(){
   const errEl = document.getElementById('submitError');
   errEl.style.display = 'none';
   const name = document.getElementById('custName').value.trim();
-  const contact = document.getElementById('custContact').value.trim();
-  const shopee = document.getElementById('custShopee').value.trim();
+  const email = document.getElementById('custEmail').value.trim();
+  const phone = document.getElementById('custPhone').value.trim();
   const notes = document.getElementById('custNotes').value.trim();
 
-  if (!name || !contact){
-    errEl.textContent = 'Please fill in your name and contact info.';
+  if (!name || !email){
+    errEl.textContent = 'Please fill in your name and email.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    errEl.textContent = 'Please enter a valid email address.';
     errEl.style.display = 'block';
     return;
   }
@@ -1032,6 +1158,7 @@ async function submitDesign(){
   btn.disabled = true; btn.textContent = 'Submitting…';
   try {
     const designDataUrl = compositeCleanDesign();
+    const saveCode = generateSaveCode();
     await submitOrder({
       product: state.product.id,
       productLabel: state.product.label,
@@ -1039,11 +1166,19 @@ async function submitDesign(){
       bleedMode: state.bleedMode,
       designDataUrl,
       customerName: name,
-      customerContact: contact,
-      shopeeOrderId: shopee,
+      customerEmail: email,
+      customerPhone: phone,
       notes,
+      saveCode,
     });
-    goStep('done');
+    const emailResult = await sendConfirmationEmail({
+      to_email: email,
+      to_name: name,
+      code: saveCode,
+      product: state.product.label,
+      size: state.size.toFixed(2),
+    });
+    showDoneScreen(saveCode, emailResult);
   } catch(e){
     errEl.textContent = 'Something went wrong submitting your design: ' + e.message;
     errEl.style.display = 'block';
@@ -1052,6 +1187,14 @@ async function submitDesign(){
   }
 }
 window.submitDesign = submitDesign;
+
+function showDoneScreen(code, emailResult){
+  document.getElementById('saveCodeDisplay').textContent = code;
+  document.getElementById('emailStatusNote').textContent = (emailResult && emailResult.sent)
+    ? "We've also emailed this code to you."
+    : "We couldn't send the confirmation email automatically — please screenshot or write down your code now.";
+  goStep('done');
+}
 
 /* ── DEVTOOLS DETECTION (deterrent-level only) ──
    Cannot reliably block a determined user — this only

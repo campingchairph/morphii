@@ -52,6 +52,8 @@
         </button>
       </div>
 
+      <div class="cr-layer-strip" id="layerStrip"></div>
+
       <div class="cr-canvas-wrap">
         <div class="cr-canvas-stage" id="canvasStage">
           <canvas id="designCanvas"></canvas>
@@ -67,140 +69,33 @@
       </div>
       <div class="cr-privacy-note">This preview is watermarked for privacy — your printed pin will be clean.</div>
 
-      <div class="cr-bottom-tabs">
-        <button class="cr-bottom-tab" onclick="openSheet('bg')">
-          <svg class="cr-bt-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-          Background
-        </button>
-        <button class="cr-bottom-tab" onclick="openSheet('stickers')">
-          <svg class="cr-bt-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/></svg>
-          Stickers
-        </button>
-        <button class="cr-bottom-tab" onclick="openSheet('character')">
-          <svg class="cr-bt-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
-          Character
-        </button>
-        <button class="cr-bottom-tab" onclick="openSheet('text')">
-          <svg class="cr-bt-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h7"/></svg>
-          Text
-        </button>
-        <button class="cr-bottom-tab" onclick="openSheet('print')">
-          <svg class="cr-bt-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M6 16h12v5H6z"/></svg>
-          Print
-        </button>
-      </div>
+      <div class="cr-settings-panel" id="settingsPanel"></div>
     </div>
 
-    <!-- BOTTOM SHEETS -->
-    <div class="cr-sheet-overlay" id="sheetOverlay" onclick="if(event.target===this) closeSheet()">
-
-      <div class="cr-sheet" id="sheetBg">
-        <div class="cr-sheet-handle"></div>
-        <button class="cr-sheet-close" onclick="closeSheet()">
-          <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </button>
-        <div class="cr-sheet-title">Background</div>
-        <div class="cr-bg-tabs">
-          <button class="cr-bg-tab active" id="bgTabUpload" onclick="setBgTab('upload')">Upload</button>
-          <button class="cr-bg-tab" id="bgTabLink" onclick="setBgTab('link')">Image Link</button>
-          <button class="cr-bg-tab" id="bgTabGradient" onclick="setBgTab('gradient')">Colors</button>
-        </div>
-        <div id="bgUploadPane">
-          <label class="cr-upload-btn" for="bgFileInput">
-            <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M4 21h16"/></svg>
-            <span id="bgUploadLabelText">Choose a Photo</span>
-          </label>
-          <input type="file" id="bgFileInput" accept="image/*" onchange="onBgFileChosen(event)" class="cr-visually-hidden">
-          <label class="cr-checkbox-row" id="imageLayerRow" style="display:none">
-            <input type="checkbox" id="imageLayerChk" onchange="toggleImageLayer(this.checked)">
-            Show the photo
-          </label>
-        </div>
-        <div id="bgLinkPane" style="display:none">
-          <input type="text" id="bgLinkInput" placeholder="https://example.com/image.jpg" class="cr-text-input">
-          <button class="cr-btn-secondary" onclick="loadBgFromLink()">Load Image</button>
-        </div>
-        <div id="bgGradientPane" style="display:none">
-          <div class="cr-gradient-grid" id="gradientGrid"></div>
-          <label class="cr-checkbox-row" id="colorLayerRow" style="display:none">
-            <input type="checkbox" id="colorLayerChk" onchange="toggleColorLayer(this.checked)">
-            Show this color
-          </label>
-        </div>
-        <div id="bgWarning" class="cr-warning" style="display:none"></div>
-        <div class="cr-hint">Turn on both a photo and a color to mix them — the color shows through anywhere the photo doesn't fully cover.</div>
-        <div class="cr-field-label" style="margin-top:16px">Opacity</div>
-        <input type="range" id="bgOpacitySlider" min="0.1" max="1" step="0.05" value="1" oninput="setBgOpacity(this.value)" class="cr-range">
-        <div class="cr-hint">Drag the photo to reposition · scroll or pinch to zoom</div>
-      </div>
-
-      <div class="cr-sheet" id="sheetStickers">
-        <div class="cr-sheet-handle"></div>
-        <button class="cr-sheet-close" onclick="closeSheet()">
-          <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </button>
-        <div class="cr-sheet-title">Stickers</div>
-        <div class="cr-preset-grid" id="stickerPresets"></div>
-        <button type="button" class="cr-upload-btn" style="margin-top:12px" onclick="promptUpload('sticker')">
-          <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M4 21h16"/></svg>
-          <span>Upload Your Own Sticker</span>
-        </button>
-        <input type="file" id="stickerFileInput" accept="image/png" onchange="onStickerFileChosen(event)" class="cr-visually-hidden">
-        <div id="placedStickerList"></div>
-      </div>
-
-      <div class="cr-sheet" id="sheetCharacter">
-        <div class="cr-sheet-handle"></div>
-        <button class="cr-sheet-close" onclick="closeSheet()">
-          <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </button>
-        <div class="cr-sheet-title">Center Character</div>
-        <div class="cr-hint" style="margin-top:-8px;margin-bottom:12px">A bigger character or logo that sits in the middle of your pin.</div>
-        <div class="cr-preset-grid" id="characterPresets"></div>
-        <button type="button" class="cr-upload-btn" style="margin-top:12px" onclick="promptUpload('character')">
-          <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M4 21h16"/></svg>
-          <span>Upload Your Own Character</span>
-        </button>
-        <input type="file" id="characterFileInput" accept="image/png" onchange="onCharacterFileChosen(event)" class="cr-visually-hidden">
-        <div id="characterControls"></div>
-      </div>
-
-      <div class="cr-sheet" id="sheetText">
-        <div class="cr-sheet-handle"></div>
-        <button class="cr-sheet-close" onclick="closeSheet()">
-          <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </button>
-        <div class="cr-sheet-title">Text</div>
-        <div id="textLinesWrap"></div>
-        <button class="cr-btn-tiny-full" onclick="addTextLine()">+ Add Text Line</button>
-      </div>
-
-      <div class="cr-sheet" id="sheetPrint">
-        <div class="cr-sheet-handle"></div>
-        <button class="cr-sheet-close" onclick="closeSheet()">
-          <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </button>
-        <div class="cr-sheet-title">Print Settings</div>
-        <div class="cr-bleed-row">
-          <button class="cr-bleed-btn active" id="bleedWrapBtn" onclick="setBleedMode('wrap')">
-            <div class="cr-bleed-name">Wrap</div>
-            <div class="cr-bleed-sub">5% of size</div>
-          </button>
-          <button class="cr-bleed-btn" id="bleedDiecutBtn" onclick="setBleedMode('diecut')">
-            <div class="cr-bleed-name">Die-Cut</div>
-            <div class="cr-bleed-sub">0.0313" trim</div>
-          </button>
-        </div>
-        <div class="cr-bleed-note" id="bleedNote"></div>
-      </div>
-
-    </div>
+    <!-- Hidden file inputs used by the settings panel -->
+    <input type="file" id="bgFileInput" accept="image/*" onchange="onBgFileChosen(event)" class="cr-visually-hidden">
+    <input type="file" id="stickerFileInput" accept="image/png" onchange="onStickerFileChosen(event)" class="cr-visually-hidden">
+    <input type="file" id="characterFileInput" accept="image/png" onchange="onCharacterFileChosen(event)" class="cr-visually-hidden">
 
     <!-- UPLOAD INSTRUCTIONS MODAL -->
     <div class="cr-modal-overlay" id="uploadHintOverlay">
       <div class="cr-modal">
         <div class="cr-modal-title">Before you upload</div>
         <div class="cr-modal-body" id="uploadHintText"></div>
+        <div class="cr-png-infographic">
+          <div class="cr-png-card bad">
+            <div class="cr-png-swatch solid"><span class="cr-png-shape"></span></div>
+            <div class="cr-png-label">✕ Has a background</div>
+          </div>
+          <div class="cr-png-arrow">→</div>
+          <div class="cr-png-card good">
+            <div class="cr-png-swatch checker"><span class="cr-png-shape"></span></div>
+            <div class="cr-png-label">✓ Transparent PNG</div>
+          </div>
+        </div>
+        <div class="cr-modal-body" style="margin-top:12px">
+          <b>PNG</b> is an image format that can save a see-through (transparent) background instead of a solid color — that's the checkerboard pattern above. Most photo apps export JPG by default, which always has a solid background, so you may need to use a "remove background" tool first.
+        </div>
         <input type="hidden" id="uploadHintInputId">
         <button class="cr-btn-primary" onclick="confirmUploadHint()">Got it — Choose File</button>
         <button class="cr-link-back" style="display:block;margin:12px auto 0" onclick="closeUploadHint()">Cancel</button>
@@ -218,11 +113,12 @@
         <label class="cr-field-label">Your Name <span class="cr-req">*</span></label>
         <input type="text" id="custName" class="cr-text-input" placeholder="Juan Dela Cruz">
 
-        <label class="cr-field-label">Contact (email or phone) <span class="cr-req">*</span></label>
-        <input type="text" id="custContact" class="cr-text-input" placeholder="you@example.com or 0917 123 4567">
+        <label class="cr-field-label">Email <span class="cr-req">*</span></label>
+        <input type="email" id="custEmail" class="cr-text-input" placeholder="you@example.com">
+        <div class="cr-hint" style="margin-top:-4px">We'll email you a save code and instructions for the next step.</div>
 
-        <label class="cr-field-label">Shopee Order ID <span class="cr-optional">(optional)</span></label>
-        <input type="text" id="custShopee" class="cr-text-input" placeholder="e.g. 250711ABCDEFG">
+        <label class="cr-field-label">Phone <span class="cr-optional">(optional)</span></label>
+        <input type="text" id="custPhone" class="cr-text-input" placeholder="0917 123 4567">
 
         <label class="cr-field-label">Notes <span class="cr-optional">(optional)</span></label>
         <textarea id="custNotes" class="cr-text-input" rows="3" placeholder="Anything else we should know?"></textarea>
@@ -239,7 +135,14 @@
     <div class="cr-done-box">
       <div class="cr-done-icon">🎉</div>
       <h1 class="cr-title">Design Submitted!</h1>
-      <p class="cr-sub">We've received your design and will follow up with you on Shopee once it's reviewed and ready.</p>
+      <p class="cr-sub">Save this code — you'll need it after paying on Shopee.</p>
+      <div class="cr-save-code" id="saveCodeDisplay"></div>
+      <div class="cr-sub" id="emailStatusNote"></div>
+      <div class="cr-done-steps">
+        <div class="cr-done-step"><b>1.</b> Complete your payment on Shopee for this product.</div>
+        <div class="cr-done-step"><b>2.</b> Send your code (above) in a Shopee chat message to us.</div>
+        <div class="cr-done-step"><b>3.</b> We'll match it to this design and get it ready to print.</div>
+      </div>
       <button class="cr-btn-primary" onclick="location.reload()">Design Another Pin</button>
     </div>
   </section>
@@ -251,6 +154,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
+<!-- EmailJS (sends the confirmation email client-side, no backend needed) -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="email-config.js"></script>
 <script src="create.js"></script>
 </body>
 </html>

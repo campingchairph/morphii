@@ -196,8 +196,10 @@ function renderOrders(){
         <span class="adm-badge adm-badge-${o.status}">${o.status}</span>
         <div class="adm-card-title">${escHtml(o.productLabel||o.product||'')}</div>
         <div class="adm-card-meta">${(o.size||'').toFixed ? o.size.toFixed(2) : o.size}" Circle · ${o.bleedMode==='wrap'?'Wrap':'Die-Cut'} · ${escHtml(dt)}</div>
+        ${o.saveCode ? `<div class="adm-card-row"><b>Code:</b> <span style="font-family:monospace;letter-spacing:1px">${escHtml(o.saveCode)}</span></div>` : ''}
         <div class="adm-card-row"><b>Name:</b> ${escHtml(o.customerName)}</div>
-        <div class="adm-card-row"><b>Contact:</b> ${escHtml(o.customerContact)}</div>
+        <div class="adm-card-row"><b>Email:</b> ${escHtml(o.customerEmail||o.customerContact)}</div>
+        ${o.customerPhone ? `<div class="adm-card-row"><b>Phone:</b> ${escHtml(o.customerPhone)}</div>` : ''}
         ${o.shopeeOrderId ? `<div class="adm-card-row"><b>Shopee:</b> ${escHtml(o.shopeeOrderId)}</div>` : ''}
         ${o.notes ? `<div class="adm-card-row"><b>Notes:</b> ${escHtml(o.notes)}</div>` : ''}
         <div class="adm-card-actions">
