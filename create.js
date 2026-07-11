@@ -25,7 +25,7 @@ const SIZES = [
 const STEP_ORDER = ['product','size','design','submit','done'];
 const CANVAS_PX   = 480;   // fixed on-screen render resolution
 const EXPORT_DPI  = 220;   // export resolution for the clean (admin-facing) design
-const FONTS = ['Fredoka One','Nunito','Cute Jellyfish','Cute Stitch','Cute Roti','Cute Maple'];
+const FONTS = ['Luckiest Guy','Shrikhand','Carter One','Ceviche One','Kavoon','Cherry Bomb One','Lobster','Spicy Rice','Chicle'];
 
 // Same gradient presets as the kiosk avatar builder (morphii.js CATS.bg.items),
 // copied verbatim so both tools offer identical background options.
