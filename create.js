@@ -126,7 +126,37 @@ function setupCanvas(){
     bindCanvasInteractions(canvas);
     canvas._boundEvents = true;
   }
+  sizeCanvasStage();
+  requestAnimationFrame(sizeCanvasStage);
+  setTimeout(sizeCanvasStage, 60); // fallback in case rAF is throttled (e.g. background tab)
 }
+
+// Fits the canvas stage to the largest square available in cr-canvas-wrap,
+// since the design step is a fixed no-scroll viewport (pin must always be visible).
+function sizeCanvasStage(){
+  const wrap = document.querySelector('.cr-canvas-wrap');
+  const stage = document.getElementById('canvasStage');
+  if (!wrap || !stage) return;
+  const side = Math.max(120, Math.min(wrap.clientWidth, wrap.clientHeight));
+  stage.style.width = side + 'px';
+  stage.style.height = side + 'px';
+}
+window.addEventListener('resize', ()=>{
+  if (document.getElementById('step-design').classList.contains('active')) sizeCanvasStage();
+});
+
+/* ── BOTTOM SHEETS ────────────────────────────── */
+function openSheet(name){
+  document.getElementById('sheetOverlay').classList.add('show');
+  ['Bg','Text','Print'].forEach(n=>{
+    document.getElementById('sheet'+n).classList.toggle('show', n.toLowerCase()===name);
+  });
+}
+window.openSheet = openSheet;
+function closeSheet(){
+  document.getElementById('sheetOverlay').classList.remove('show');
+}
+window.closeSheet = closeSheet;
 
 /* ── BACKGROUND: UPLOAD / LINK ───────────────── */
 function setBgTab(which){
@@ -156,33 +186,59 @@ window.loadBgFromLink = loadBgFromLink;
 function setBgImage(src, isExternal){
   const warnEl = document.getElementById('bgWarning');
   warnEl.style.display = 'none';
-  const img = new Image();
-  if (isExternal) img.crossOrigin = 'anonymous';
-  img.onload = () => {
-    state.bg.img = img;
-    state.bg.tainted = false;
-    state.bg.offsetXFrac = 0; state.bg.offsetYFrac = 0; state.bg.scale = 1;
-    if (isExternal){
-      // Probe for a tainted canvas (cross-origin image without CORS headers)
-      try {
-        const probe = document.createElement('canvas');
-        probe.width = 1; probe.height = 1;
-        probe.getContext('2d').drawImage(img,0,0,1,1);
-        probe.getContext('2d').getImageData(0,0,1,1);
-      } catch(err){
-        state.bg.tainted = true;
-        warnEl.style.display = 'block';
-        warnEl.textContent = "This image link can't be used for printing (the host doesn't allow cross-site access). Please upload the file instead.";
-      }
-    }
-    drawPreview();
-    updateSubmitAvailability();
+  if (!isExternal){
+    const img = new Image();
+    img.onload = () => applyBgImage(img, false);
+    img.onerror = () => showBgWarning('Could not load that image.');
+    img.src = src;
+    return;
+  }
+  // External links: most image CDNs (e.g. Pinterest) don't send CORS headers,
+  // so a crossOrigin='anonymous' request fails outright rather than just tainting.
+  // Try CORS first (gives a clean, exportable image); fall back to a plain load
+  // (displays fine, but can't be used in the final print — we warn about that).
+  const corsImg = new Image();
+  corsImg.crossOrigin = 'anonymous';
+  corsImg.onload = () => {
+    if (isCanvasTainted(corsImg)) loadPlain(); else applyBgImage(corsImg, false);
   };
-  img.onerror = () => {
-    warnEl.style.display = 'block';
-    warnEl.textContent = 'Could not load that image link. Check the URL or upload the file instead.';
-  };
-  img.src = src;
+  corsImg.onerror = loadPlain;
+  corsImg.src = src;
+
+  function loadPlain(){
+    const img2 = new Image();
+    img2.onload = () => {
+      applyBgImage(img2, true);
+      showBgWarning("This image can be previewed but can't be used for the final print (the host blocks cross-site access). For best results, upload the file instead.");
+    };
+    img2.onerror = () => showBgWarning('Could not load that image link. Check the URL or upload the file instead.');
+    img2.src = src;
+  }
+}
+
+function isCanvasTainted(img){
+  try {
+    const probe = document.createElement('canvas');
+    probe.width = 1; probe.height = 1;
+    const pctx = probe.getContext('2d');
+    pctx.drawImage(img,0,0,1,1);
+    pctx.getImageData(0,0,1,1);
+    return false;
+  } catch(e){ return true; }
+}
+
+function applyBgImage(img, tainted){
+  state.bg.img = img;
+  state.bg.tainted = tainted;
+  state.bg.offsetXFrac = 0; state.bg.offsetYFrac = 0; state.bg.scale = 1;
+  drawPreview();
+  updateSubmitAvailability();
+}
+
+function showBgWarning(msg){
+  const warnEl = document.getElementById('bgWarning');
+  warnEl.style.display = 'block';
+  warnEl.textContent = msg;
 }
 
 /* ── TEXT LINES ───────────────────────────────── */
@@ -322,7 +378,10 @@ function drawDesignLayer(ctx, sizePx){
 }
 
 function drawArcText(ctx, text, cx, cy, radius, bottom){
-  const chars = bottom ? text.split('').reverse() : text.split('');
+  // Position sweep already goes left-to-right for both top and bottom arcs
+  // (see angle formula below) — reversing characters here would mirror the
+  // reading order, so the same left-to-right char order is used for both.
+  const chars = text.split('');
   const widths = chars.map(c=>ctx.measureText(c).width + 2);
   const totalAngle = widths.reduce((a,w)=>a + w/radius, 0);
   let a = -totalAngle/2;

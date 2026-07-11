@@ -42,67 +42,82 @@
     <div class="cr-size-grid" id="sizeGrid"></div>
   </section>
 
-  <!-- STEP 3: DESIGN -->
-  <section class="cr-panel" id="step-design">
-    <div class="cr-design-layout">
+  <!-- STEP 3: DESIGN (mobile-first — pin always visible, controls in popup sheets) -->
+  <section class="cr-panel cr-panel-design" id="step-design">
+    <div class="cr-design-app">
 
-      <!-- LEFT: controls -->
-      <div class="cr-controls">
-        <button class="cr-link-back" onclick="goStep('size')">&larr; Change size</button>
-
-        <div class="cr-ctrl-group">
-          <div class="cr-ctrl-title">🖼️ Background</div>
-          <div class="cr-bg-tabs">
-            <button class="cr-bg-tab active" id="bgTabUpload" onclick="setBgTab('upload')">Upload</button>
-            <button class="cr-bg-tab" id="bgTabLink" onclick="setBgTab('link')">Image Link</button>
-          </div>
-          <div id="bgUploadPane">
-            <input type="file" id="bgFileInput" accept="image/*" onchange="onBgFileChosen(event)">
-          </div>
-          <div id="bgLinkPane" style="display:none">
-            <input type="text" id="bgLinkInput" placeholder="https://example.com/image.jpg" class="cr-text-input">
-            <button class="cr-btn-secondary" onclick="loadBgFromLink()">Load Image</button>
-          </div>
-          <div id="bgWarning" class="cr-warning" style="display:none"></div>
-          <div class="cr-hint">Drag the image to reposition · scroll or pinch to zoom</div>
-        </div>
-
-        <div class="cr-ctrl-group">
-          <div class="cr-ctrl-title">📝 Text <button class="cr-btn-tiny" onclick="addTextLine()">+ Add Line</button></div>
-          <div id="textLinesWrap"></div>
-        </div>
-
-        <div class="cr-ctrl-group">
-          <div class="cr-ctrl-title">🖨️ Print Settings</div>
-          <div class="cr-bleed-row">
-            <button class="cr-bleed-btn active" id="bleedWrapBtn" onclick="setBleedMode('wrap')">
-              <div class="cr-bleed-name">Wrap</div>
-              <div class="cr-bleed-sub">5% of size</div>
-            </button>
-            <button class="cr-bleed-btn" id="bleedDiecutBtn" onclick="setBleedMode('diecut')">
-              <div class="cr-bleed-name">Die-Cut</div>
-              <div class="cr-bleed-sub">0.0313" trim</div>
-            </button>
-          </div>
-          <div class="cr-bleed-note" id="bleedNote"></div>
-        </div>
-
-        <button class="cr-btn-primary" id="toSubmitBtn" onclick="goStep('submit')">Continue to Submit →</button>
+      <div class="cr-design-topbar">
+        <button class="cr-icon-btn" onclick="goStep('size')">&larr; Size</button>
+        <div class="cr-design-title" id="previewLabel"></div>
+        <button class="cr-icon-btn cr-next-btn" id="toSubmitBtn" onclick="goStep('submit')">Next &rarr;</button>
       </div>
 
-      <!-- RIGHT: canvas preview -->
-      <div class="cr-preview">
-        <div class="cr-preview-label" id="previewLabel"></div>
+      <div class="cr-canvas-wrap">
         <div class="cr-canvas-stage" id="canvasStage">
           <canvas id="designCanvas"></canvas>
           <div class="cr-devtools-shield" id="devtoolsShield">
             <div>🔒 Preview hidden</div>
           </div>
         </div>
-        <div class="cr-legend">
-          <span><i class="cr-legend-swatch cr-legend-cut"></i>Cut line</span>
-          <span><i class="cr-legend-swatch cr-legend-safe"></i>Safe area</span>
+      </div>
+
+      <div class="cr-legend">
+        <span><i class="cr-legend-swatch cr-legend-cut"></i>Cut line</span>
+        <span><i class="cr-legend-swatch cr-legend-safe"></i>Safe area</span>
+      </div>
+
+      <div class="cr-bottom-tabs">
+        <button class="cr-bottom-tab" onclick="openSheet('bg')"><span class="cr-bt-icon">🖼️</span>Background</button>
+        <button class="cr-bottom-tab" onclick="openSheet('text')"><span class="cr-bt-icon">📝</span>Text</button>
+        <button class="cr-bottom-tab" onclick="openSheet('print')"><span class="cr-bt-icon">🖨️</span>Print</button>
+      </div>
+    </div>
+
+    <!-- BOTTOM SHEETS -->
+    <div class="cr-sheet-overlay" id="sheetOverlay" onclick="if(event.target===this) closeSheet()">
+
+      <div class="cr-sheet" id="sheetBg">
+        <div class="cr-sheet-handle"></div>
+        <button class="cr-sheet-close" onclick="closeSheet()">✕</button>
+        <div class="cr-sheet-title">🖼️ Background</div>
+        <div class="cr-bg-tabs">
+          <button class="cr-bg-tab active" id="bgTabUpload" onclick="setBgTab('upload')">Upload</button>
+          <button class="cr-bg-tab" id="bgTabLink" onclick="setBgTab('link')">Image Link</button>
         </div>
+        <div id="bgUploadPane">
+          <input type="file" id="bgFileInput" accept="image/*" onchange="onBgFileChosen(event)">
+        </div>
+        <div id="bgLinkPane" style="display:none">
+          <input type="text" id="bgLinkInput" placeholder="https://example.com/image.jpg" class="cr-text-input">
+          <button class="cr-btn-secondary" onclick="loadBgFromLink()">Load Image</button>
+        </div>
+        <div id="bgWarning" class="cr-warning" style="display:none"></div>
+        <div class="cr-hint">Drag the image to reposition · scroll or pinch to zoom</div>
+      </div>
+
+      <div class="cr-sheet" id="sheetText">
+        <div class="cr-sheet-handle"></div>
+        <button class="cr-sheet-close" onclick="closeSheet()">✕</button>
+        <div class="cr-sheet-title">📝 Text</div>
+        <div id="textLinesWrap"></div>
+        <button class="cr-btn-tiny-full" onclick="addTextLine()">+ Add Text Line</button>
+      </div>
+
+      <div class="cr-sheet" id="sheetPrint">
+        <div class="cr-sheet-handle"></div>
+        <button class="cr-sheet-close" onclick="closeSheet()">✕</button>
+        <div class="cr-sheet-title">🖨️ Print Settings</div>
+        <div class="cr-bleed-row">
+          <button class="cr-bleed-btn active" id="bleedWrapBtn" onclick="setBleedMode('wrap')">
+            <div class="cr-bleed-name">Wrap</div>
+            <div class="cr-bleed-sub">5% of size</div>
+          </button>
+          <button class="cr-bleed-btn" id="bleedDiecutBtn" onclick="setBleedMode('diecut')">
+            <div class="cr-bleed-name">Die-Cut</div>
+            <div class="cr-bleed-sub">0.0313" trim</div>
+          </button>
+        </div>
+        <div class="cr-bleed-note" id="bleedNote"></div>
       </div>
 
     </div>
