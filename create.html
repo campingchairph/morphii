@@ -15,8 +15,9 @@
   <div class="cr-steps" id="crSteps">
     <div class="cr-step active" data-step="product"><span class="cr-step-num">1</span><span class="cr-step-label">Product</span></div>
     <div class="cr-step" data-step="size"><span class="cr-step-num">2</span><span class="cr-step-label">Size</span></div>
-    <div class="cr-step" data-step="design"><span class="cr-step-num">3</span><span class="cr-step-label">Design</span></div>
-    <div class="cr-step" data-step="submit"><span class="cr-step-num">4</span><span class="cr-step-label">Submit</span></div>
+    <div class="cr-step" data-step="print"><span class="cr-step-num">3</span><span class="cr-step-label">Print</span></div>
+    <div class="cr-step" data-step="design"><span class="cr-step-num">4</span><span class="cr-step-label">Design</span></div>
+    <div class="cr-step" data-step="submit"><span class="cr-step-num">5</span><span class="cr-step-label">Submit</span></div>
   </div>
 </header>
 
@@ -36,14 +37,22 @@
     <div class="cr-size-grid" id="sizeGrid"></div>
   </section>
 
-  <!-- STEP 3: DESIGN (mobile-first — pin always visible, controls in popup sheets) -->
+  <!-- STEP 3: PRINT SETTINGS -->
+  <section class="cr-panel" id="step-print">
+    <h1 class="cr-title">Print settings</h1>
+    <p class="cr-sub"><button class="cr-link-back" onclick="goStep('size')">&larr; Change size</button></p>
+    <div id="printStepBody" style="max-width:420px"></div>
+    <button class="cr-btn-primary" style="max-width:420px;margin-top:10px" onclick="goStep('design')">Continue to Design &rarr;</button>
+  </section>
+
+  <!-- STEP 4: DESIGN (mobile-first — pin always visible, controls in popup sheets) -->
   <section class="cr-panel cr-panel-design" id="step-design">
     <div class="cr-design-app">
 
       <div class="cr-design-topbar">
-        <button class="cr-icon-btn" onclick="goStep('size')">
+        <button class="cr-icon-btn" onclick="goStep('print')">
           <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-          Size
+          Back
         </button>
         <div class="cr-design-title" id="previewLabel"></div>
         <button class="cr-icon-btn cr-next-btn" id="toSubmitBtn" onclick="goStep('submit')">
@@ -51,8 +60,17 @@
           <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
         </button>
       </div>
+      <div class="cr-next-disabled-note" id="nextDisabledNote" style="display:none">
+        Next is off because your background photo came from a link that blocks printing — upload it as a file instead, or remove it.
+      </div>
 
-      <div class="cr-layer-strip" id="layerStrip"></div>
+      <div class="cr-layer-strip-label">Layers <span class="cr-hint" style="display:inline">— tap one to edit, swipe for more</span></div>
+      <div class="cr-layer-strip-wrap">
+        <div class="cr-layer-strip" id="layerStrip"></div>
+        <div class="cr-layer-strip-arrow" id="layerStripArrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+      </div>
 
       <div class="cr-canvas-wrap">
         <div class="cr-canvas-stage" id="canvasStage">

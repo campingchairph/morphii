@@ -22,7 +22,7 @@ const SIZES = [
   { inches:3.00, tag:'Large & bold' },
 ];
 
-const STEP_ORDER = ['product','size','design','submit','done'];
+const STEP_ORDER = ['product','size','print','design','submit','done'];
 const CANVAS_PX   = 480;   // fixed on-screen render resolution
 const EXPORT_DPI  = 220;   // export resolution for the clean (admin-facing) design
 const FONTS = ['Luckiest Guy','Shrikhand','Carter One','Ceviche One','Kavoon','Cherry Bomb One','Lobster','Spicy Rice','Chicle'];
@@ -99,6 +99,7 @@ function goStep(name){
     el.classList.toggle('done', i<idx && i>=0);
   });
   window.scrollTo({top:0,behavior:'smooth'});
+  if (name==='print'){ renderPrintStep(); }
   if (name==='design'){ setupCanvas(); drawPreview(); }
   if (name==='submit'){ renderSubmitSummary(); }
 }
@@ -133,7 +134,7 @@ function renderSizeGrid(){
 }
 function selectSize(inches){
   state.size = inches;
-  goStep('design');
+  goStep('print');
 }
 window.selectSize = selectSize;
 
@@ -150,12 +151,18 @@ function safeInset(){
 }
 function setBleedMode(mode){
   state.bleedMode = mode;
-  // Font sizes were fit to the old safe area — re-check them against the new one.
-  state.textLines.forEach(clampTextSize);
-  if (state.selected && state.selected.kind==='print') renderSettingsPanel();
+  // Font sizes/positions were fit to the old safe area — re-check them against the new one.
+  state.textLines.forEach(t => { clampTextSize(t); clampTextPosition(t); });
+  renderPrintStep();
   drawPreview();
 }
 window.setBleedMode = setBleedMode;
+
+function renderPrintStep(){
+  const el = document.getElementById('printStepBody');
+  if (!el) return;
+  el.innerHTML = printPanelHtml();
+}
 
 /* ── CANVAS SETUP ─────────────────────────────── */
 function setupCanvas(){
@@ -167,9 +174,15 @@ function setupCanvas(){
   if (!state.selected) state.selected = { kind:'background' };
   renderLayerStrip();
   renderSettingsPanel();
+  updateSubmitAvailability();
   if (!canvas._boundEvents){
     bindCanvasInteractions(canvas);
     canvas._boundEvents = true;
+  }
+  const strip = document.getElementById('layerStrip');
+  if (strip && !strip._boundScroll){
+    strip.addEventListener('scroll', updateLayerStripOverflowArrow, { passive:true });
+    strip._boundScroll = true;
   }
   sizeCanvasStage();
   requestAnimationFrame(sizeCanvasStage);
@@ -214,21 +227,23 @@ function selectLayer(descriptor){
 }
 window.selectLayer = selectLayer;
 
+const ICON_LOCK   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>';
+const ICON_UNLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 017.6-1.8"/></svg>';
+
 function renderLayerStrip(){
   const strip = document.getElementById('layerStrip');
   if (!strip) return;
   const activeKey = layerKey(state.selected);
   const chips = [];
 
-  chips.push({ d:{kind:'background'}, label:'Background', thumb: bgChipThumb() });
-  chips.push({ d:{kind:'character'}, label:'Character', thumb: state.character ? `<img src="${state.character.img.src}" alt="">` : ICON_CHARACTER });
-  state.stickers.forEach((s,i)=> chips.push({ d:{kind:'sticker', id:s.id}, label:'Sticker '+(i+1), thumb:`<img src="${s.img.src}" alt="">` }));
-  state.textLines.forEach((t,i)=> chips.push({ d:{kind:'text', id:t.id}, label: (t.text||'Text').slice(0,10), thumb: ICON_TEXT }));
-  chips.push({ d:{kind:'print'}, label:'Print', thumb: ICON_PRINT });
+  chips.push({ d:{kind:'background'}, label:'Background', thumb: bgChipThumb(), locked:false });
+  chips.push({ d:{kind:'character'}, label:'Character', thumb: state.character ? `<img src="${state.character.img.src}" alt="">` : ICON_CHARACTER, locked: state.character?.locked });
+  state.stickers.forEach((s,i)=> chips.push({ d:{kind:'sticker', id:s.id}, label:'Sticker '+(i+1), thumb:`<img src="${s.img.src}" alt="">`, locked:s.locked }));
+  state.textLines.forEach((t,i)=> chips.push({ d:{kind:'text', id:t.id}, label: (t.text||'Text').slice(0,10), thumb: ICON_TEXT, locked:t.locked }));
 
   strip.innerHTML = chips.map(c => `
     <button class="cr-layer-chip ${activeKey===layerKey(c.d)?'active':''}" onclick='selectLayer(${JSON.stringify(c.d)})'>
-      <span class="cr-layer-thumb">${c.thumb}</span>
+      <span class="cr-layer-thumb">${c.thumb}${c.locked?`<span class="cr-layer-lock-badge">${ICON_LOCK}</span>`:''}</span>
       <span class="cr-layer-label">${escHtml(c.label)}</span>
     </button>`).join('') + `
     <button class="cr-layer-chip cr-layer-add" onclick="quickAddText()">
@@ -239,6 +254,17 @@ function renderLayerStrip(){
       <span class="cr-layer-thumb">${ICON_PLUS}</span>
       <span class="cr-layer-label">Add Sticker</span>
     </button>`;
+
+  updateLayerStripOverflowArrow();
+}
+
+function updateLayerStripOverflowArrow(){
+  const strip = document.getElementById('layerStrip');
+  const arrow = document.getElementById('layerStripArrow');
+  if (!strip || !arrow) return;
+  const hasOverflow = strip.scrollWidth > strip.clientWidth + 2;
+  const atEnd = strip.scrollLeft + strip.clientWidth >= strip.scrollWidth - 2;
+  arrow.classList.toggle('show', hasOverflow && !atEnd);
 }
 
 function bgChipThumb(){
@@ -264,7 +290,6 @@ function renderSettingsPanel(){
     case 'character':  panel.innerHTML = characterPanelHtml(); break;
     case 'sticker':    panel.innerHTML = stickerPanelHtml(state.selected.id); break;
     case 'text':       panel.innerHTML = textPanelHtml(state.selected.id); break;
-    case 'print':      panel.innerHTML = printPanelHtml(); break;
     default:           panel.innerHTML = '';
   }
 }
@@ -478,6 +503,7 @@ function stickerPanelHtml(id){
     <div class="cr-field-label" style="margin-top:16px">Size</div>
     <input type="range" class="cr-range" min="0.4" max="2.5" step="0.1" value="${s.scale}" oninput="setStickerScale(${s.id},this.value)">
     <div class="cr-hint">Drag the sticker on the pin to reposition · use the handles to resize/rotate</div>
+    ${lockRowHtml('sticker', s.id, s.locked)}
     <button class="cr-text-line-remove" style="margin-top:10px" onclick="removeSticker(${s.id})">Remove this sticker</button>`;
 }
 
@@ -486,7 +512,7 @@ function addStickerFromPreset(i){
   if (!preset) return;
   const img = new Image();
   img.onload = () => {
-    const s = { id: state.nextStickerId++, img, xFrac:0.15, yFrac:-0.15, scale:1, rotation:0 };
+    const s = { id: state.nextStickerId++, img, xFrac:0.15, yFrac:-0.15, scale:1, rotation:0, locked:false };
     state.stickers.push(s);
     selectLayer({ kind:'sticker', id:s.id });
   };
@@ -501,7 +527,7 @@ function onStickerFileChosen(e){
   reader.onload = ev => {
     const img = new Image();
     img.onload = () => {
-      const s = { id: state.nextStickerId++, img, xFrac:0.15, yFrac:-0.15, scale:1, rotation:0 };
+      const s = { id: state.nextStickerId++, img, xFrac:0.15, yFrac:-0.15, scale:1, rotation:0, locked:false };
       state.stickers.push(s);
       selectLayer({ kind:'sticker', id:s.id });
     };
@@ -549,14 +575,31 @@ function characterPanelHtml(){
     <div class="cr-field-label" style="margin-top:16px">Size</div>
     <input type="range" class="cr-range" min="0.5" max="2" step="0.1" value="${state.character.scale}" oninput="setCharacterScale(this.value)">
     <div class="cr-hint">Tap it on the pin to select, then use the handles to resize/rotate — position is always centered</div>
+    ${lockRowHtml('character', null, state.character.locked)}
     <button class="cr-text-line-remove" style="margin-top:10px" onclick="removeCharacter()">Remove character</button>`;
 }
+
+function lockRowHtml(kind, id, locked){
+  return `<button class="cr-lock-btn ${locked?'locked':''}" onclick="toggleLock('${kind}'${id!=null?','+id:''})">
+    ${locked?ICON_LOCK:ICON_UNLOCK}<span>${locked?'Locked — tap to unlock':'Lock this in place'}</span>
+  </button>`;
+}
+function toggleLock(kind, id){
+  const el = kind==='character' ? state.character
+    : kind==='sticker' ? state.stickers.find(s=>s.id===id)
+    : state.textLines.find(t=>t.id===id);
+  if (!el) return;
+  el.locked = !el.locked;
+  renderLayerStrip();
+  renderSettingsPanel();
+}
+window.toggleLock = toggleLock;
 
 function setCharacterFromPreset(i){
   const preset = CHARACTER_PRESETS[i];
   if (!preset) return;
   const img = new Image();
-  img.onload = () => { state.character = { img, scale:1, rotation:0, xFrac:0, yFrac:0 }; selectLayer({kind:'character'}); };
+  img.onload = () => { state.character = { img, scale:1, rotation:0, xFrac:0, yFrac:0, locked:false }; selectLayer({kind:'character'}); };
   img.src = preset.src;
 }
 window.setCharacterFromPreset = setCharacterFromPreset;
@@ -567,7 +610,7 @@ function onCharacterFileChosen(e){
   const reader = new FileReader();
   reader.onload = ev => {
     const img = new Image();
-    img.onload = () => { state.character = { img, scale:1, rotation:0, xFrac:0, yFrac:0 }; selectLayer({kind:'character'}); };
+    img.onload = () => { state.character = { img, scale:1, rotation:0, xFrac:0, yFrac:0, locked:false }; selectLayer({kind:'character'}); };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
@@ -593,7 +636,7 @@ window.setCharacterScale = setCharacterScale;
 
 /* ── TEXT PANEL ───────────────────────────────── */
 function addTextLine(){
-  const line = { id: state.nextTextId++, text:'Your Text', font:FONTS[0], color:'#FFFFFF', placement:'straight', size:1, shadow:false };
+  const line = { id: state.nextTextId++, text:'Your Text', font:FONTS[0], color:'#FFFFFF', placement:'straight', size:1, shadow:false, xFrac:0, yFrac:0, locked:false };
   state.textLines.push(line);
   selectLayer({ kind:'text', id: line.id });
 }
@@ -614,6 +657,7 @@ function updateTextLine(id, field, value){
   line[field] = value;
   if (field==='size' || field==='text' || field==='placement' || field==='font'){
     clampTextSize(line);
+    clampTextPosition(line);
     if (field==='size'){
       const slider = document.getElementById('textSizeSlider_'+id);
       if (slider) slider.value = line.size;
@@ -668,6 +712,8 @@ function textPanelHtml(id){
       <input type="checkbox" ${t.shadow?'checked':''} onchange="toggleTextShadow(${t.id},this.checked)">
       Drop shadow
     </label>
+    <div class="cr-hint" style="margin-top:10px">Drag the text directly on the pin to reposition it.</div>
+    ${lockRowHtml('text', t.id, t.locked)}
     <button class="cr-text-line-remove" style="margin-top:10px" onclick="removeTextLine(${t.id})">Remove this text line</button>`;
 }
 
@@ -701,6 +747,22 @@ function hitTestSticker(xFrac, yFrac){
   }
   return null;
 }
+// Text is drawn last (topmost), so it's checked first when tapping the canvas.
+function hitTestText(xFrac, yFrac){
+  const ctx = document.getElementById('designCanvas').getContext('2d');
+  const scalePxPerInch = CANVAS_PX / artboardDiameter();
+  const cutRadiusPx = (state.size/2) * scalePxPerInch;
+  for (let i = state.textLines.length - 1; i >= 0; i--){
+    const t = state.textLines[i];
+    ctx.font = `bold ${28*t.size}px "${t.font}", 'Nunito', sans-serif`;
+    const width = ctx.measureText(t.text || 'Text').width;
+    const height = 28*t.size*1.15;
+    const rPx = t.placement==='straight' ? Math.hypot(width/2, height/2) : (cutRadiusPx*0.78) + height/2;
+    const rFrac = rPx / CANVAS_PX;
+    if (dist2(xFrac,yFrac,t.xFrac||0,t.yFrac||0) <= rFrac*rFrac) return t;
+  }
+  return null;
+}
 function dist2(x1,y1,x2,y2){ const dx=x1-x2, dy=y1-y2; return dx*dx+dy*dy; }
 
 function pointerFrac(canvas, e){
@@ -730,11 +792,11 @@ function bindCanvasInteractions(canvas){
     const p = pointerFrac(canvas, e);
     const HANDLE_R = 0.05;
 
-    // 1. Handles of the currently selected element take priority
+    // 1. Handles of the currently selected element take priority (skipped if locked)
     if (state.selected && (state.selected.kind==='sticker' || state.selected.kind==='character')){
       const isChar = state.selected.kind==='character';
       const el = isChar ? state.character : state.stickers.find(s=>s.id===state.selected.id);
-      if (el){
+      if (el && !el.locked){
         const hp = handlePositions(el, isChar);
         if (dist2(p.x,p.y,hp.resize.x,hp.resize.y) <= HANDLE_R*HANDLE_R){
           startElementDrag(canvas, e, 'resize', el); return;
@@ -745,16 +807,22 @@ function bindCanvasInteractions(canvas){
       }
     }
 
-    // 2. Stickers (topmost first), then the center character
+    // 2. Text (topmost layer), then stickers, then the center character
+    const textHit = hitTestText(p.x, p.y);
+    if (textHit){
+      if (layerKey(state.selected)!==layerKey({kind:'text',id:textHit.id})) selectLayer({ kind:'text', id: textHit.id });
+      if (!textHit.locked) startElementDrag(canvas, e, 'move', textHit);
+      return;
+    }
     const sticker = hitTestSticker(p.x, p.y);
     if (sticker){
       if (layerKey(state.selected)!==layerKey({kind:'sticker',id:sticker.id})) selectLayer({ kind:'sticker', id: sticker.id });
-      startElementDrag(canvas, e, 'move', sticker);
+      if (!sticker.locked) startElementDrag(canvas, e, 'move', sticker);
       return;
     }
     if (state.character && dist2(p.x,p.y,0,0) <= Math.pow(elementRadiusFrac(state.character,true),2)){
       if (layerKey(state.selected)!==layerKey({kind:'character'})) selectLayer({ kind:'character' });
-      return; // character position is fixed — select only, no move-drag
+      return; // character position is always centered — select only, no move-drag
     }
 
     // 3. Nothing hit — fall back to the background layer, and drag the photo if there is one
@@ -785,6 +853,7 @@ function bindCanvasInteractions(canvas){
       const dyFrac = (e.clientY - state.dragStartY) / rect.height;
       state.dragTarget.xFrac = state.dragStartOffX + dxFrac;
       state.dragTarget.yFrac = state.dragStartOffY + dyFrac;
+      if (state.textLines.includes(state.dragTarget)) clampTextPosition(state.dragTarget);
     } else if (state.dragTarget && state.dragMode==='resize'){
       const dist = Math.hypot(p.x-state.dragTarget.xFrac, p.y-state.dragTarget.yFrac);
       state.dragTarget.scale = Math.max(0.3, Math.min(3, state.dragStartScale * (dist/state.dragStartDist)));
@@ -940,6 +1009,33 @@ function clampTextSize(t){
   }
 }
 
+// Text can be dragged off-center, but never far enough that it would spill
+// past the safe area — clamps xFrac/yFrac given the text's current footprint.
+function clampTextPosition(t){
+  const ctx = document.getElementById('designCanvas').getContext('2d');
+  const scalePxPerInch = CANVAS_PX / artboardDiameter();
+  const cutRadiusPx = (state.size/2) * scalePxPerInch;
+  const safeRadiusPx = cutRadiusPx - safeInset()*scalePxPerInch;
+  const text = t.text || 'Text';
+  ctx.font = `bold ${28*t.size}px "${t.font}", 'Nunito', sans-serif`;
+  const width = ctx.measureText(text).width;
+  const height = 28*t.size*1.15;
+
+  let footprintPx;
+  if (t.placement==='straight'){
+    footprintPx = Math.hypot(width/2, height/2);
+  } else {
+    footprintPx = (cutRadiusPx*0.78) + height/2;
+  }
+  const maxOffsetPx = Math.max(0, safeRadiusPx - footprintPx);
+  const maxOffsetFrac = maxOffsetPx / CANVAS_PX;
+  const dist = Math.hypot(t.xFrac, t.yFrac);
+  if (dist > maxOffsetFrac && dist > 0){
+    const ratio = maxOffsetFrac / dist;
+    t.xFrac *= ratio; t.yFrac *= ratio;
+  }
+}
+
 function drawTextLines(ctx, artboardPx){
   const scalePxPerInch = artboardPx / artboardDiameter();
   const cutRadiusPx = (state.size/2) * scalePxPerInch;
@@ -953,11 +1049,13 @@ function drawTextLines(ctx, artboardPx){
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 2;
     }
+    const cx = artboardPx/2 + (t.xFrac||0)*artboardPx;
+    const cy = artboardPx/2 + (t.yFrac||0)*artboardPx;
     if (t.placement==='straight'){
       ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(t.text, artboardPx/2, artboardPx/2);
+      ctx.fillText(t.text, cx, cy);
     } else {
-      drawArcText(ctx, t.text, artboardPx/2, artboardPx/2, cutRadiusPx*0.78, t.placement==='bottom-arc');
+      drawArcText(ctx, t.text, cx, cy, cutRadiusPx*0.78, t.placement==='bottom-arc');
     }
     ctx.restore();
   });
@@ -1103,7 +1201,11 @@ function approxBytes(dataUrl){ return Math.round(dataUrl.length*0.75); }
 
 /* ── SUBMIT ───────────────────────────────────── */
 function updateSubmitAvailability(){
-  document.getElementById('toSubmitBtn').disabled = state.bg.imageOn && state.bg.tainted;
+  const blocked = state.bg.imageOn && state.bg.tainted;
+  const btn = document.getElementById('toSubmitBtn');
+  if (btn) btn.disabled = blocked;
+  const note = document.getElementById('nextDisabledNote');
+  if (note) note.style.display = blocked ? 'block' : 'none';
 }
 
 function renderSubmitSummary(){
