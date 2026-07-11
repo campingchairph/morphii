@@ -184,6 +184,7 @@ function setupCanvas(){
     strip.addEventListener('scroll', updateLayerStripOverflowArrow, { passive:true });
     strip._boundScroll = true;
   }
+  watchCanvasWrapSize();
   sizeCanvasStage();
   requestAnimationFrame(sizeCanvasStage);
   setTimeout(sizeCanvasStage, 60); // fallback in case rAF is throttled (e.g. background tab)
@@ -202,6 +203,20 @@ function sizeCanvasStage(){
 window.addEventListener('resize', ()=>{
   if (document.getElementById('step-design').classList.contains('active')) sizeCanvasStage();
 });
+
+// The settings panel's height changes constantly (different layers have
+// different amounts of content), which shrinks/grows cr-canvas-wrap on every
+// selection — a plain resize listener misses that. A ResizeObserver on the
+// wrap itself catches every cause, so the stage (and the circle inside it)
+// can never end up non-square.
+let _canvasWrapObserver = null;
+function watchCanvasWrapSize(){
+  if (_canvasWrapObserver) return;
+  const wrap = document.querySelector('.cr-canvas-wrap');
+  if (!wrap || typeof ResizeObserver === 'undefined') return;
+  _canvasWrapObserver = new ResizeObserver(() => sizeCanvasStage());
+  _canvasWrapObserver.observe(wrap);
+}
 
 function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function capitalize(s){ return s[0].toUpperCase()+s.slice(1); }
@@ -236,16 +251,24 @@ function renderLayerStrip(){
   const activeKey = layerKey(state.selected);
   const chips = [];
 
-  chips.push({ d:{kind:'background'}, label:'Background', thumb: bgChipThumb(), locked:false });
-  chips.push({ d:{kind:'character'}, label:'Character', thumb: state.character ? `<img src="${state.character.img.src}" alt="">` : ICON_CHARACTER, locked: state.character?.locked });
-  state.stickers.forEach((s,i)=> chips.push({ d:{kind:'sticker', id:s.id}, label:'Sticker '+(i+1), thumb:`<img src="${s.img.src}" alt="">`, locked:s.locked }));
-  state.textLines.forEach((t,i)=> chips.push({ d:{kind:'text', id:t.id}, label: (t.text||'Text').slice(0,10), thumb: ICON_TEXT, locked:t.locked }));
+  chips.push({ d:{kind:'background'}, label:'Background', thumb: bgChipThumb(), lockable:false });
+  chips.push({ d:{kind:'character'}, label:'Character', thumb: state.character ? `<img src="${state.character.img.src}" alt="">` : ICON_CHARACTER, lockable: !!state.character, locked: state.character?.locked });
+  state.stickers.forEach((s,i)=> chips.push({ d:{kind:'sticker', id:s.id}, label:'Sticker '+(i+1), thumb:`<img src="${s.img.src}" alt="">`, lockable:true, locked:s.locked }));
+  state.textLines.forEach((t,i)=> chips.push({ d:{kind:'text', id:t.id}, label: (t.text||'Text').slice(0,10), thumb: ICON_TEXT, lockable:true, locked:t.locked }));
 
-  strip.innerHTML = chips.map(c => `
-    <button class="cr-layer-chip ${activeKey===layerKey(c.d)?'active':''}" onclick='selectLayer(${JSON.stringify(c.d)})'>
-      <span class="cr-layer-thumb">${c.thumb}${c.locked?`<span class="cr-layer-lock-badge">${ICON_LOCK}</span>`:''}</span>
+  // Lockable chips are <div role=button> instead of <button> so they can
+  // contain a real nested <button> for the lock toggle (invalid inside <button>).
+  strip.innerHTML = chips.map(c => {
+    const lockBtn = c.lockable
+      ? `<button class="cr-chip-lock-toggle ${c.locked?'locked':''}" onclick='event.stopPropagation();toggleLock("${c.d.kind}"${c.d.id!=null?','+c.d.id:''})' title="${c.locked?'Unlock':'Lock in place'}">${c.locked?ICON_LOCK:ICON_UNLOCK}</button>`
+      : '';
+    return `
+    <div class="cr-layer-chip ${activeKey===layerKey(c.d)?'active':''}" role="button" tabindex="0" onclick='selectLayer(${JSON.stringify(c.d)})'>
+      ${lockBtn}
+      <span class="cr-layer-thumb">${c.thumb}</span>
       <span class="cr-layer-label">${escHtml(c.label)}</span>
-    </button>`).join('') + `
+    </div>`;
+  }).join('') + `
     <button class="cr-layer-chip cr-layer-add" onclick="quickAddText()">
       <span class="cr-layer-thumb">${ICON_PLUS}</span>
       <span class="cr-layer-label">Add Text</span>
