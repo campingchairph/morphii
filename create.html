@@ -71,6 +71,7 @@
         <span><i class="cr-legend-swatch cr-legend-cut"></i>Cut line</span>
         <span><i class="cr-legend-swatch cr-legend-safe"></i>Safe area</span>
       </div>
+      <div class="cr-privacy-note">This preview is watermarked for privacy — your printed pin will be clean.</div>
 
       <div class="cr-bottom-tabs">
         <button class="cr-bottom-tab" onclick="openSheet('bg')">
@@ -116,6 +117,10 @@
             <span id="bgUploadLabelText">Choose a Photo</span>
           </label>
           <input type="file" id="bgFileInput" accept="image/*" onchange="onBgFileChosen(event)" class="cr-visually-hidden">
+          <label class="cr-checkbox-row" id="imageLayerRow" style="display:none">
+            <input type="checkbox" id="imageLayerChk" onchange="toggleImageLayer(this.checked)">
+            Show the photo
+          </label>
         </div>
         <div id="bgLinkPane" style="display:none">
           <input type="text" id="bgLinkInput" placeholder="https://example.com/image.jpg" class="cr-text-input">
@@ -123,11 +128,16 @@
         </div>
         <div id="bgGradientPane" style="display:none">
           <div class="cr-gradient-grid" id="gradientGrid"></div>
+          <label class="cr-checkbox-row" id="colorLayerRow" style="display:none">
+            <input type="checkbox" id="colorLayerChk" onchange="toggleColorLayer(this.checked)">
+            Show this color
+          </label>
         </div>
         <div id="bgWarning" class="cr-warning" style="display:none"></div>
+        <div class="cr-hint">Turn on both a photo and a color to mix them — the color shows through anywhere the photo doesn't fully cover.</div>
         <div class="cr-field-label" style="margin-top:16px">Opacity</div>
         <input type="range" id="bgOpacitySlider" min="0.1" max="1" step="0.05" value="1" oninput="setBgOpacity(this.value)" class="cr-range">
-        <div class="cr-hint">Drag the image to reposition · scroll or pinch to zoom · it always fills the whole circle</div>
+        <div class="cr-hint">Drag the photo to reposition · scroll or pinch to zoom</div>
       </div>
 
       <div class="cr-sheet" id="sheetStickers">
@@ -137,10 +147,10 @@
         </button>
         <div class="cr-sheet-title">Stickers</div>
         <div class="cr-preset-grid" id="stickerPresets"></div>
-        <label class="cr-upload-btn" for="stickerFileInput" style="margin-top:12px">
+        <button type="button" class="cr-upload-btn" style="margin-top:12px" onclick="promptUpload('sticker')">
           <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M4 21h16"/></svg>
           <span>Upload Your Own Sticker</span>
-        </label>
+        </button>
         <input type="file" id="stickerFileInput" accept="image/png" onchange="onStickerFileChosen(event)" class="cr-visually-hidden">
         <div id="placedStickerList"></div>
       </div>
@@ -153,10 +163,10 @@
         <div class="cr-sheet-title">Center Character</div>
         <div class="cr-hint" style="margin-top:-8px;margin-bottom:12px">A bigger character or logo that sits in the middle of your pin.</div>
         <div class="cr-preset-grid" id="characterPresets"></div>
-        <label class="cr-upload-btn" for="characterFileInput" style="margin-top:12px">
+        <button type="button" class="cr-upload-btn" style="margin-top:12px" onclick="promptUpload('character')">
           <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M4 21h16"/></svg>
           <span>Upload Your Own Character</span>
-        </label>
+        </button>
         <input type="file" id="characterFileInput" accept="image/png" onchange="onCharacterFileChosen(event)" class="cr-visually-hidden">
         <div id="characterControls"></div>
       </div>
@@ -190,6 +200,17 @@
         <div class="cr-bleed-note" id="bleedNote"></div>
       </div>
 
+    </div>
+
+    <!-- UPLOAD INSTRUCTIONS MODAL -->
+    <div class="cr-modal-overlay" id="uploadHintOverlay">
+      <div class="cr-modal">
+        <div class="cr-modal-title">Before you upload</div>
+        <div class="cr-modal-body" id="uploadHintText"></div>
+        <input type="hidden" id="uploadHintInputId">
+        <button class="cr-btn-primary" onclick="confirmUploadHint()">Got it — Choose File</button>
+        <button class="cr-link-back" style="display:block;margin:12px auto 0" onclick="closeUploadHint()">Cancel</button>
+      </div>
     </div>
   </section>
 
