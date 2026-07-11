@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order Admin — Morphii</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --navy:#0B2E4E; --pink:#FF6FAE; --yellow:#FFFF00; --sky:#4DC8F0;
+  --panel:#0d3557; --border:rgba(255,255,255,0.14); --ink-dim:rgba(255,255,255,0.55);
+}
+body{font-family:'Nunito',sans-serif;background:var(--navy);color:white;min-height:100vh;}
+button,input{font-family:inherit;}
+h1,.logo{font-family:'Fredoka One',cursive;}
+
+/* ── LOGIN ── */
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-card{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:36px 32px;max-width:360px;width:100%;text-align:center;}
+.login-card .logo{font-size:26px;margin-bottom:4px;}
+.login-card .logo span{color:var(--pink);}
+.login-sub{font-size:12.5px;color:var(--ink-dim);font-weight:700;margin-bottom:22px;}
+.login-input{width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);background:rgba(255,255,255,0.06);color:white;font-size:13px;font-weight:700;margin-bottom:10px;outline:none;}
+.login-input:focus{border-color:var(--pink);}
+.login-btn{width:100%;padding:12px;border-radius:50px;border:none;background:var(--pink);color:white;font-family:'Fredoka One',cursive;font-size:15px;cursor:pointer;margin-top:6px;box-shadow:0 4px 0 #c0437e;}
+.login-err{margin-top:10px;font-size:12px;font-weight:700;color:#ff9b98;min-height:16px;}
+
+/* ── ADMIN ── */
+#adminScreen{display:none;}
+.adm-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:16px 24px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20;}
+.adm-header .logo{font-size:20px;}
+.adm-header .logo span{color:var(--pink);}
+.adm-user{font-size:12px;color:var(--ink-dim);font-weight:700;}
+.adm-signout{background:rgba(255,255,255,0.08);border:1px solid var(--border);color:white;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:800;cursor:pointer;}
+
+.adm-main{max-width:1100px;margin:0 auto;padding:24px;}
+.adm-stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
+.adm-stat{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 16px;text-align:center;min-width:90px;}
+.adm-stat b{display:block;font-family:'Fredoka One',cursive;font-size:20px;}
+.adm-stat span{font-size:10.5px;color:var(--ink-dim);font-weight:800;text-transform:uppercase;letter-spacing:0.4px;}
+
+.adm-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+.adm-tab{padding:8px 16px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:white;font-size:12px;font-weight:800;cursor:pointer;}
+.adm-tab.active{background:var(--pink);border-color:var(--pink);}
+
+.adm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;}
+.adm-card{background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+.adm-card img{width:100%;aspect-ratio:1/1;object-fit:cover;cursor:zoom-in;background:#082138;}
+.adm-card-body{padding:14px;}
+.adm-card-title{font-weight:900;font-size:13.5px;margin-bottom:2px;}
+.adm-card-meta{font-size:11px;color:var(--ink-dim);font-weight:700;margin-bottom:8px;}
+.adm-card-row{font-size:12px;font-weight:700;margin-bottom:3px;}
+.adm-card-row b{color:var(--ink-dim);font-weight:800;}
+.adm-badge{display:inline-block;font-size:9.5px;font-weight:900;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;}
+.adm-badge-pending{background:rgba(255,255,0,0.18);color:#FFFF00;}
+.adm-badge-approved{background:rgba(85,239,196,0.18);color:#55EFC4;}
+.adm-badge-rejected{background:rgba(255,94,91,0.18);color:#ff9b98;}
+.adm-badge-fulfilled{background:rgba(77,200,240,0.18);color:#4DC8F0;}
+.adm-card-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.adm-btn{flex:1;min-width:70px;padding:7px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:white;font-size:11px;font-weight:800;cursor:pointer;}
+.adm-btn.approve{border-color:#55EFC4;color:#55EFC4;}
+.adm-btn.reject{border-color:#ff9b98;color:#ff9b98;}
+.adm-btn.fulfill{border-color:#4DC8F0;color:#4DC8F0;}
+.adm-empty{text-align:center;padding:60px 20px;color:var(--ink-dim);font-weight:700;}
+
+.adm-lightbox{display:none;position:fixed;inset:0;z-index:99;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:24px;}
+.adm-lightbox.show{display:flex;}
+.adm-lightbox img{max-width:90vw;max-height:90vh;border-radius:12px;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="logo">morphii<span>.</span> Admin</div>
+    <div class="login-sub">Order review — sign in to continue</div>
+    <input type="email" id="loginEmail" class="login-input" placeholder="Admin email">
+    <input type="password" id="loginPass" class="login-input" placeholder="Password">
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="adminScreen">
+  <div class="adm-header">
+    <div class="logo">morphii<span>.</span> Order Admin</div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="adm-user" id="admUserEmail"></div>
+      <button class="adm-signout" onclick="doSignOut()">Sign Out</button>
+    </div>
+  </div>
+  <div class="adm-main">
+    <div class="adm-stats" id="admStats"></div>
+    <div class="adm-tabs" id="admTabs">
+      <button class="adm-tab active" data-status="all" onclick="setFilter('all')">All</button>
+      <button class="adm-tab" data-status="pending" onclick="setFilter('pending')">Pending</button>
+      <button class="adm-tab" data-status="approved" onclick="setFilter('approved')">Approved</button>
+      <button class="adm-tab" data-status="rejected" onclick="setFilter('rejected')">Rejected</button>
+      <button class="adm-tab" data-status="fulfilled" onclick="setFilter('fulfilled')">Fulfilled</button>
+    </div>
+    <div class="adm-grid" id="ordersGrid"></div>
+  </div>
+</div>
+
+<div class="adm-lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightboxImg" src="" alt="Design full view">
+</div>
+
+<!-- Firebase SDK (compat mode — no build step needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+let currentFilter = 'all';
+let allOrders = [];
+let ordersUnsub = null;
+
+function doLogin(){
+  const errEl = document.getElementById('loginErr');
+  errEl.textContent = '';
+  if (!AUTH){ errEl.textContent = 'Firebase not configured yet — see firebase-config.js'; return; }
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPass').value;
+  if (!email || !pass){ errEl.textContent = 'Enter email and password.'; return; }
+  AUTH.signInWithEmailAndPassword(email, pass)
+    .catch(err => { errEl.textContent = err.message; });
+}
+window.doLogin = doLogin;
+
+function doSignOut(){
+  if (AUTH) AUTH.signOut();
+}
+window.doSignOut = doSignOut;
+
+if (AUTH){
+  AUTH.onAuthStateChanged(user => {
+    if (user && isAdmin(user)){
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('adminScreen').style.display = 'block';
+      document.getElementById('admUserEmail').textContent = user.email;
+      subscribeOrders();
+    } else {
+      if (ordersUnsub){ ordersUnsub(); ordersUnsub = null; }
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('adminScreen').style.display = 'none';
+      if (user && !isAdmin(user)){
+        document.getElementById('loginErr').textContent = 'This account is not authorized as an admin.';
+        AUTH.signOut();
+      }
+    }
+  });
+}
+
+function subscribeOrders(){
+  if (ordersUnsub) return;
+  ordersUnsub = DB.collection('morphii_orders').orderBy('createdAt','desc')
+    .onSnapshot(snap => {
+      allOrders = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+      renderStats();
+      renderOrders();
+    }, err => console.warn('Orders listener error:', err));
+}
+
+function renderStats(){
+  const counts = { all: allOrders.length, pending:0, approved:0, rejected:0, fulfilled:0 };
+  allOrders.forEach(o => { if (counts[o.status] != null) counts[o.status]++; });
+  const el = document.getElementById('admStats');
+  el.innerHTML = Object.entries(counts).map(([k,v]) =>
+    `<div class="adm-stat"><b>${v}</b><span>${k}</span></div>`).join('');
+}
+
+function setFilter(status){
+  currentFilter = status;
+  document.querySelectorAll('.adm-tab').forEach(t => t.classList.toggle('active', t.dataset.status===status));
+  renderOrders();
+}
+window.setFilter = setFilter;
+
+function renderOrders(){
+  const grid = document.getElementById('ordersGrid');
+  const list = currentFilter==='all' ? allOrders : allOrders.filter(o=>o.status===currentFilter);
+  if (!list.length){
+    grid.innerHTML = '<div class="adm-empty">No orders here yet.</div>';
+    return;
+  }
+  grid.innerHTML = list.map(o => {
+    const dt = o.createdAt && o.createdAt.toDate ? o.createdAt.toDate().toLocaleString() : '';
+    return `
+    <div class="adm-card">
+      <img src="${o.designDataUrl||''}" onclick="openLightbox('${o.id}')" alt="Design">
+      <div class="adm-card-body">
+        <span class="adm-badge adm-badge-${o.status}">${o.status}</span>
+        <div class="adm-card-title">${escHtml(o.productLabel||o.product||'')}</div>
+        <div class="adm-card-meta">${(o.size||'').toFixed ? o.size.toFixed(2) : o.size}" Circle · ${o.bleedMode==='wrap'?'Wrap':'Die-Cut'} · ${escHtml(dt)}</div>
+        <div class="adm-card-row"><b>Name:</b> ${escHtml(o.customerName)}</div>
+        <div class="adm-card-row"><b>Contact:</b> ${escHtml(o.customerContact)}</div>
+        ${o.shopeeOrderId ? `<div class="adm-card-row"><b>Shopee:</b> ${escHtml(o.shopeeOrderId)}</div>` : ''}
+        ${o.notes ? `<div class="adm-card-row"><b>Notes:</b> ${escHtml(o.notes)}</div>` : ''}
+        <div class="adm-card-actions">
+          <button class="adm-btn approve" onclick="setStatus('${o.id}','approved')">Approve</button>
+          <button class="adm-btn reject" onclick="setStatus('${o.id}','rejected')">Reject</button>
+          <button class="adm-btn fulfill" onclick="setStatus('${o.id}','fulfilled')">Fulfilled</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setStatus(id, status){
+  DB.collection('morphii_orders').doc(id).update({ status }).catch(err => alert('Error: '+err.message));
+}
+window.setStatus = setStatus;
+
+function openLightbox(id){
+  const o = allOrders.find(x=>x.id===id);
+  if (!o) return;
+  document.getElementById('lightboxImg').src = o.designDataUrl||'';
+  document.getElementById('lightbox').classList.add('show');
+}
+window.openLightbox = openLightbox;
+function closeLightbox(){ document.getElementById('lightbox').classList.remove('show'); }
+window.closeLightbox = closeLightbox;
+
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+</script>
+</body>
+</html>

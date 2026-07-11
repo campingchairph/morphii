@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "morphii-static",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8098", "-d", "C:\\Users\\josep\\OneDrive\\Documents\\GitHub\\morphii"],
+      "port": 8098
+    }
+  ]
+}
