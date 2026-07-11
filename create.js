@@ -27,13 +27,60 @@ const CANVAS_PX   = 480;   // fixed on-screen render resolution
 const EXPORT_DPI  = 220;   // export resolution for the clean (admin-facing) design
 const FONTS = ['Fredoka One','Nunito','Cute Jellyfish','Cute Stitch','Cute Roti','Cute Maple'];
 
+// Same gradient presets as the kiosk avatar builder (morphii.js CATS.bg.items),
+// copied verbatim so both tools offer identical background options.
+const GRADIENTS = [
+  {label:'Sky Blue',grad:['#87CEEB','#B0E2FF']},
+  {label:'Candy',grad:['#FFD6E0','#FFEFBA']},
+  {label:'Mint',grad:['#B8F0D8','#D4F5FF']},
+  {label:'Lavender',grad:['#E8D5FF','#FFD6F0']},
+  {label:'Peach',grad:['#FFD6A5','#FFEFBA']},
+  {label:'Lemon',grad:['#FFFACD','#FFF0B3']},
+  {label:'Rose',grad:['#FFD6D6','#FFE8E8']},
+  {label:'Seafoam',grad:['#B8EDD8','#D8F5EC']},
+  {label:'Lilac',grad:['#DDD0FF','#EEE8FF']},
+  {label:'Sunrise',grad:['#FFE0B2','#FFCCBC']},
+  {label:'Arctic',grad:['#E0F7FA','#B2EBF2']},
+  {label:'Blush',grad:['#FCE4EC','#F8BBD0']},
+  {label:'Sunset',grad:['#FF9A9E','#FECFEF']},
+  {label:'Ocean',grad:['#2193B0','#6DD5FA']},
+  {label:'Forest',grad:['#A8E063','#C8F08C']},
+  {label:'Grape',grad:['#E0AAFF','#C77DFF']},
+  {label:'Coral',grad:['#FF9A76','#FFE0C8']},
+  {label:'Aurora',grad:['#A0F0C0','#92FEE0']},
+  {label:'Dusk',grad:['#FFD580','#FFE9AA']},
+  {label:'Berry',grad:['#FF758C','#FFB3C1']},
+  {label:'Dreamy',   grad4:['#FFB3C6','#FFFACD','#E8D5FF','#C8F0E0']},
+  {label:'Sunset 4', grad4:['#FFD6A5','#FFB3C6','#FFF0B3','#FECFEF']},
+  {label:'Ocean 4',  grad4:['#B3E5FF','#E8D5FF','#B3C6FF','#C8F5EC']},
+  {label:'Spring 4', grad4:['#C8F0E0','#FFFACD','#D4F5FF','#FFB3C6']},
+  {label:'Twilight', grad4:['#E0AAFF','#FFB3C6','#B3C6FF','#C8F0E0']},
+  {label:'Sherbet',  grad4:['#FF9A9E','#FFD166','#87CEEB','#C8F0D8']},
+  {label:'Fairy',    grad4:['#EED5FF','#FFD6E0','#FFFACD','#D4F5FF']},
+  {label:'Lullaby',  grad4:['#E8D5FF','#B3E5FF','#FFD6E0','#FFFACD']},
+];
+
+// Preset sticker/character libraries — empty for now, assets to be added later
+// (either hardcoded here or via the admin asset library once that's built).
+// Uploading your own PNG always works regardless of what's in these lists.
+const STICKER_PRESETS = [];
+const CHARACTER_PRESETS = [];
+
 const state = {
   product: null,
   size: null,
   bleedMode: 'wrap',
-  bg: { img:null, tainted:false, offsetXFrac:0, offsetYFrac:0, scale:1 },
+  bg: {
+    type: 'none',           // 'none' | 'image' | 'gradient'
+    img:null, tainted:false, opacity:1,
+    offsetXFrac:0, offsetYFrac:0, scale:1,
+    gradient: null,          // one of GRADIENTS
+  },
   textLines: [],
-  dragging:false, dragStartX:0, dragStartY:0, dragStartOffX:0, dragStartOffY:0,
+  stickers: [],             // [{id, img, xFrac, yFrac, scale}]
+  character: null,          // {img, scale} | null
+  nextStickerId: 1,
+  dragging:false, dragTarget:null, dragStartX:0, dragStartY:0, dragStartOffX:0, dragStartOffY:0,
   nextTextId: 1,
 };
 
@@ -146,11 +193,19 @@ window.addEventListener('resize', ()=>{
 });
 
 /* ── BOTTOM SHEETS ────────────────────────────── */
+const SHEET_NAMES = ['bg','stickers','character','text','print'];
 function openSheet(name){
   document.getElementById('sheetOverlay').classList.add('show');
-  ['Bg','Text','Print'].forEach(n=>{
-    document.getElementById('sheet'+n).classList.toggle('show', n.toLowerCase()===name);
+  SHEET_NAMES.forEach(n=>{
+    document.getElementById('sheet'+n[0].toUpperCase()+n.slice(1)).classList.toggle('show', n===name);
   });
+  if (name==='bg'){ renderGradientGrid(); syncBgOpacitySlider(); }
+  if (name==='stickers') renderStickerSheet();
+  if (name==='character') renderCharacterSheet();
+}
+function syncBgOpacitySlider(){
+  const el = document.getElementById('bgOpacitySlider');
+  if (el) el.value = state.bg.opacity;
 }
 window.openSheet = openSheet;
 function closeSheet(){
@@ -158,14 +213,36 @@ function closeSheet(){
 }
 window.closeSheet = closeSheet;
 
-/* ── BACKGROUND: UPLOAD / LINK ───────────────── */
+/* ── BACKGROUND: UPLOAD / LINK / GRADIENT ────── */
 function setBgTab(which){
-  document.getElementById('bgTabUpload').classList.toggle('active', which==='upload');
-  document.getElementById('bgTabLink').classList.toggle('active', which==='link');
-  document.getElementById('bgUploadPane').style.display = which==='upload' ? 'block' : 'none';
-  document.getElementById('bgLinkPane').style.display   = which==='link'   ? 'block' : 'none';
+  ['upload','link','gradient'].forEach(w=>{
+    document.getElementById('bgTab'+capitalize(w)).classList.toggle('active', w===which);
+    document.getElementById('bg'+capitalize(w)+'Pane').style.display = w===which ? 'block' : 'none';
+  });
 }
 window.setBgTab = setBgTab;
+function capitalize(s){ return s[0].toUpperCase()+s.slice(1); }
+
+function renderGradientGrid(){
+  const grid = document.getElementById('gradientGrid');
+  if (grid.dataset.rendered) return;
+  grid.dataset.rendered = '1';
+  grid.innerHTML = GRADIENTS.map((g,i)=>{
+    const css = g.grad4
+      ? `conic-gradient(from 45deg, ${g.grad4[0]}, ${g.grad4[1]}, ${g.grad4[3]}, ${g.grad4[2]}, ${g.grad4[0]})`
+      : `linear-gradient(135deg, ${g.grad[0]}, ${g.grad[1]})`;
+    return `<button class="cr-gradient-swatch" style="background:${css}" title="${g.label}" onclick="selectGradient(${i})"></button>`;
+  }).join('');
+}
+
+function selectGradient(i){
+  state.bg.type = 'gradient';
+  state.bg.gradient = GRADIENTS[i];
+  state.bg.tainted = false;
+  drawPreview();
+  updateSubmitAvailability();
+}
+window.selectGradient = selectGradient;
 
 function onBgFileChosen(e){
   const file = e.target.files[0];
@@ -230,6 +307,7 @@ function isCanvasTainted(img){
 }
 
 function applyBgImage(img, tainted){
+  state.bg.type = 'image';
   state.bg.img = img;
   state.bg.tainted = tainted;
   state.bg.offsetXFrac = 0; state.bg.offsetYFrac = 0; state.bg.scale = 1;
@@ -241,6 +319,157 @@ function showBgWarning(msg){
   const warnEl = document.getElementById('bgWarning');
   warnEl.style.display = 'block';
   warnEl.textContent = msg;
+}
+
+function setBgOpacity(val){
+  state.bg.opacity = +val;
+  drawPreview();
+}
+window.setBgOpacity = setBgOpacity;
+
+// Keeps the background image always fully covering the circular pin area —
+// clamps pan offset (in artboard-fraction units) and forbids zooming below
+// the "just covers" scale of 1, so dragging/zooming can never leave a gap.
+function clampBgTransform(){
+  const img = state.bg.img;
+  if (!img) return;
+  state.bg.scale = Math.max(1, Math.min(4, state.bg.scale));
+  const unit = 1 / Math.min(img.naturalWidth, img.naturalHeight);
+  const w = img.naturalWidth * unit * state.bg.scale;
+  const h = img.naturalHeight * unit * state.bg.scale;
+  const maxX = Math.max(0, (w - 1) / 2);
+  const maxY = Math.max(0, (h - 1) / 2);
+  state.bg.offsetXFrac = Math.max(-maxX, Math.min(maxX, state.bg.offsetXFrac));
+  state.bg.offsetYFrac = Math.max(-maxY, Math.min(maxY, state.bg.offsetYFrac));
+}
+
+/* ── STICKERS (freely placed, drag anywhere on the pin) ── */
+function renderStickerSheet(){
+  const presetsEl = document.getElementById('stickerPresets');
+  presetsEl.innerHTML = STICKER_PRESETS.length
+    ? STICKER_PRESETS.map((s,i)=>`<button class="cr-preset-thumb" onclick="addStickerFromPreset(${i})"><img src="${s.src}" alt="${escHtml(s.label||'')}"></button>`).join('')
+    : `<div class="cr-empty-hint">More stickers coming soon! Upload your own below in the meantime.</div>`;
+  renderPlacedStickerList();
+}
+
+function addStickerFromPreset(i){
+  const preset = STICKER_PRESETS[i];
+  if (!preset) return;
+  const img = new Image();
+  img.onload = () => {
+    state.stickers.push({ id: state.nextStickerId++, img, xFrac:0, yFrac:0, scale:1 });
+    renderPlacedStickerList();
+    drawPreview();
+  };
+  img.src = preset.src;
+}
+window.addStickerFromPreset = addStickerFromPreset;
+
+function onStickerFileChosen(e){
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      state.stickers.push({ id: state.nextStickerId++, img, xFrac:0, yFrac:0, scale:1 });
+      renderPlacedStickerList();
+      drawPreview();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+window.onStickerFileChosen = onStickerFileChosen;
+
+function removeSticker(id){
+  state.stickers = state.stickers.filter(s=>s.id!==id);
+  renderPlacedStickerList();
+  drawPreview();
+}
+window.removeSticker = removeSticker;
+
+function setStickerScale(id, val){
+  const s = state.stickers.find(x=>x.id===id);
+  if (!s) return;
+  s.scale = +val;
+  drawPreview();
+}
+window.setStickerScale = setStickerScale;
+
+function renderPlacedStickerList(){
+  const el = document.getElementById('placedStickerList');
+  if (!el) return;
+  if (!state.stickers.length){
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = `<div class="cr-hint" style="margin:12px 0 8px">Drag stickers directly on the pin to reposition.</div>` +
+    state.stickers.map(s=>`
+      <div class="cr-placed-row">
+        <img class="cr-placed-thumb" src="${s.img.src}" alt="">
+        <input type="range" min="0.4" max="2.5" step="0.1" value="${s.scale}" oninput="setStickerScale(${s.id},this.value)">
+        <button class="cr-remove-btn" onclick="removeSticker(${s.id})">Remove</button>
+      </div>`).join('');
+}
+
+/* ── CENTER CHARACTER (single, big, always centered) ── */
+function renderCharacterSheet(){
+  const presetsEl = document.getElementById('characterPresets');
+  presetsEl.innerHTML = CHARACTER_PRESETS.length
+    ? CHARACTER_PRESETS.map((c,i)=>`<button class="cr-preset-thumb" onclick="setCharacterFromPreset(${i})"><img src="${c.src}" alt="${escHtml(c.label||'')}"></button>`).join('')
+    : `<div class="cr-empty-hint">More characters coming soon! Upload your own below in the meantime.</div>`;
+  renderCharacterControls();
+}
+
+function setCharacterFromPreset(i){
+  const preset = CHARACTER_PRESETS[i];
+  if (!preset) return;
+  const img = new Image();
+  img.onload = () => { state.character = { img, scale:1 }; renderCharacterControls(); drawPreview(); };
+  img.src = preset.src;
+}
+window.setCharacterFromPreset = setCharacterFromPreset;
+
+function onCharacterFileChosen(e){
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => { state.character = { img, scale:1 }; renderCharacterControls(); drawPreview(); };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+window.onCharacterFileChosen = onCharacterFileChosen;
+
+function removeCharacter(){
+  state.character = null;
+  renderCharacterControls();
+  drawPreview();
+}
+window.removeCharacter = removeCharacter;
+
+function setCharacterScale(val){
+  if (!state.character) return;
+  state.character.scale = +val;
+  drawPreview();
+}
+window.setCharacterScale = setCharacterScale;
+
+function renderCharacterControls(){
+  const el = document.getElementById('characterControls');
+  if (!el) return;
+  if (!state.character){ el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <div class="cr-placed-row">
+      <img class="cr-placed-thumb" src="${state.character.img.src}" alt="">
+      <input type="range" min="0.5" max="2" step="0.1" value="${state.character.scale}" oninput="setCharacterScale(this.value)">
+      <button class="cr-remove-btn" onclick="removeCharacter()">Remove</button>
+    </div>`;
 }
 
 /* ── TEXT LINES ───────────────────────────────── */
@@ -299,15 +528,40 @@ function renderTextLines(){
 function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 /* ── CANVAS DRAG / ZOOM ──────────────────────── */
+// Finds the topmost sticker under a point (in canvas-fraction coords, -0.5..0.5 from center).
+function hitTestSticker(xFrac, yFrac){
+  for (let i = state.stickers.length - 1; i >= 0; i--){
+    const s = state.stickers[i];
+    const r = 0.14 * s.scale; // approximate placed-sticker radius, in artboard fractions
+    const dx = xFrac - s.xFrac, dy = yFrac - s.yFrac;
+    if (dx*dx + dy*dy <= r*r) return s;
+  }
+  return null;
+}
+
 function bindCanvasInteractions(canvas){
   canvas.addEventListener('contextmenu', e=>e.preventDefault());
   canvas.addEventListener('dragstart', e=>e.preventDefault());
 
   canvas.addEventListener('pointerdown', e=>{
-    if (!state.bg.img) return;
+    const rect = canvas.getBoundingClientRect();
+    const xFrac = (e.clientX - rect.left) / rect.width - 0.5;
+    const yFrac = (e.clientY - rect.top) / rect.height - 0.5;
+    const sticker = hitTestSticker(xFrac, yFrac);
+    if (sticker){
+      state.dragTarget = sticker;
+    } else if (state.bg.type==='image' && state.bg.img){
+      state.dragTarget = 'bg';
+    } else {
+      return;
+    }
     state.dragging = true;
     state.dragStartX = e.clientX; state.dragStartY = e.clientY;
-    state.dragStartOffX = state.bg.offsetXFrac; state.dragStartOffY = state.bg.offsetYFrac;
+    if (state.dragTarget==='bg'){
+      state.dragStartOffX = state.bg.offsetXFrac; state.dragStartOffY = state.bg.offsetYFrac;
+    } else {
+      state.dragStartOffX = state.dragTarget.xFrac; state.dragStartOffY = state.dragTarget.yFrac;
+    }
     canvas.setPointerCapture(e.pointerId);
   });
   canvas.addEventListener('pointermove', e=>{
@@ -315,22 +569,29 @@ function bindCanvasInteractions(canvas){
     const rect = canvas.getBoundingClientRect();
     const dxFrac = (e.clientX - state.dragStartX) / rect.width;
     const dyFrac = (e.clientY - state.dragStartY) / rect.height;
-    state.bg.offsetXFrac = state.dragStartOffX + dxFrac;
-    state.bg.offsetYFrac = state.dragStartOffY + dyFrac;
+    if (state.dragTarget==='bg'){
+      state.bg.offsetXFrac = state.dragStartOffX + dxFrac;
+      state.bg.offsetYFrac = state.dragStartOffY + dyFrac;
+      clampBgTransform();
+    } else if (state.dragTarget){
+      state.dragTarget.xFrac = state.dragStartOffX + dxFrac;
+      state.dragTarget.yFrac = state.dragStartOffY + dyFrac;
+    }
     drawPreview();
   });
-  canvas.addEventListener('pointerup', e=>{ state.dragging=false; });
-  canvas.addEventListener('pointercancel', ()=>{ state.dragging=false; });
+  canvas.addEventListener('pointerup', ()=>{ state.dragging=false; state.dragTarget=null; });
+  canvas.addEventListener('pointercancel', ()=>{ state.dragging=false; state.dragTarget=null; });
 
   canvas.addEventListener('wheel', e=>{
-    if (!state.bg.img) return;
+    if (state.bg.type!=='image' || !state.bg.img) return;
     e.preventDefault();
     const delta = e.deltaY > 0 ? 0.92 : 1.08;
-    state.bg.scale = Math.min(4, Math.max(0.3, state.bg.scale*delta));
+    state.bg.scale = state.bg.scale*delta;
+    clampBgTransform();
     drawPreview();
   }, { passive:false });
 
-  // Basic pinch-to-zoom for touch
+  // Basic pinch-to-zoom for touch (background only)
   let pinchStartDist = null, pinchStartScale = 1;
   canvas.addEventListener('touchstart', e=>{
     if (e.touches.length===2){
@@ -339,10 +600,11 @@ function bindCanvasInteractions(canvas){
     }
   }, { passive:true });
   canvas.addEventListener('touchmove', e=>{
-    if (e.touches.length===2 && pinchStartDist){
+    if (e.touches.length===2 && pinchStartDist && state.bg.type==='image'){
       e.preventDefault();
       const d = touchDist(e.touches);
-      state.bg.scale = Math.min(4, Math.max(0.3, pinchStartScale * (d/pinchStartDist)));
+      state.bg.scale = pinchStartScale * (d/pinchStartDist);
+      clampBgTransform();
       drawPreview();
     }
   }, { passive:false });
@@ -357,10 +619,26 @@ function touchDist(touches){
 function drawDesignLayer(ctx, sizePx){
   const artboardPx = sizePx; // canvas itself represents the full artboard (incl bleed)
   ctx.clearRect(0,0,sizePx,sizePx);
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0,0,sizePx,sizePx);
 
-  if (state.bg.img){
+  // Everything printable is physically round — clip the whole design layer
+  // (background, stickers, character, text) to the pin's circular shape.
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(artboardPx/2, artboardPx/2, artboardPx/2, 0, Math.PI*2);
+  ctx.clip();
+
+  drawBackground(ctx, artboardPx);
+  drawStickers(ctx, artboardPx);
+  drawCharacter(ctx, artboardPx);
+  drawTextLines(ctx, artboardPx);
+
+  ctx.restore();
+}
+
+function drawBackground(ctx, artboardPx){
+  ctx.save();
+  ctx.globalAlpha = state.bg.opacity;
+  if (state.bg.type==='image' && state.bg.img){
     const img = state.bg.img;
     const baseScale = artboardPx / Math.min(img.naturalWidth, img.naturalHeight);
     const drawScale = baseScale * state.bg.scale;
@@ -368,8 +646,47 @@ function drawDesignLayer(ctx, sizePx){
     const cx = artboardPx/2 + state.bg.offsetXFrac*artboardPx;
     const cy = artboardPx/2 + state.bg.offsetYFrac*artboardPx;
     ctx.drawImage(img, cx-w/2, cy-h/2, w, h);
+  } else if (state.bg.type==='gradient' && state.bg.gradient){
+    // Same diagonal-gradient algorithm as the kiosk avatar builder (morphii.js)
+    const g = state.bg.gradient;
+    const grad = ctx.createLinearGradient(0,0,artboardPx,artboardPx);
+    if (g.grad4){
+      const [tl,tr,bl,br] = g.grad4;
+      grad.addColorStop(0,tl); grad.addColorStop(0.33,tr); grad.addColorStop(0.66,br); grad.addColorStop(1,bl);
+    } else {
+      grad.addColorStop(0,g.grad[0]); grad.addColorStop(1,g.grad[1]);
+    }
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,artboardPx,artboardPx);
+  } else {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0,0,artboardPx,artboardPx);
   }
+  ctx.restore();
+}
 
+function drawStickers(ctx, artboardPx){
+  state.stickers.forEach(s=>{
+    if (!s.img) return;
+    const d = artboardPx * 0.28 * s.scale; // placed-sticker footprint
+    const cx = artboardPx/2 + s.xFrac*artboardPx;
+    const cy = artboardPx/2 + s.yFrac*artboardPx;
+    const ar = s.img.naturalWidth / s.img.naturalHeight;
+    const w = ar >= 1 ? d : d*ar, h = ar >= 1 ? d/ar : d;
+    ctx.drawImage(s.img, cx-w/2, cy-h/2, w, h);
+  });
+}
+
+function drawCharacter(ctx, artboardPx){
+  if (!state.character || !state.character.img) return;
+  const img = state.character.img;
+  const d = artboardPx * 0.55 * state.character.scale; // big, centered
+  const ar = img.naturalWidth / img.naturalHeight;
+  const w = ar >= 1 ? d : d*ar, h = ar >= 1 ? d/ar : d;
+  ctx.drawImage(img, artboardPx/2 - w/2, artboardPx/2 - h/2, w, h);
+}
+
+function drawTextLines(ctx, artboardPx){
   const scalePxPerInch = artboardPx / artboardDiameter();
   const cutRadiusPx = (state.size/2) * scalePxPerInch;
   state.textLines.forEach(t=>{
@@ -511,8 +828,8 @@ async function submitDesign(){
     errEl.style.display = 'block';
     return;
   }
-  if (!state.bg.img){
-    errEl.textContent = 'Please add a background image before submitting.';
+  if (state.bg.type==='none'){
+    errEl.textContent = 'Please add a background before submitting.';
     errEl.style.display = 'block';
     return;
   }

@@ -47,16 +47,22 @@
     <div class="cr-design-app">
 
       <div class="cr-design-topbar">
-        <button class="cr-icon-btn" onclick="goStep('size')">&larr; Size</button>
+        <button class="cr-icon-btn" onclick="goStep('size')">
+          <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          Size
+        </button>
         <div class="cr-design-title" id="previewLabel"></div>
-        <button class="cr-icon-btn cr-next-btn" id="toSubmitBtn" onclick="goStep('submit')">Next &rarr;</button>
+        <button class="cr-icon-btn cr-next-btn" id="toSubmitBtn" onclick="goStep('submit')">
+          Next
+          <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
       </div>
 
       <div class="cr-canvas-wrap">
         <div class="cr-canvas-stage" id="canvasStage">
           <canvas id="designCanvas"></canvas>
           <div class="cr-devtools-shield" id="devtoolsShield">
-            <div>🔒 Preview hidden</div>
+            <div>Preview hidden</div>
           </div>
         </div>
       </div>
@@ -67,9 +73,26 @@
       </div>
 
       <div class="cr-bottom-tabs">
-        <button class="cr-bottom-tab" onclick="openSheet('bg')"><span class="cr-bt-icon">🖼️</span>Background</button>
-        <button class="cr-bottom-tab" onclick="openSheet('text')"><span class="cr-bt-icon">📝</span>Text</button>
-        <button class="cr-bottom-tab" onclick="openSheet('print')"><span class="cr-bt-icon">🖨️</span>Print</button>
+        <button class="cr-bottom-tab" onclick="openSheet('bg')">
+          <svg class="cr-bt-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          Background
+        </button>
+        <button class="cr-bottom-tab" onclick="openSheet('stickers')">
+          <svg class="cr-bt-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/></svg>
+          Stickers
+        </button>
+        <button class="cr-bottom-tab" onclick="openSheet('character')">
+          <svg class="cr-bt-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+          Character
+        </button>
+        <button class="cr-bottom-tab" onclick="openSheet('text')">
+          <svg class="cr-bt-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h7"/></svg>
+          Text
+        </button>
+        <button class="cr-bottom-tab" onclick="openSheet('print')">
+          <svg class="cr-bt-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M6 16h12v5H6z"/></svg>
+          Print
+        </button>
       </div>
     </div>
 
@@ -78,15 +101,18 @@
 
       <div class="cr-sheet" id="sheetBg">
         <div class="cr-sheet-handle"></div>
-        <button class="cr-sheet-close" onclick="closeSheet()">✕</button>
-        <div class="cr-sheet-title">🖼️ Background</div>
+        <button class="cr-sheet-close" onclick="closeSheet()">
+          <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+        <div class="cr-sheet-title">Background</div>
         <div class="cr-bg-tabs">
           <button class="cr-bg-tab active" id="bgTabUpload" onclick="setBgTab('upload')">Upload</button>
           <button class="cr-bg-tab" id="bgTabLink" onclick="setBgTab('link')">Image Link</button>
+          <button class="cr-bg-tab" id="bgTabGradient" onclick="setBgTab('gradient')">Colors</button>
         </div>
         <div id="bgUploadPane">
           <label class="cr-upload-btn" for="bgFileInput">
-            <span class="cr-upload-icon">📤</span>
+            <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M4 21h16"/></svg>
             <span id="bgUploadLabelText">Choose a Photo</span>
           </label>
           <input type="file" id="bgFileInput" accept="image/*" onchange="onBgFileChosen(event)" class="cr-visually-hidden">
@@ -95,22 +121,62 @@
           <input type="text" id="bgLinkInput" placeholder="https://example.com/image.jpg" class="cr-text-input">
           <button class="cr-btn-secondary" onclick="loadBgFromLink()">Load Image</button>
         </div>
+        <div id="bgGradientPane" style="display:none">
+          <div class="cr-gradient-grid" id="gradientGrid"></div>
+        </div>
         <div id="bgWarning" class="cr-warning" style="display:none"></div>
-        <div class="cr-hint">Drag the image to reposition · scroll or pinch to zoom</div>
+        <div class="cr-field-label" style="margin-top:16px">Opacity</div>
+        <input type="range" id="bgOpacitySlider" min="0.1" max="1" step="0.05" value="1" oninput="setBgOpacity(this.value)" class="cr-range">
+        <div class="cr-hint">Drag the image to reposition · scroll or pinch to zoom · it always fills the whole circle</div>
+      </div>
+
+      <div class="cr-sheet" id="sheetStickers">
+        <div class="cr-sheet-handle"></div>
+        <button class="cr-sheet-close" onclick="closeSheet()">
+          <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+        <div class="cr-sheet-title">Stickers</div>
+        <div class="cr-preset-grid" id="stickerPresets"></div>
+        <label class="cr-upload-btn" for="stickerFileInput" style="margin-top:12px">
+          <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M4 21h16"/></svg>
+          <span>Upload Your Own Sticker</span>
+        </label>
+        <input type="file" id="stickerFileInput" accept="image/png" onchange="onStickerFileChosen(event)" class="cr-visually-hidden">
+        <div id="placedStickerList"></div>
+      </div>
+
+      <div class="cr-sheet" id="sheetCharacter">
+        <div class="cr-sheet-handle"></div>
+        <button class="cr-sheet-close" onclick="closeSheet()">
+          <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+        <div class="cr-sheet-title">Center Character</div>
+        <div class="cr-hint" style="margin-top:-8px;margin-bottom:12px">A bigger character or logo that sits in the middle of your pin.</div>
+        <div class="cr-preset-grid" id="characterPresets"></div>
+        <label class="cr-upload-btn" for="characterFileInput" style="margin-top:12px">
+          <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M4 21h16"/></svg>
+          <span>Upload Your Own Character</span>
+        </label>
+        <input type="file" id="characterFileInput" accept="image/png" onchange="onCharacterFileChosen(event)" class="cr-visually-hidden">
+        <div id="characterControls"></div>
       </div>
 
       <div class="cr-sheet" id="sheetText">
         <div class="cr-sheet-handle"></div>
-        <button class="cr-sheet-close" onclick="closeSheet()">✕</button>
-        <div class="cr-sheet-title">📝 Text</div>
+        <button class="cr-sheet-close" onclick="closeSheet()">
+          <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+        <div class="cr-sheet-title">Text</div>
         <div id="textLinesWrap"></div>
         <button class="cr-btn-tiny-full" onclick="addTextLine()">+ Add Text Line</button>
       </div>
 
       <div class="cr-sheet" id="sheetPrint">
         <div class="cr-sheet-handle"></div>
-        <button class="cr-sheet-close" onclick="closeSheet()">✕</button>
-        <div class="cr-sheet-title">🖨️ Print Settings</div>
+        <button class="cr-sheet-close" onclick="closeSheet()">
+          <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+        <div class="cr-sheet-title">Print Settings</div>
         <div class="cr-bleed-row">
           <button class="cr-bleed-btn active" id="bleedWrapBtn" onclick="setBleedMode('wrap')">
             <div class="cr-bleed-name">Wrap</div>
