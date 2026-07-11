@@ -268,15 +268,7 @@ function renderLayerStrip(){
       <span class="cr-layer-thumb">${c.thumb}</span>
       <span class="cr-layer-label">${escHtml(c.label)}</span>
     </div>`;
-  }).join('') + `
-    <button class="cr-layer-chip cr-layer-add" onclick="quickAddText()">
-      <span class="cr-layer-thumb">${ICON_PLUS}</span>
-      <span class="cr-layer-label">Add Text</span>
-    </button>
-    <button class="cr-layer-chip cr-layer-add" onclick="promptUpload('sticker')">
-      <span class="cr-layer-thumb">${ICON_PLUS}</span>
-      <span class="cr-layer-label">Add Sticker</span>
-    </button>`;
+  }).join('');
 
   updateLayerStripOverflowArrow();
 }
@@ -762,9 +754,14 @@ function bleedNoteText(){
 }
 
 /* ── CANVAS INTERACTIONS: drag bg, move/resize/rotate stickers+character ── */
+// Locked elements are skipped entirely here — locking means "get out of the
+// way of canvas taps," not just "can't be dragged." A locked element that
+// still intercepted taps could block anything underneath it from ever being
+// reachable (e.g. a large locked text box sitting over a small sticker).
 function hitTestSticker(xFrac, yFrac){
   for (let i = state.stickers.length - 1; i >= 0; i--){
     const s = state.stickers[i];
+    if (s.locked) continue;
     const r = STICKER_BASE_R * s.scale;
     if (dist2(xFrac,yFrac,s.xFrac,s.yFrac) <= r*r) return s;
   }
@@ -777,6 +774,7 @@ function hitTestText(xFrac, yFrac){
   const cutRadiusPx = (state.size/2) * scalePxPerInch;
   for (let i = state.textLines.length - 1; i >= 0; i--){
     const t = state.textLines[i];
+    if (t.locked) continue;
     ctx.font = `bold ${28*t.size}px "${t.font}", 'Nunito', sans-serif`;
     const width = ctx.measureText(t.text || 'Text').width;
     const height = 28*t.size*1.15;
@@ -843,7 +841,7 @@ function bindCanvasInteractions(canvas){
       if (!sticker.locked) startElementDrag(canvas, e, 'move', sticker);
       return;
     }
-    if (state.character && dist2(p.x,p.y,0,0) <= Math.pow(elementRadiusFrac(state.character,true),2)){
+    if (state.character && !state.character.locked && dist2(p.x,p.y,0,0) <= Math.pow(elementRadiusFrac(state.character,true),2)){
       if (layerKey(state.selected)!==layerKey({kind:'character'})) selectLayer({ kind:'character' });
       return; // character position is always centered — select only, no move-drag
     }
@@ -1032,26 +1030,14 @@ function clampTextSize(t){
   }
 }
 
-// Text can be dragged off-center, but never far enough that it would spill
-// past the safe area — clamps xFrac/yFrac given the text's current footprint.
+// Text can be dragged fully freely anywhere within the safe area — only its
+// center point is constrained to the safe radius (not center-minus-footprint,
+// which used to shrink the movable range to almost nothing for larger text).
 function clampTextPosition(t){
-  const ctx = document.getElementById('designCanvas').getContext('2d');
   const scalePxPerInch = CANVAS_PX / artboardDiameter();
   const cutRadiusPx = (state.size/2) * scalePxPerInch;
   const safeRadiusPx = cutRadiusPx - safeInset()*scalePxPerInch;
-  const text = t.text || 'Text';
-  ctx.font = `bold ${28*t.size}px "${t.font}", 'Nunito', sans-serif`;
-  const width = ctx.measureText(text).width;
-  const height = 28*t.size*1.15;
-
-  let footprintPx;
-  if (t.placement==='straight'){
-    footprintPx = Math.hypot(width/2, height/2);
-  } else {
-    footprintPx = (cutRadiusPx*0.78) + height/2;
-  }
-  const maxOffsetPx = Math.max(0, safeRadiusPx - footprintPx);
-  const maxOffsetFrac = maxOffsetPx / CANVAS_PX;
+  const maxOffsetFrac = safeRadiusPx / CANVAS_PX;
   const dist = Math.hypot(t.xFrac, t.yFrac);
   if (dist > maxOffsetFrac && dist > 0){
     const ratio = maxOffsetFrac / dist;

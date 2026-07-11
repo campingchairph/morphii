@@ -65,7 +65,17 @@
       </div>
 
       <div class="cr-layer-box">
-        <div class="cr-layer-strip-label">Layers <span class="cr-hint" style="display:inline">— tap one to edit, swipe for more</span></div>
+        <div class="cr-layer-strip-label">
+          <span>Layers <span class="cr-hint" style="display:inline">— tap to edit, swipe for more</span></span>
+          <span class="cr-layer-add-btns">
+            <button class="cr-layer-add-btn" onclick="quickAddText()" title="Add Text">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Text
+            </button>
+            <button class="cr-layer-add-btn" onclick="promptUpload('sticker')" title="Add Sticker">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Sticker
+            </button>
+          </span>
+        </div>
         <div class="cr-layer-strip-wrap">
           <div class="cr-layer-strip" id="layerStrip"></div>
           <div class="cr-layer-strip-arrow" id="layerStripArrow">
