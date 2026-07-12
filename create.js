@@ -228,6 +228,7 @@ const ICON_CHARACTER  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 const ICON_TEXT       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h7"/></svg>';
 const ICON_PRINT      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M6 16h12v5H6z"/></svg>';
 const ICON_PLUS       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>';
+const ICON_DUPLICATE  = '<svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>';
 const ICON_CLOSE      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>';
 const ICON_UPLOAD      = '<svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M4 21h16"/></svg>';
 
@@ -518,9 +519,24 @@ function stickerPanelHtml(id){
     <div class="cr-field-label" style="margin-top:16px">Size</div>
     <input type="range" class="cr-range" min="0.4" max="2.5" step="0.1" value="${s.scale}" oninput="setStickerScale(${s.id},this.value)">
     <div class="cr-hint">Drag the sticker on the pin to reposition · use the handles to resize/rotate</div>
+    <button type="button" class="cr-btn-secondary" style="margin-top:10px" onclick="duplicateSticker(${s.id})">${ICON_DUPLICATE} Duplicate</button>
     ${lockRowHtml('sticker', s.id, s.locked)}
     <button class="cr-text-line-remove" style="margin-top:10px" onclick="removeSticker(${s.id})">Remove this sticker</button>`;
 }
+
+function duplicateSticker(id){
+  const s = state.stickers.find(x=>x.id===id);
+  if (!s) return;
+  const copy = {
+    id: state.nextStickerId++, img: s.img,
+    xFrac: Math.max(-0.4, Math.min(0.4, s.xFrac + 0.08)),
+    yFrac: Math.max(-0.4, Math.min(0.4, s.yFrac + 0.08)),
+    scale: s.scale, rotation: s.rotation, locked: false,
+  };
+  state.stickers.push(copy);
+  selectLayer({ kind:'sticker', id: copy.id });
+}
+window.duplicateSticker = duplicateSticker;
 
 function addStickerFromPreset(i){
   const preset = STICKER_PRESETS[i];
@@ -582,14 +598,20 @@ function characterPanelHtml(){
       </button>
       <div class="cr-hint">A bigger character or logo that sits in the middle of your pin.</div>`;
   }
+  const sizePct = Math.round(state.character.scale*100);
+  const rotDeg = Math.round((state.character.rotation||0)*180/Math.PI);
   return `
     <img src="${state.character.img.src}" alt="" style="width:64px;height:64px;object-fit:contain;border-radius:12px;background:var(--cream-deep);display:block;margin-bottom:12px">
     <button type="button" class="cr-upload-btn" onclick="promptUpload('character')">
       ${ICON_UPLOAD}<span>Replace with a New Upload</span>
     </button>
-    <div class="cr-field-label" style="margin-top:16px">Size</div>
-    <input type="range" class="cr-range" min="0.5" max="2" step="0.1" value="${state.character.scale}" oninput="setCharacterScale(this.value)">
-    <div class="cr-hint">Tap it on the pin to select, then use the handles to resize/rotate — position is always centered</div>
+    <div class="cr-field-label" style="margin-top:16px">Size <span class="cr-slider-val" id="charSizeVal">${sizePct}%</span></div>
+    <input type="range" class="cr-range cr-range-mid" min="1" max="199" value="${sizePct}"
+      oninput="setCharacterScale(this.value/100); document.getElementById('charSizeVal').textContent=this.value+'%'">
+    <div class="cr-field-label">Rotation <span class="cr-slider-val" id="charRotVal">${rotDeg}°</span></div>
+    <input type="range" class="cr-range cr-range-mid" min="-180" max="180" value="${rotDeg}"
+      oninput="setCharacterRotation(this.value); document.getElementById('charRotVal').textContent=this.value+'°'">
+    <div class="cr-hint">Position is always centered — drag the slider handle left to shrink/rotate counter-clockwise, right to grow/rotate clockwise.</div>
     ${lockRowHtml('character', null, state.character.locked)}
     <button class="cr-text-line-remove" style="margin-top:10px" onclick="removeCharacter()">Remove character</button>`;
 }
@@ -649,6 +671,13 @@ function setCharacterScale(val){
 }
 window.setCharacterScale = setCharacterScale;
 
+function setCharacterRotation(deg){
+  if (!state.character) return;
+  state.character.rotation = (+deg) * Math.PI/180;
+  drawPreview();
+}
+window.setCharacterRotation = setCharacterRotation;
+
 /* ── TEXT PANEL ───────────────────────────────── */
 function addTextLine(){
   const line = { id: state.nextTextId++, text:'Your Text', font:FONTS[0], color:'#FFFFFF', placement:'straight', size:1, shadow:false, xFrac:0, yFrac:0, rotation:0, locked:false };
@@ -694,14 +723,12 @@ function toggleTextShadow(id, on){
 }
 window.toggleTextShadow = toggleTextShadow;
 
-const TEXT_COLORS = [
-  '#1E2A20','#FFFFFF','#FF6F91','#8FAE7C','#F2B441','#4D8FE0','#B25CE0','#E05C5C',
-  '#FF9E00','#00B894','#0984E3','#D63384','#6C5CE7','#00CEC9','#E17055','#2D3436',
-];
-
 function textPanelHtml(id){
   const t = state.textLines.find(x=>x.id===id);
   if (!t) return `<div class="cr-empty-hint">This text line was removed.</div>`;
+  const sizePct = Math.round(t.size*100);
+  const rotDeg = Math.round((t.rotation||0)*180/Math.PI);
+  const safeColor = /^#[0-9a-fA-F]{6}$/.test(t.color) ? t.color : '#000000';
   return `
     <input type="text" class="cr-text-input" style="margin-bottom:10px" value="${escHtml(t.text)}" maxlength="24"
       oninput="updateTextLine(${t.id},'text',this.value)">
@@ -715,21 +742,45 @@ function textPanelHtml(id){
         ${FONTS.map(f=>`<option value="${f}" ${t.font===f?'selected':''}>${f}</option>`).join('')}
       </select>
     </div>
+    <div class="cr-field-label" style="margin-top:10px">Size <span class="cr-slider-val" id="textSizeVal_${t.id}">${sizePct}%</span></div>
+    <input type="range" class="cr-range cr-range-mid" min="1" max="199" value="${sizePct}"
+      oninput="setTextSizePct(${t.id},this.value); document.getElementById('textSizeVal_${t.id}').textContent=this.value+'%'">
+    <div class="cr-field-label">Rotation <span class="cr-slider-val" id="textRotVal_${t.id}">${rotDeg}°</span></div>
+    <input type="range" class="cr-range cr-range-mid" min="-180" max="180" value="${rotDeg}"
+      oninput="setTextRotation(${t.id},this.value); document.getElementById('textRotVal_${t.id}').textContent=this.value+'°'">
+    <div class="cr-hint" style="margin-top:-4px">Slide left of center to shrink/rotate counter-clockwise, right to grow/rotate clockwise. Size auto-shrinks so it always stays inside the safe area.</div>
     <div class="cr-field-label" style="margin-top:10px">Color</div>
-    <div class="cr-swatch-row">
-      ${TEXT_COLORS.map(c=>`<button class="cr-swatch ${t.color===c?'active':''}" style="background:${c}" onclick="updateTextLine(${t.id},'color','${c}');renderSettingsPanel()"></button>`).join('')}
-      <label class="cr-color-picker-swatch" title="Custom color" style="background:${t.color}">
-        <input type="color" value="${/^#[0-9a-fA-F]{6}$/.test(t.color)?t.color:'#000000'}" oninput="updateTextLine(${t.id},'color',this.value);renderSettingsPanel()">
-      </label>
-    </div>
+    <label class="cr-color-picker-btn" id="textColorBtn_${t.id}" style="background:${t.color}">
+      <input type="color" value="${safeColor}"
+        oninput="updateTextLine(${t.id},'color',this.value); document.getElementById('textColorBtn_${t.id}').style.background=this.value">
+      <span>Tap to pick any color</span>
+    </label>
     <label class="cr-checkbox-row">
       <input type="checkbox" ${t.shadow?'checked':''} onchange="toggleTextShadow(${t.id},this.checked)">
       Drop shadow
     </label>
-    <div class="cr-hint" style="margin-top:10px">Drag the text on the pin to move it · use the handles to resize/rotate. Size auto-shrinks so it always stays inside the safe area.</div>
+    <div class="cr-hint" style="margin-top:10px">Drag the text directly on the pin to reposition it.</div>
     ${lockRowHtml('text', t.id, t.locked)}
     <button class="cr-text-line-remove" style="margin-top:10px" onclick="removeTextLine(${t.id})">Remove this text line</button>`;
 }
+
+function setTextSizePct(id, pct){
+  const t = state.textLines.find(x=>x.id===id);
+  if (!t) return;
+  t.size = (+pct)/100;
+  clampTextSize(t);
+  clampTextPosition(t);
+  drawPreview();
+}
+window.setTextSizePct = setTextSizePct;
+
+function setTextRotation(id, deg){
+  const t = state.textLines.find(x=>x.id===id);
+  if (!t) return;
+  t.rotation = (+deg) * Math.PI/180;
+  drawPreview();
+}
+window.setTextRotation = setTextRotation;
 
 /* ── PRINT SETTINGS PANEL ─────────────────────── */
 function printPanelHtml(){
@@ -813,10 +864,12 @@ function bindCanvasInteractions(canvas){
     const p = pointerFrac(canvas, e);
     const HANDLE_R = 0.05;
 
-    // 1. Handles of the currently selected element take priority (skipped if locked)
+    // 1. Handles of the currently selected element take priority (skipped if locked).
+    // Stickers only — text/character resize+rotate via sliders instead, since
+    // their handles could end up off-canvas (ungrabbable) once enlarged.
     {
       const { el, kind } = selectedElementAndKind();
-      if (el && !el.locked && (kind==='sticker' || kind==='character' || kind==='text')){
+      if (el && !el.locked && kind==='sticker'){
         const hp = handlePositions(el, kind);
         if (dist2(p.x,p.y,hp.resize.x,hp.resize.y) <= HANDLE_R*HANDLE_R){
           startElementDrag(canvas, e, 'resize', el); return;
@@ -875,15 +928,9 @@ function bindCanvasInteractions(canvas){
       state.dragTarget.yFrac = state.dragStartOffY + dyFrac;
       if (state.dragIsText) clampTextPosition(state.dragTarget);
     } else if (state.dragTarget && state.dragMode==='resize'){
+      // Sticker-only now (text/character resize via sliders) — see pointerdown.
       const dist = Math.hypot(p.x-state.dragTarget.xFrac, p.y-state.dragTarget.yFrac);
-      const newScale = Math.max(0.3, Math.min(3, state.dragStartScale * (dist/state.dragStartDist)));
-      if (state.dragIsText){
-        state.dragTarget.size = newScale;
-        clampTextSize(state.dragTarget);
-        clampTextPosition(state.dragTarget);
-      } else {
-        state.dragTarget.scale = newScale;
-      }
+      state.dragTarget.scale = Math.max(0.3, Math.min(3, state.dragStartScale * (dist/state.dragStartDist)));
     } else if (state.dragTarget && state.dragMode==='rotate'){
       const angle = Math.atan2(p.y-state.dragTarget.yFrac, p.x-state.dragTarget.xFrac);
       state.dragTarget.rotation = state.dragStartRotation + (angle - state.dragStartAngle);
@@ -1148,7 +1195,7 @@ function selectedElementAndKind(){
 }
 function drawSelectionHandles(ctx, artboardPx){
   const { el, kind } = selectedElementAndKind();
-  if (!el || (kind!=='sticker' && kind!=='character' && kind!=='text')) return;
+  if (!el || kind!=='sticker') return;
   const r = elementRadiusFrac(el, kind) * artboardPx;
   const cx = artboardPx/2 + el.xFrac*artboardPx, cy = artboardPx/2 + el.yFrac*artboardPx;
   const hp = handlePositions(el, kind);
