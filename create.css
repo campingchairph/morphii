@@ -125,10 +125,10 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
    is baked into the canvas drawing, so it stays visible regardless. */
 .cr-design-app.isolate .cr-design-topbar,
 .cr-design-app.isolate .cr-next-disabled-note,
-.cr-design-app.isolate .cr-layer-box,
 .cr-design-app.isolate .cr-legend,
 .cr-design-app.isolate .cr-privacy-note,
-.cr-design-app.isolate .cr-settings-panel{
+.cr-design-app.isolate .cr-tool-rise-panel,
+.cr-design-app.isolate .cr-dock{
   display:none;
 }
 
@@ -137,79 +137,91 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
   border:1px solid rgba(255,111,145,0.35);border-radius:10px;padding:8px 10px;line-height:1.4;
 }
 
-/* ── LAYER STRIP (top, swipeable — one chip per element) ── */
-.cr-layer-box{
-  background:var(--card);border:1.5px solid var(--border);border-radius:16px;
-  padding:10px 10px 12px;box-shadow:var(--shadow-sm);
-}
-.cr-layer-strip-label{
-  font-size:10.5px;font-weight:800;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.4px;
-  display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap;
-}
-.cr-layer-strip-label .cr-hint{margin:0;font-size:9.5px;text-transform:none;letter-spacing:0;font-weight:700;opacity:0.8;}
-.cr-layer-add-btns{display:flex;gap:6px;flex-shrink:0;}
-.cr-layer-add-btn{
-  display:flex;align-items:center;gap:3px;padding:5px 9px;border-radius:20px;
-  border:1.5px dashed var(--sage);background:var(--sage-light);color:#3f6b34;
-  font-size:10px;font-weight:800;text-transform:none;letter-spacing:0;cursor:pointer;
-}
-.cr-layer-add-btn svg{width:11px;height:11px;}
-.cr-layer-strip-wrap{position:relative;}
-.cr-layer-strip{
-  display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
-  padding-bottom:2px;
-}
-.cr-layer-strip::-webkit-scrollbar{display:none;}
-.cr-layer-chip{
-  position:relative;flex-shrink:0;width:58px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 4px 7px;
-  border-radius:14px;border:2px solid var(--border);background:var(--card);color:var(--ink);
-  font-size:8.5px;font-weight:800;cursor:pointer;box-shadow:var(--shadow-sm);transition:transform 0.1s,border-color 0.1s;
-}
-.cr-layer-chip:active{transform:scale(0.95);}
-.cr-layer-chip.active{border-color:var(--coral);}
-.cr-layer-thumb{
-  position:relative;width:32px;height:32px;border-radius:9px;overflow:hidden;background:var(--cream-deep);
-  display:flex;align-items:center;justify-content:center;color:var(--ink-dim);
-}
-.cr-layer-chip.active .cr-layer-thumb{color:var(--coral);}
-.cr-layer-thumb img{width:100%;height:100%;object-fit:cover;}
-.cr-layer-thumb svg{width:18px;height:18px;}
-.cr-layer-label{max-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.cr-layer-add .cr-layer-thumb{border:1.5px dashed var(--sage);background:var(--sage-light);color:#3f6b34;}
-
-.cr-chip-lock-toggle{
-  position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;z-index:2;
-  background:var(--card);border:1.5px solid var(--border);color:var(--ink-dim);
-  display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;
-  box-shadow:var(--shadow-sm);
-}
-.cr-chip-lock-toggle svg{width:10px;height:10px;}
-.cr-chip-lock-toggle.locked{background:var(--pill);border-color:var(--pill);color:white;}
-
-.cr-layer-strip-arrow{
-  position:absolute;top:0;right:0;bottom:2px;width:34px;display:none;align-items:center;justify-content:flex-end;
-  background:linear-gradient(to right, rgba(255,255,255,0), var(--card) 65%);
-  color:var(--ink-dim);pointer-events:none;
-}
-.cr-layer-strip-arrow.show{display:flex;}
-.cr-layer-strip-arrow svg{width:18px;height:18px;}
-
-.cr-lock-btn{
-  display:flex;align-items:center;gap:6px;width:100%;padding:7px 10px;margin-top:8px;
-  border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--ink-dim);
-  font-size:11px;font-weight:800;cursor:pointer;
-}
-.cr-lock-btn svg{width:13px;height:13px;flex-shrink:0;}
-.cr-lock-btn.locked{border-color:var(--pill);background:var(--cream-deep);color:var(--ink);}
-
-/* ── SETTINGS PANEL (inline, below the pin — not a popup) ── */
-.cr-settings-panel{
-  max-height:34vh;overflow-y:auto;background:var(--card);border:1px solid var(--border);
-  border-radius:14px;padding:10px;box-shadow:var(--shadow-sm);font-size:13px;
-}
-.cr-settings-panel:empty{display:none;}
-
 .cr-privacy-note{font-size:9.5px;color:var(--ink-dim);text-align:center;font-weight:700;line-height:1.4;opacity:0.85;}
+
+/* ── BOTTOM DOCK (GoDaddy-Studio style icon bar) ── */
+.cr-dock{
+  background:var(--card);border:1.5px solid var(--border);border-radius:18px;
+  box-shadow:var(--shadow-sm);min-height:64px;display:flex;align-items:stretch;
+  flex-shrink:0;
+}
+.cr-add-row{display:flex;width:100%;overflow-x:auto;scrollbar-width:none;}
+.cr-add-row::-webkit-scrollbar{display:none;}
+.cr-dock-btn{
+  flex:1;min-width:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  padding:10px 6px;border:none;background:none;color:var(--ink);cursor:pointer;
+}
+.cr-dock-btn:active{opacity:0.6;}
+.cr-dock-icon{
+  width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:var(--ink-dim);
+}
+.cr-dock-icon svg{width:22px;height:22px;}
+.cr-dock-icon-thumb{width:26px;height:26px;border-radius:8px;overflow:hidden;background:var(--cream-deep);}
+.cr-dock-icon-thumb img{width:100%;height:100%;object-fit:cover;}
+.cr-dock-icon-thumb svg{width:16px;height:16px;}
+.cr-dock-label{font-size:9.5px;font-weight:800;color:var(--ink-dim);}
+
+/* Tool-row: shown instead of the add-row once something is selected. A fixed
+   close (X) button sits outside the swipeable strip so it's always reachable. */
+.cr-tool-row-close{
+  flex-shrink:0;width:44px;display:flex;align-items:center;justify-content:center;
+  border:none;border-right:1px solid var(--border);background:none;color:var(--ink-dim);cursor:pointer;
+}
+.cr-tool-row-close svg{width:16px;height:16px;}
+.cr-tool-row-scroll{
+  flex:1;display:flex;overflow-x:auto;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+}
+.cr-tool-row-scroll::-webkit-scrollbar{display:none;}
+.cr-tool-btn{
+  flex-shrink:0;min-width:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  padding:10px 8px;border:none;background:none;color:var(--ink);cursor:pointer;scroll-snap-align:start;
+}
+.cr-tool-btn:active{opacity:0.6;}
+.cr-tool-icon{width:22px;height:22px;display:flex;align-items:center;justify-content:center;color:var(--ink-dim);}
+.cr-tool-icon svg{width:20px;height:20px;}
+.cr-tool-label{font-size:9.5px;font-weight:800;color:var(--ink-dim);}
+.cr-tool-btn.active .cr-tool-icon,.cr-tool-btn.active .cr-tool-label{color:var(--coral);}
+.cr-tool-btn.on .cr-tool-icon{color:var(--pill);}
+.cr-tool-btn.danger .cr-tool-icon,.cr-tool-btn.danger .cr-tool-label{color:var(--coral);}
+
+/* ── RISING TOOL PANEL (compact bottom sheet, one control at a time) ── */
+.cr-tool-rise-panel{
+  max-height:0;overflow:hidden;background:var(--card);border:1px solid var(--border);border-radius:14px;
+  box-shadow:var(--shadow-sm);transition:max-height 0.22s ease,opacity 0.22s ease,margin 0.22s ease;
+  opacity:0;flex-shrink:0;
+}
+.cr-tool-rise-panel.show{max-height:40vh;opacity:1;overflow-y:auto;}
+.cr-rise-handle{width:34px;height:4px;border-radius:3px;background:var(--border);margin:9px auto 0;}
+.cr-rise-body{padding:8px 14px 14px;font-size:13px;}
+
+/* ── LAYERS TAB ── */
+.cr-layers-modal{max-width:380px;max-height:80vh;display:flex;flex-direction:column;}
+.cr-layers-list{overflow-y:auto;}
+.cr-layer-row{
+  display:flex;align-items:center;gap:10px;padding:8px;margin-bottom:6px;
+  background:var(--cream);border:1px solid var(--border);border-radius:12px;
+}
+.cr-layer-row.fixed{opacity:0.75;background:var(--cream-deep);}
+.cr-layer-row-handle{
+  flex-shrink:0;width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+  border:none;background:none;color:var(--ink-dim);cursor:grab;touch-action:none;padding:0;
+}
+.cr-layer-row-handle svg{width:16px;height:16px;}
+.cr-layer-row-thumb{
+  flex-shrink:0;width:32px;height:32px;border-radius:8px;overflow:hidden;background:var(--card);
+  display:flex;align-items:center;justify-content:center;color:var(--ink-dim);cursor:pointer;
+}
+.cr-layer-row-thumb img{width:100%;height:100%;object-fit:cover;}
+.cr-layer-row-thumb svg{width:16px;height:16px;}
+.cr-layer-row-label{flex:1;font-size:12.5px;font-weight:700;color:var(--ink);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cr-layer-row-lock{
+  flex-shrink:0;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--border);background:var(--card);color:var(--ink-dim);cursor:pointer;padding:0;
+}
+.cr-layer-row-lock svg{width:12px;height:12px;}
+.cr-layer-row-lock.locked{background:var(--pill);border-color:var(--pill);color:#fff;}
+.cr-layer-row-tag{flex-shrink:0;font-size:9px;font-weight:800;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.4px;}
+.cr-layers-fixed-label{font-size:9.5px;font-weight:800;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.4px;margin:10px 0 6px;}
 
 /* ── UPLOAD INSTRUCTIONS MODAL ── */
 .cr-modal-overlay{
@@ -247,11 +259,7 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 .cr-done-step:last-child{margin-bottom:0;}
 .cr-done-step b{color:var(--coral);}
 
-/* ── SHARED CONTROLS (used in the settings panel + submit form) ── */
-.cr-bg-tabs{display:flex;gap:5px;margin-bottom:8px;background:var(--cream-deep);padding:3px;border-radius:12px;}
-.cr-bg-tab{flex:1;padding:6px;border-radius:9px;border:none;background:transparent;color:var(--ink-dim);font-weight:800;font-size:11px;cursor:pointer;}
-.cr-bg-tab.active{background:var(--card);color:var(--ink);box-shadow:var(--shadow-sm);}
-
+/* ── SHARED CONTROLS (used in the tool panels + submit form) ── */
 .cr-upload-btn{
   display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:11px;
   border-radius:13px;border:2px dashed var(--sage);background:var(--sage-light);color:var(--ink);
@@ -268,10 +276,6 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
   cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;overflow:hidden;
 }
 .cr-preset-thumb img{width:100%;height:100%;object-fit:contain;}
-
-.cr-placed-row{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px;margin-top:8px;}
-.cr-placed-thumb{width:28px;height:28px;object-fit:contain;border-radius:7px;background:var(--cream-deep);flex-shrink:0;}
-.cr-remove-btn{background:none;border:none;color:var(--coral);font-size:11px;font-weight:800;cursor:pointer;flex-shrink:0;padding:0;}
 
 .cr-range{width:100%;accent-color:var(--sage);height:16px;margin:4px 0 2px;}
 /* Midpoint sliders: default value sits at dead-center of the track — left of
@@ -293,21 +297,10 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
   background-repeat:no-repeat;background-position:right 10px center;padding-right:22px;
 }
 
-.cr-btn-secondary{
-  display:flex;align-items:center;justify-content:center;gap:6px;
-  width:100%;padding:9px;border-radius:10px;border:1.5px solid var(--sage);background:var(--sage-light);
-  color:#3f6b34;font-weight:800;font-size:11.5px;cursor:pointer;
-}
-.cr-btn-secondary .cr-icon{width:14px;height:14px;}
-
 .cr-checkbox-row{
   display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11.5px;font-weight:700;color:var(--ink);cursor:pointer;
 }
 .cr-checkbox-row input{width:16px;height:16px;accent-color:var(--sage);flex-shrink:0;}
-.cr-btn-tiny-full{
-  width:100%;margin-top:8px;padding:9px;border-radius:10px;border:1.5px dashed var(--coral);
-  background:var(--coral-light);color:var(--coral);font-weight:800;font-size:11.5px;cursor:pointer;
-}
 .cr-hint{font-size:10px;color:var(--ink-dim);margin-top:8px;line-height:1.4;font-weight:600;}
 .cr-warning{
   margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--coral-light);
@@ -316,14 +309,6 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 .cr-empty-hint{font-size:11.5px;color:var(--ink-dim);font-weight:700;padding:8px 2px 4px;}
 .cr-preset-grid .cr-empty-hint{grid-column:1/-1;}
 
-.cr-text-line{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:10px;margin-bottom:8px;box-shadow:var(--shadow-sm);}
-.cr-text-line-row{display:flex;gap:6px;margin-bottom:8px;}
-.cr-swatch-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;}
-.cr-swatch{
-  width:21px;height:21px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;
-  box-shadow:inset 0 0 0 1px var(--border);
-}
-.cr-swatch.active{border-color:var(--ink);transform:scale(1.1);}
 .cr-color-picker-btn{
   position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:44px;
   border-radius:12px;border:2px solid rgba(255,255,255,0.55);cursor:pointer;overflow:hidden;
@@ -335,7 +320,6 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 .cr-color-picker-btn input[type=color]{
   position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0;
 }
-.cr-text-line-remove{background:none;border:none;color:var(--coral);font-size:11px;font-weight:800;cursor:pointer;padding:0;}
 
 .cr-bleed-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .cr-bleed-btn{

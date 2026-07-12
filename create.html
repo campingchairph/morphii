@@ -64,26 +64,6 @@
         Next is off because your background photo came from a link that blocks printing — upload it as a file instead, or remove it.
       </div>
 
-      <div class="cr-layer-box">
-        <div class="cr-layer-strip-label">
-          <span>Layers <span class="cr-hint" style="display:inline">— tap to edit, swipe for more</span></span>
-          <span class="cr-layer-add-btns">
-            <button class="cr-layer-add-btn" onclick="quickAddText()" title="Add Text">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Text
-            </button>
-            <button class="cr-layer-add-btn" onclick="promptUpload('sticker')" title="Add Sticker">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Sticker
-            </button>
-          </span>
-        </div>
-        <div class="cr-layer-strip-wrap">
-          <div class="cr-layer-strip" id="layerStrip"></div>
-          <div class="cr-layer-strip-arrow" id="layerStripArrow">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-          </div>
-        </div>
-      </div>
-
       <div class="cr-canvas-wrap">
         <button class="cr-isolate-btn" id="isolateBtn" onclick="toggleIsolateMode()" title="Full-screen view">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/></svg>
@@ -99,7 +79,11 @@
       </div>
       <div class="cr-privacy-note">This preview is watermarked for privacy — your printed pin will be clean.</div>
 
-      <div class="cr-settings-panel" id="settingsPanel"></div>
+      <div class="cr-tool-rise-panel" id="toolRisePanel">
+        <div class="cr-rise-handle"></div>
+        <div class="cr-rise-body" id="toolRiseBody"></div>
+      </div>
+      <div class="cr-dock" id="dockArea"></div>
     </div>
 
     <!-- Hidden file inputs used by the settings panel -->
@@ -129,6 +113,17 @@
         <input type="hidden" id="uploadHintInputId">
         <button class="cr-btn-primary" onclick="confirmUploadHint()">Got it — Choose File</button>
         <button class="cr-link-back" style="display:block;margin:12px auto 0" onclick="closeUploadHint()">Cancel</button>
+      </div>
+    </div>
+
+    <!-- LAYERS TAB (drag to reorder; background is always fixed at the back) -->
+    <div class="cr-modal-overlay" id="layersOverlay">
+      <div class="cr-modal cr-layers-modal">
+        <div class="cr-modal-title">Layers</div>
+        <div class="cr-modal-body" style="margin-bottom:8px">Drag <svg class="cr-icon" style="width:12px;height:12px;vertical-align:-1px" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg> to reorder — higher in the list means closer to the front.</div>
+        <div class="cr-layers-list" id="layersDragList"></div>
+        <div class="cr-layers-fixed" id="layersFixedList"></div>
+        <button class="cr-btn-primary" style="margin-top:16px" onclick="closeLayersModal()">Done</button>
       </div>
     </div>
   </section>

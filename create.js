@@ -82,11 +82,24 @@ const state = {
   stickers: [],             // [{id, img, xFrac, yFrac, scale, rotation}]
   character: null,          // {img, scale, rotation} | null
   nextStickerId: 1,
-  selected: null,           // {kind:'sticker', id} | {kind:'character'} | null
+  selected: null,           // {kind:'sticker', id} | {kind:'character'} | {kind:'background'} | null
+  // Z-order of everything EXCEPT the background (which is always fixed at the
+  // very back: color, then image, then everything in this list). Index 0 is
+  // the back-most of these, the last index is the front-most (drawn last).
+  layerOrder: [],           // [{kind:'character'}|{kind:'sticker',id}|{kind:'text',id}]
   dragging:false, dragTarget:null, dragMode:'move', dragStartX:0, dragStartY:0, dragStartOffX:0, dragStartOffY:0,
   dragStartScale:1, dragStartRotation:0, dragStartDist:0, dragStartAngle:0,
   nextTextId: 1,
 };
+
+/* ── Z-ORDER (layerOrder) HELPERS ─────────────────────────────────── */
+function pushLayer(descriptor){ state.layerOrder.push(descriptor); }
+function removeLayerFromOrder(kind, id){
+  state.layerOrder = state.layerOrder.filter(d => !(d.kind===kind && d.id===id));
+}
+// Topmost-first, for display in the Layers list (reverse of draw/z-order).
+function layersVisualList(){ return state.layerOrder.slice().reverse(); }
+function setLayersFromVisual(visualList){ state.layerOrder = visualList.slice().reverse(); }
 
 /* ── STEP NAVIGATION ─────────────────────────── */
 function goStep(name){
@@ -171,18 +184,12 @@ function setupCanvas(){
   canvas.height = CANVAS_PX;
   document.getElementById('previewLabel').textContent =
     `${state.product.label} · ${state.size.toFixed(2)}" Circle (${artboardDiameter().toFixed(2)}" with bleed)`;
-  if (!state.selected) state.selected = { kind:'background' };
-  renderLayerStrip();
-  renderSettingsPanel();
+  renderDock();
+  renderToolPanelContent();
   updateSubmitAvailability();
   if (!canvas._boundEvents){
     bindCanvasInteractions(canvas);
     canvas._boundEvents = true;
-  }
-  const strip = document.getElementById('layerStrip');
-  if (strip && !strip._boundScroll){
-    strip.addEventListener('scroll', updateLayerStripOverflowArrow, { passive:true });
-    strip._boundScroll = true;
   }
   watchCanvasWrapSize();
   sizeCanvasStage();
@@ -249,57 +256,43 @@ const ICON_PLUS       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 const ICON_DUPLICATE  = '<svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>';
 const ICON_CLOSE      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>';
 const ICON_UPLOAD      = '<svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M4 21h16"/></svg>';
+const ICON_PALETTE    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 100 18c1.1 0 1.5-.7 1.5-1.4 0-.4-.2-.7-.4-1-.2-.3-.4-.6-.4-1 0-.8.6-1.4 1.4-1.4H16a4 4 0 004-4c0-5-3.6-9-8-9z"/><circle cx="7.5" cy="10.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="7.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="16.2" cy="10" r="1.1" fill="currentColor" stroke="none"/></svg>';
+const ICON_OPACITY    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z"/></svg>';
+const ICON_SIZE       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>';
+const ICON_ROTATE     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 1 2.6 5.9"/><path d="M4 17v-5h5"/></svg>';
+const ICON_FONT       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19l5-14 5 14M6.5 14h7"/><path d="M15 19l3-7 3 7M16.3 16.5h3.4"/></svg>';
+const ICON_ARC        = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17a10 8 0 0 1 16 0"/></svg>';
+const ICON_SWATCH     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/></svg>';
+const ICON_SHADOW     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M9 9h12v12H9z" opacity="0.45"/></svg>';
+const ICON_EDIT       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>';
+const ICON_TRASH      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6"/></svg>';
+const ICON_LAYERS     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>';
+const ICON_GRIP       = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
 
 /* ── LAYER SELECTION (tap on the pin OR tap a chip — same result) ── */
 function layerKey(l){ return l ? l.kind + (l.id!=null ? ':'+l.id : '') : ''; }
 
 function selectLayer(descriptor){
+  const changingElement = layerKey(state.selected) !== layerKey(descriptor);
   state.selected = descriptor;
-  renderLayerStrip();
-  renderSettingsPanel();
+  if (changingElement) _activeTool = null; // close any open tool panel for the previous element
+  renderDock();
+  renderToolPanelContent();
   drawPreview();
 }
 window.selectLayer = selectLayer;
 
+function deselectLayer(){
+  state.selected = null;
+  _activeTool = null;
+  renderDock();
+  renderToolPanelContent();
+  drawPreview();
+}
+window.deselectLayer = deselectLayer;
+
 const ICON_LOCK   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>';
 const ICON_UNLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 017.6-1.8"/></svg>';
-
-function renderLayerStrip(){
-  const strip = document.getElementById('layerStrip');
-  if (!strip) return;
-  const activeKey = layerKey(state.selected);
-  const chips = [];
-
-  chips.push({ d:{kind:'background'}, label:'Background', thumb: bgChipThumb(), lockable:true, locked: state.bg.locked });
-  chips.push({ d:{kind:'character'}, label:'Character', thumb: state.character ? `<img src="${state.character.img.src}" alt="">` : ICON_CHARACTER, lockable: !!state.character, locked: state.character?.locked });
-  state.stickers.forEach((s,i)=> chips.push({ d:{kind:'sticker', id:s.id}, label:'Sticker '+(i+1), thumb:`<img src="${s.img.src}" alt="">`, lockable:true, locked:s.locked }));
-  state.textLines.forEach((t,i)=> chips.push({ d:{kind:'text', id:t.id}, label: (t.text||'Text').slice(0,10), thumb: ICON_TEXT, lockable:true, locked:t.locked }));
-
-  // Lockable chips are <div role=button> instead of <button> so they can
-  // contain a real nested <button> for the lock toggle (invalid inside <button>).
-  strip.innerHTML = chips.map(c => {
-    const lockBtn = c.lockable
-      ? `<button class="cr-chip-lock-toggle ${c.locked?'locked':''}" onclick='event.stopPropagation();toggleLock("${c.d.kind}"${c.d.id!=null?','+c.d.id:''})' title="${c.locked?'Unlock':'Lock in place'}">${c.locked?ICON_LOCK:ICON_UNLOCK}</button>`
-      : '';
-    return `
-    <div class="cr-layer-chip ${activeKey===layerKey(c.d)?'active':''}" role="button" tabindex="0" onclick='selectLayer(${JSON.stringify(c.d)})'>
-      ${lockBtn}
-      <span class="cr-layer-thumb">${c.thumb}</span>
-      <span class="cr-layer-label">${escHtml(c.label)}</span>
-    </div>`;
-  }).join('');
-
-  updateLayerStripOverflowArrow();
-}
-
-function updateLayerStripOverflowArrow(){
-  const strip = document.getElementById('layerStrip');
-  const arrow = document.getElementById('layerStripArrow');
-  if (!strip || !arrow) return;
-  const hasOverflow = strip.scrollWidth > strip.clientWidth + 2;
-  const atEnd = strip.scrollLeft + strip.clientWidth >= strip.scrollWidth - 2;
-  arrow.classList.toggle('show', hasOverflow && !atEnd);
-}
 
 function bgChipThumb(){
   if (state.bg.imageOn && state.bg.img) return `<img src="${state.bg.img.src}" alt="">`;
@@ -314,67 +307,174 @@ function bgChipThumb(){
 function quickAddText(){ addTextLine(); }
 window.quickAddText = quickAddText;
 
-/* ── SETTINGS PANEL (inline, below the pin — not a popup) ─────────── */
-function renderSettingsPanel(){
-  const panel = document.getElementById('settingsPanel');
-  if (!panel) return;
-  if (!state.selected){ panel.innerHTML = ''; return; }
-  switch (state.selected.kind){
-    case 'background': panel.innerHTML = bgPanelHtml(); break;
-    case 'character':  panel.innerHTML = characterPanelHtml(); break;
-    case 'sticker':    panel.innerHTML = stickerPanelHtml(state.selected.id); break;
-    case 'text':       panel.innerHTML = textPanelHtml(state.selected.id); break;
-    default:           panel.innerHTML = '';
+function quickAddSticker(){ promptUpload('sticker'); }
+window.quickAddSticker = quickAddSticker;
+
+function quickSelectCharacter(){
+  if (state.character) selectLayer({ kind:'character' });
+  else promptUpload('character');
+}
+window.quickSelectCharacter = quickSelectCharacter;
+
+function quickSelectBackground(){ selectLayer({ kind:'background' }); }
+window.quickSelectBackground = quickSelectBackground;
+
+/* ── BOTTOM DOCK (GoDaddy-style icon bar) ──────────────────────────
+   Two swappable rows live in #dockArea:
+   - Add-row (nothing selected): tap an element type to add/select it.
+   - Tool-row (something selected): swipeable icons for that element's
+     tools; a rising panel (openToolPanel) shows the control for
+     whichever tool icon was tapped. ── */
+let _activeTool = null;
+
+function renderDock(){
+  const dock = document.getElementById('dockArea');
+  if (!dock) return;
+  dock.innerHTML = state.selected ? toolRowHtml() : addRowHtml();
+}
+
+function addRowHtml(){
+  const items = [
+    { onclick:'quickSelectBackground()', icon: bgChipThumb(), label:'Background', thumb:true },
+    { onclick:'quickSelectCharacter()', icon: state.character ? `<img src="${state.character.img.src}" alt="">` : ICON_CHARACTER, label:'Character', thumb: !!state.character },
+    { onclick:'quickAddSticker()', icon: ICON_STICKER, label:'Sticker' },
+    { onclick:'quickAddText()', icon: ICON_TEXT, label:'Text' },
+    { onclick:'openLayersModal()', icon: ICON_LAYERS, label:'Layers' },
+  ];
+  return `<div class="cr-add-row">${items.map(it=>`
+    <button class="cr-dock-btn" onclick="${it.onclick}">
+      <span class="cr-dock-icon ${it.thumb?'cr-dock-icon-thumb':''}">${it.icon}</span>
+      <span class="cr-dock-label">${it.label}</span>
+    </button>`).join('')}</div>`;
+}
+
+function toolIconsForSelection(){
+  const kind = state.selected.kind;
+  if (kind==='background') return [
+    { id:'photo', label:'Photo', icon:ICON_BG, panel:true },
+    { id:'colors', label:'Colors', icon:ICON_PALETTE, panel:true },
+    { id:'opacity', label:'Opacity', icon:ICON_OPACITY, panel:true },
+    { id:'lock', label: state.bg.locked?'Locked':'Lock', icon: state.bg.locked?ICON_LOCK:ICON_UNLOCK, instant:'toggleLock("background")', on: state.bg.locked },
+  ];
+  if (kind==='character') return state.character ? [
+    { id:'replace', label:'Replace', icon:ICON_UPLOAD, instant:"promptUpload('character')" },
+    { id:'size', label:'Size', icon:ICON_SIZE, panel:true },
+    { id:'rotate', label:'Rotate', icon:ICON_ROTATE, panel:true },
+    { id:'lock', label: state.character.locked?'Locked':'Lock', icon: state.character.locked?ICON_LOCK:ICON_UNLOCK, instant:'toggleLock("character")', on: state.character.locked },
+    { id:'remove', label:'Remove', icon:ICON_TRASH, instant:'removeCharacter()', danger:true },
+  ] : [];
+  if (kind==='sticker'){
+    const s = state.stickers.find(x=>x.id===state.selected.id);
+    if (!s) return [];
+    return [
+      { id:'replace', label:'Replace', icon:ICON_UPLOAD, instant:"promptUpload('sticker')" },
+      { id:'size', label:'Size', icon:ICON_SIZE, panel:true },
+      { id:'rotate', label:'Rotate', icon:ICON_ROTATE, panel:true },
+      { id:'duplicate', label:'Duplicate', icon:ICON_DUPLICATE, instant:`duplicateSticker(${s.id})` },
+      { id:'lock', label: s.locked?'Locked':'Lock', icon: s.locked?ICON_LOCK:ICON_UNLOCK, instant:`toggleLock("sticker",${s.id})`, on: s.locked },
+      { id:'remove', label:'Remove', icon:ICON_TRASH, instant:`removeSticker(${s.id})`, danger:true },
+    ];
   }
+  if (kind==='text'){
+    const t = state.textLines.find(x=>x.id===state.selected.id);
+    if (!t) return [];
+    return [
+      { id:'edit', label:'Edit', icon:ICON_EDIT, panel:true },
+      { id:'font', label:'Font', icon:ICON_FONT, panel:true },
+      { id:'placement', label:'Style', icon:ICON_ARC, panel:true },
+      { id:'color', label:'Color', icon:ICON_SWATCH, panel:true },
+      { id:'size', label:'Size', icon:ICON_SIZE, panel:true },
+      { id:'rotate', label:'Rotate', icon:ICON_ROTATE, panel:true },
+      { id:'shadow', label:'Shadow', icon:ICON_SHADOW, instant:`toggleTextShadow(${t.id},${!t.shadow})`, on:t.shadow },
+      { id:'lock', label: t.locked?'Locked':'Lock', icon: t.locked?ICON_LOCK:ICON_UNLOCK, instant:`toggleLock("text",${t.id})`, on: t.locked },
+      { id:'remove', label:'Remove', icon:ICON_TRASH, instant:`removeTextLine(${t.id})`, danger:true },
+    ];
+  }
+  return [];
 }
 
-/* ── BACKGROUND PANEL ─────────────────────────── */
-let _bgActiveTab = 'upload';
-function setBgTab(which){
-  _bgActiveTab = which;
-  renderSettingsPanel();
+function toolRowHtml(){
+  const icons = toolIconsForSelection();
+  const btns = icons.map(t => {
+    const onclick = t.panel ? `openToolPanel('${t.id}')` : t.instant;
+    const cls = ['cr-tool-btn', t.panel && _activeTool===t.id ? 'active' : '', t.on ? 'on' : '', t.danger ? 'danger' : ''].filter(Boolean).join(' ');
+    return `<button class="${cls}" onclick='${onclick}'>
+      <span class="cr-tool-icon">${t.icon}</span>
+      <span class="cr-tool-label">${t.label}</span>
+    </button>`;
+  }).join('');
+  return `
+    <button class="cr-tool-row-close" onclick="deselectLayer()" title="Done">${ICON_CLOSE}</button>
+    <div class="cr-tool-row-scroll">${btns}</div>`;
 }
-window.setBgTab = setBgTab;
 
-function bgPanelHtml(){
-  const tab = _bgActiveTab;
-  let tabBody = '';
-  if (tab==='upload'){
-    tabBody = `
+/* ── RISING TOOL PANEL (compact bottom sheet, one control at a time) ── */
+function openToolPanel(toolId){
+  _activeTool = (_activeTool===toolId) ? null : toolId;
+  renderDock();
+  renderToolPanelContent();
+}
+window.openToolPanel = openToolPanel;
+
+function closeToolPanel(){
+  _activeTool = null;
+  renderDock();
+  renderToolPanelContent();
+}
+window.closeToolPanel = closeToolPanel;
+
+function renderToolPanelContent(){
+  const wrap = document.getElementById('toolRisePanel');
+  const body = document.getElementById('toolRiseBody');
+  if (!wrap || !body) return;
+  if (!state.selected || !_activeTool){ wrap.classList.remove('show'); body.innerHTML=''; return; }
+  const kind = state.selected.kind;
+  let html = '';
+  if (kind==='background') html = bgToolPanelHtml(_activeTool);
+  else if (kind==='character' && state.character) html = characterToolPanelHtml(_activeTool);
+  else if (kind==='sticker') html = stickerToolPanelHtml(_activeTool, state.selected.id);
+  else if (kind==='text') html = textToolPanelHtml(_activeTool, state.selected.id);
+  if (!html){ wrap.classList.remove('show'); body.innerHTML=''; return; }
+  body.innerHTML = html;
+  wrap.classList.add('show');
+}
+
+/* ── BACKGROUND TOOL PANELS ───────────────────── */
+function bgToolPanelHtml(tool){
+  if (tool==='photo'){
+    return `
       <button type="button" class="cr-upload-btn" onclick="document.getElementById('bgFileInput').click()">
         ${ICON_UPLOAD}<span id="bgUploadLabelText">Choose a Photo</span>
       </button>
-      ${state.bg.img ? `<label class="cr-checkbox-row"><input type="checkbox" ${state.bg.imageOn?'checked':''} onchange="toggleImageLayer(this.checked)">Show the photo</label>` : ''}`;
-  } else {
-    tabBody = `
+      ${state.bg.img ? `<label class="cr-checkbox-row"><input type="checkbox" ${state.bg.imageOn?'checked':''} onchange="toggleImageLayer(this.checked)">Show the photo</label>` : ''}
+      <div id="bgWarning" class="cr-warning" style="display:none"></div>
+      <div class="cr-hint">Drag directly on the pin to reposition · scroll or pinch to zoom.</div>`;
+  }
+  if (tool==='colors'){
+    return `
       <div class="cr-gradient-grid">${GRADIENTS.map((g,i)=>{
         const css = g.grad4
           ? `conic-gradient(from 45deg, ${g.grad4[0]}, ${g.grad4[1]}, ${g.grad4[3]}, ${g.grad4[2]}, ${g.grad4[0]})`
           : `linear-gradient(135deg, ${g.grad[0]}, ${g.grad[1]})`;
         return `<button class="cr-gradient-swatch ${state.bg.color===g?'active':''}" style="background:${css}" title="${g.label}" onclick="selectGradient(${i})"></button>`;
       }).join('')}</div>
-      ${state.bg.color ? `<label class="cr-checkbox-row"><input type="checkbox" ${state.bg.colorOn?'checked':''} onchange="toggleColorLayer(this.checked)">Show this color</label>` : ''}`;
+      ${state.bg.color ? `<label class="cr-checkbox-row"><input type="checkbox" ${state.bg.colorOn?'checked':''} onchange="toggleColorLayer(this.checked)">Show this color</label>` : ''}
+      <div class="cr-hint">Turn on both a photo and a color to mix them — the color shows through anywhere the photo doesn't fully cover.</div>`;
   }
-
-  return `
-    <div class="cr-bg-tabs">
-      <button class="cr-bg-tab ${tab==='upload'?'active':''}" onclick="setBgTab('upload')">Upload</button>
-      <button class="cr-bg-tab ${tab==='gradient'?'active':''}" onclick="setBgTab('gradient')">Background Colors</button>
-    </div>
-    ${tabBody}
-    <div id="bgWarning" class="cr-warning" style="display:none"></div>
-    <div class="cr-hint">Turn on both a photo and a color to mix them — the color shows through anywhere the photo doesn't fully cover.</div>
-    <div class="cr-field-label" style="margin-top:16px">Opacity</div>
-    <input type="range" min="0.1" max="1" step="0.05" value="${state.bg.opacity}" oninput="setBgOpacity(this.value)" class="cr-range">
-    <div class="cr-hint">Drag the photo to reposition · scroll or pinch to zoom</div>
-    ${lockRowHtml('background', null, state.bg.locked)}`;
+  if (tool==='opacity'){
+    return `
+      <div class="cr-field-label">Photo Opacity</div>
+      <input type="range" min="0.1" max="1" step="0.05" value="${state.bg.opacity}" oninput="setBgOpacity(this.value)" class="cr-range">
+      <div class="cr-hint">Only affects the photo layer — any color underneath stays fully visible.</div>`;
+  }
+  return '';
 }
 
 function selectGradient(i){
   state.bg.color = GRADIENTS[i];
   state.bg.colorOn = true;
-  renderLayerStrip();
-  renderSettingsPanel();
+  renderDock();
+  renderToolPanelContent();
   drawPreview();
   updateSubmitAvailability();
 }
@@ -463,8 +563,8 @@ function applyBgImage(img, tainted){
     state.bg.color = GRADIENTS[0];
     state.bg.colorOn = true;
   }
-  renderLayerStrip();
-  renderSettingsPanel();
+  renderDock();
+  renderToolPanelContent();
   drawPreview();
   updateSubmitAvailability();
 }
@@ -524,23 +624,122 @@ function confirmUploadHint(){
 }
 window.confirmUploadHint = confirmUploadHint;
 
-/* ── STICKERS PANEL (freely placed, drag anywhere on the pin) ────── */
-function stickerPanelHtml(id){
+/* ── LAYERS TAB (drag to reorder; background is always fixed at the back) ──
+   Reorderable rows use document-level pointermove/pointerup listeners rather
+   than setPointerCapture, so the list can safely re-render on every step of
+   the drag (capture is silently dropped once its element leaves the DOM). */
+function openLayersModal(){
+  renderLayersModal();
+  document.getElementById('layersOverlay').classList.add('show');
+}
+window.openLayersModal = openLayersModal;
+function closeLayersModal(){
+  document.getElementById('layersOverlay').classList.remove('show');
+}
+window.closeLayersModal = closeLayersModal;
+
+function layerThumbFor(d){
+  if (d.kind==='character') return state.character ? `<img src="${state.character.img.src}" alt="">` : ICON_CHARACTER;
+  if (d.kind==='sticker'){ const s=state.stickers.find(x=>x.id===d.id); return s ? `<img src="${s.img.src}" alt="">` : ICON_STICKER; }
+  return ICON_TEXT;
+}
+function layerLabelFor(d){
+  if (d.kind==='character') return 'Character';
+  if (d.kind==='sticker'){ const idx=state.stickers.findIndex(x=>x.id===d.id); return 'Sticker '+(idx+1); }
+  const t = state.textLines.find(x=>x.id===d.id);
+  return (t && t.text ? t.text : 'Text').slice(0,18);
+}
+function layerLockedFor(d){
+  if (d.kind==='character') return !!(state.character && state.character.locked);
+  if (d.kind==='sticker'){ const s=state.stickers.find(x=>x.id===d.id); return !!(s && s.locked); }
+  const t = state.textLines.find(x=>x.id===d.id);
+  return !!(t && t.locked);
+}
+
+function renderLayersModal(){
+  const list = document.getElementById('layersDragList');
+  const fixed = document.getElementById('layersFixedList');
+  if (!list || !fixed) return;
+  const visual = layersVisualList();
+  list.innerHTML = visual.length ? visual.map((d,i)=>`
+    <div class="cr-layer-row draggable">
+      <button class="cr-layer-row-handle" onpointerdown="startLayerDrag(event,${i})" title="Drag to reorder">${ICON_GRIP}</button>
+      <span class="cr-layer-row-thumb" onclick='selectLayerFromModal(${JSON.stringify(d)})'>${layerThumbFor(d)}</span>
+      <span class="cr-layer-row-label" onclick='selectLayerFromModal(${JSON.stringify(d)})'>${escHtml(layerLabelFor(d))}</span>
+      <button class="cr-layer-row-lock ${layerLockedFor(d)?'locked':''}" onclick='toggleLock("${d.kind}"${d.id!=null?','+d.id:''});renderLayersModal()'>${layerLockedFor(d)?ICON_LOCK:ICON_UNLOCK}</button>
+    </div>`).join('') : `<div class="cr-empty-hint">No layers yet — add text, a sticker, or a character to see them here.</div>`;
+
+  const fixedRows = [];
+  if (state.bg.imageOn && state.bg.img) fixedRows.push({ label:'Background Photo', thumb:`<img src="${state.bg.img.src}" alt="">` });
+  if (state.bg.colorOn && state.bg.color){
+    const g = state.bg.color;
+    const css = g.grad4 ? `linear-gradient(135deg,${g.grad4[0]},${g.grad4[3]})` : `linear-gradient(135deg,${g.grad[0]},${g.grad[1]})`;
+    fixedRows.push({ label:'Background Color', thumb:`<span style="display:block;width:100%;height:100%;background:${css}"></span>` });
+  }
+  fixed.innerHTML = fixedRows.length ? `
+    <div class="cr-layers-fixed-label">Always at the back</div>
+    ${fixedRows.map(r=>`
+      <div class="cr-layer-row fixed">
+        <span class="cr-layer-row-thumb">${r.thumb}</span>
+        <span class="cr-layer-row-label">${r.label}</span>
+        <span class="cr-layer-row-tag">Fixed</span>
+      </div>`).join('')}` : '';
+}
+
+window.selectLayerFromModal = function(d){
+  closeLayersModal();
+  selectLayer(d.kind==='character' ? { kind:'character' } : { kind:d.kind, id:d.id });
+};
+
+let _layerDrag = null;
+function startLayerDrag(e, visualIndex){
+  e.preventDefault();
+  const rows = document.querySelectorAll('#layersDragList .cr-layer-row.draggable');
+  if (rows.length < 1) return;
+  const r0 = rows[0].getBoundingClientRect();
+  const rowH = rows.length > 1 ? (rows[1].getBoundingClientRect().top - r0.top) : r0.height;
+  _layerDrag = { index: visualIndex, startY: e.clientY, rowH: Math.max(30, rowH), list: layersVisualList() };
+  document.addEventListener('pointermove', onLayerDragMove);
+  document.addEventListener('pointerup', endLayerDrag, { once:true });
+}
+window.startLayerDrag = startLayerDrag;
+
+function onLayerDragMove(e){
+  if (!_layerDrag) return;
+  const dy = e.clientY - _layerDrag.startY;
+  const steps = Math.round(dy / _layerDrag.rowH);
+  const from = _layerDrag.index;
+  const to = Math.max(0, Math.min(_layerDrag.list.length - 1, from + steps));
+  if (to !== from){
+    const list = _layerDrag.list;
+    const [item] = list.splice(from, 1);
+    list.splice(to, 0, item);
+    _layerDrag.index = to;
+    _layerDrag.startY = e.clientY;
+    setLayersFromVisual(list);
+    renderLayersModal();
+    drawPreview();
+  }
+}
+function endLayerDrag(){
+  _layerDrag = null;
+  document.removeEventListener('pointermove', onLayerDragMove);
+}
+
+/* ── STICKER TOOL PANELS ──────────────────────── */
+function stickerToolPanelHtml(tool, id){
   const s = state.stickers.find(x=>x.id===id);
-  if (!s) return `<div class="cr-empty-hint">This sticker was removed.</div>`;
-  return `
-    <div class="cr-preset-grid">${STICKER_PRESETS.length
-      ? STICKER_PRESETS.map((p,i)=>`<button class="cr-preset-thumb" onclick="addStickerFromPreset(${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`).join('')
-      : `<div class="cr-empty-hint">More stickers coming soon!</div>`}</div>
-    <button type="button" class="cr-upload-btn" style="margin-top:12px" onclick="promptUpload('sticker')">
-      ${ICON_UPLOAD}<span>Replace with a New Upload</span>
-    </button>
-    <div class="cr-field-label" style="margin-top:16px">Size</div>
-    <input type="range" class="cr-range" min="0.4" max="2.5" step="0.1" value="${s.scale}" oninput="setStickerScale(${s.id},this.value)">
-    <div class="cr-hint">Drag the sticker on the pin to reposition · use the handles to resize/rotate</div>
-    <button type="button" class="cr-btn-secondary" style="margin-top:10px" onclick="duplicateSticker(${s.id})">${ICON_DUPLICATE} Duplicate</button>
-    ${lockRowHtml('sticker', s.id, s.locked)}
-    <button class="cr-text-line-remove" style="margin-top:10px" onclick="removeSticker(${s.id})">Remove this sticker</button>`;
+  if (!s) return '';
+  if (tool==='size'){
+    return `
+      <div class="cr-field-label">Size</div>
+      <input type="range" class="cr-range" min="0.4" max="2.5" step="0.1" value="${s.scale}" oninput="setStickerScale(${s.id},this.value)">
+      <div class="cr-hint">Drag the sticker on the pin to reposition.</div>`;
+  }
+  if (tool==='rotate'){
+    return `<div class="cr-hint" style="margin-top:2px">Use the blue handle that appears on the pin to rotate this sticker.</div>`;
+  }
+  return '';
 }
 
 function duplicateSticker(id){
@@ -553,6 +752,7 @@ function duplicateSticker(id){
     scale: s.scale, rotation: s.rotation, locked: false,
   };
   state.stickers.push(copy);
+  pushLayer({ kind:'sticker', id: copy.id });
   selectLayer({ kind:'sticker', id: copy.id });
 }
 window.duplicateSticker = duplicateSticker;
@@ -564,6 +764,7 @@ function addStickerFromPreset(i){
   img.onload = () => {
     const s = { id: state.nextStickerId++, img, xFrac:0.15, yFrac:-0.15, scale:1, rotation:0, locked:false };
     state.stickers.push(s);
+    pushLayer({ kind:'sticker', id:s.id });
     selectLayer({ kind:'sticker', id:s.id });
   };
   img.src = preset.src;
@@ -579,6 +780,7 @@ function onStickerFileChosen(e){
     img.onload = () => {
       const s = { id: state.nextStickerId++, img, xFrac:0.15, yFrac:-0.15, scale:1, rotation:0, locked:false };
       state.stickers.push(s);
+      pushLayer({ kind:'sticker', id:s.id });
       selectLayer({ kind:'sticker', id:s.id });
     };
     img.src = ev.target.result;
@@ -590,10 +792,9 @@ window.onStickerFileChosen = onStickerFileChosen;
 
 function removeSticker(id){
   state.stickers = state.stickers.filter(s=>s.id!==id);
-  if (state.selected && state.selected.kind==='sticker' && state.selected.id===id) state.selected = { kind:'background' };
-  renderLayerStrip();
-  renderSettingsPanel();
-  drawPreview();
+  removeLayerFromOrder('sticker', id);
+  if (state.selected && state.selected.kind==='sticker' && state.selected.id===id) deselectLayer();
+  else { renderDock(); drawPreview(); }
 }
 window.removeSticker = removeSticker;
 
@@ -605,41 +806,28 @@ function setStickerScale(id, val){
 }
 window.setStickerScale = setStickerScale;
 
-/* ── CENTER CHARACTER PANEL (single, big, always centered) ───────── */
-function characterPanelHtml(){
-  if (!state.character){
+/* ── CENTER CHARACTER TOOL PANELS (single, big, always centered) ── */
+function characterToolPanelHtml(tool){
+  const c = state.character;
+  if (!c) return '';
+  if (tool==='size'){
+    const sizePct = Math.round(c.scale*100);
     return `
-      <div class="cr-preset-grid">${CHARACTER_PRESETS.length
-        ? CHARACTER_PRESETS.map((c,i)=>`<button class="cr-preset-thumb" onclick="setCharacterFromPreset(${i})"><img src="${c.src}" alt="${escHtml(c.label||'')}"></button>`).join('')
-        : `<div class="cr-empty-hint">More characters coming soon! Upload your own below.</div>`}</div>
-      <button type="button" class="cr-upload-btn" style="margin-top:12px" onclick="promptUpload('character')">
-        ${ICON_UPLOAD}<span>Upload Your Own Character</span>
-      </button>
-      <div class="cr-hint">A bigger character or logo that sits in the middle of your pin.</div>`;
+      <div class="cr-field-label">Size <span class="cr-slider-val" id="charSizeVal">${sizePct}%</span></div>
+      <input type="range" class="cr-range cr-range-mid" min="1" max="199" value="${sizePct}"
+        oninput="setCharacterScale(this.value/100); document.getElementById('charSizeVal').textContent=this.value+'%'">
+      <div class="cr-hint">Position is always centered — slide left of center to shrink, right to grow.</div>`;
   }
-  const sizePct = Math.round(state.character.scale*100);
-  const rotDeg = Math.round((state.character.rotation||0)*180/Math.PI);
-  return `
-    <img src="${state.character.img.src}" alt="" style="width:64px;height:64px;object-fit:contain;border-radius:12px;background:var(--cream-deep);display:block;margin-bottom:12px">
-    <button type="button" class="cr-upload-btn" onclick="promptUpload('character')">
-      ${ICON_UPLOAD}<span>Replace with a New Upload</span>
-    </button>
-    <div class="cr-field-label" style="margin-top:16px">Size <span class="cr-slider-val" id="charSizeVal">${sizePct}%</span></div>
-    <input type="range" class="cr-range cr-range-mid" min="1" max="199" value="${sizePct}"
-      oninput="setCharacterScale(this.value/100); document.getElementById('charSizeVal').textContent=this.value+'%'">
-    <div class="cr-field-label">Rotation <span class="cr-slider-val" id="charRotVal">${rotDeg}°</span></div>
-    <input type="range" class="cr-range cr-range-mid" min="-180" max="180" value="${rotDeg}"
-      oninput="setCharacterRotation(this.value); document.getElementById('charRotVal').textContent=this.value+'°'">
-    <div class="cr-hint">Position is always centered — drag the slider handle left to shrink/rotate counter-clockwise, right to grow/rotate clockwise.</div>
-    ${lockRowHtml('character', null, state.character.locked)}
-    <button class="cr-text-line-remove" style="margin-top:10px" onclick="removeCharacter()">Remove character</button>`;
+  if (tool==='rotate'){
+    const rotDeg = Math.round((c.rotation||0)*180/Math.PI);
+    return `
+      <div class="cr-field-label">Rotation <span class="cr-slider-val" id="charRotVal">${rotDeg}°</span></div>
+      <input type="range" class="cr-range cr-range-mid" min="-180" max="180" value="${rotDeg}"
+        oninput="setCharacterRotation(this.value); document.getElementById('charRotVal').textContent=this.value+'°'">`;
+  }
+  return '';
 }
 
-function lockRowHtml(kind, id, locked){
-  return `<button class="cr-lock-btn ${locked?'locked':''}" onclick="toggleLock('${kind}'${id!=null?','+id:''})">
-    ${locked?ICON_LOCK:ICON_UNLOCK}<span>${locked?'Locked — tap to unlock':'Lock this in place'}</span>
-  </button>`;
-}
 function toggleLock(kind, id){
   const el = kind==='background' ? state.bg
     : kind==='character' ? state.character
@@ -647,8 +835,7 @@ function toggleLock(kind, id){
     : state.textLines.find(t=>t.id===id);
   if (!el) return;
   el.locked = !el.locked;
-  renderLayerStrip();
-  renderSettingsPanel();
+  renderDock();
 }
 window.toggleLock = toggleLock;
 window.toggleIsolateMode = toggleIsolateMode;
@@ -657,7 +844,12 @@ function setCharacterFromPreset(i){
   const preset = CHARACTER_PRESETS[i];
   if (!preset) return;
   const img = new Image();
-  img.onload = () => { state.character = { img, scale:1, rotation:0, xFrac:0, yFrac:0, locked:false }; selectLayer({kind:'character'}); };
+  img.onload = () => {
+    const isNew = !state.character;
+    state.character = { img, scale:1, rotation:0, xFrac:0, yFrac:0, locked:false };
+    if (isNew) pushLayer({ kind:'character' });
+    selectLayer({kind:'character'});
+  };
   img.src = preset.src;
 }
 window.setCharacterFromPreset = setCharacterFromPreset;
@@ -668,7 +860,12 @@ function onCharacterFileChosen(e){
   const reader = new FileReader();
   reader.onload = ev => {
     const img = new Image();
-    img.onload = () => { state.character = { img, scale:1, rotation:0, xFrac:0, yFrac:0, locked:false }; selectLayer({kind:'character'}); };
+    img.onload = () => {
+      const isNew = !state.character;
+      state.character = { img, scale:1, rotation:0, xFrac:0, yFrac:0, locked:false };
+      if (isNew) pushLayer({ kind:'character' });
+      selectLayer({kind:'character'});
+    };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
@@ -678,10 +875,9 @@ window.onCharacterFileChosen = onCharacterFileChosen;
 
 function removeCharacter(){
   state.character = null;
-  if (state.selected && state.selected.kind==='character') state.selected = { kind:'background' };
-  renderLayerStrip();
-  renderSettingsPanel();
-  drawPreview();
+  removeLayerFromOrder('character', undefined);
+  if (state.selected && state.selected.kind==='character') deselectLayer();
+  else { renderDock(); drawPreview(); }
 }
 window.removeCharacter = removeCharacter;
 
@@ -703,16 +899,17 @@ window.setCharacterRotation = setCharacterRotation;
 function addTextLine(){
   const line = { id: state.nextTextId++, text:'Your Text', font:FONTS[0], color:'#FFFFFF', placement:'straight', size:1, shadow:false, xFrac:0, yFrac:0, rotation:0, locked:false };
   state.textLines.push(line);
+  pushLayer({ kind:'text', id: line.id });
   selectLayer({ kind:'text', id: line.id });
+  openToolPanel('edit');
 }
 window.addTextLine = addTextLine;
 
 function removeTextLine(id){
   state.textLines = state.textLines.filter(t=>t.id!==id);
-  if (state.selected && state.selected.kind==='text' && state.selected.id===id) state.selected = { kind:'background' };
-  renderLayerStrip();
-  renderSettingsPanel();
-  drawPreview();
+  removeLayerFromOrder('text', id);
+  if (state.selected && state.selected.kind==='text' && state.selected.id===id) deselectLayer();
+  else { renderDock(); drawPreview(); }
 }
 window.removeTextLine = removeTextLine;
 
@@ -728,10 +925,6 @@ function updateTextLine(id, field, value){
       if (slider) slider.value = line.size;
     }
   }
-  if (field==='text' || field==='placement'){
-    // layer strip label / thumbnail may need to reflect the new text
-    renderLayerStrip();
-  }
   drawPreview();
 }
 window.updateTextLine = updateTextLine;
@@ -744,45 +937,52 @@ function toggleTextShadow(id, on){
 }
 window.toggleTextShadow = toggleTextShadow;
 
-function textPanelHtml(id){
+/* ── TEXT TOOL PANELS ─────────────────────────── */
+function textToolPanelHtml(tool, id){
   const t = state.textLines.find(x=>x.id===id);
-  if (!t) return `<div class="cr-empty-hint">This text line was removed.</div>`;
-  const sizePct = Math.round(t.size*100);
-  const rotDeg = Math.round((t.rotation||0)*180/Math.PI);
-  const safeColor = /^#[0-9a-fA-F]{6}$/.test(t.color) ? t.color : '#000000';
-  return `
-    <input type="text" class="cr-text-input" style="margin-bottom:10px" value="${escHtml(t.text)}" maxlength="24"
-      oninput="updateTextLine(${t.id},'text',this.value)">
-    <div class="cr-text-line-row">
-      <select class="cr-select" onchange="updateTextLine(${t.id},'placement',this.value)">
-        <option value="straight" ${t.placement==='straight'?'selected':''}>Straight</option>
-        <option value="top-arc" ${t.placement==='top-arc'?'selected':''}>Top Arc</option>
-        <option value="bottom-arc" ${t.placement==='bottom-arc'?'selected':''}>Bottom Arc</option>
-      </select>
-      <select class="cr-select" onchange="updateTextLine(${t.id},'font',this.value)">
-        ${FONTS.map(f=>`<option value="${f}" ${t.font===f?'selected':''}>${f}</option>`).join('')}
-      </select>
-    </div>
-    <div class="cr-field-label" style="margin-top:10px">Size <span class="cr-slider-val" id="textSizeVal_${t.id}">${sizePct}%</span></div>
-    <input type="range" class="cr-range cr-range-mid" min="1" max="199" value="${sizePct}"
-      oninput="setTextSizePct(${t.id},this.value); document.getElementById('textSizeVal_${t.id}').textContent=this.value+'%'">
-    <div class="cr-field-label">Rotation <span class="cr-slider-val" id="textRotVal_${t.id}">${rotDeg}°</span></div>
-    <input type="range" class="cr-range cr-range-mid" min="-180" max="180" value="${rotDeg}"
-      oninput="setTextRotation(${t.id},this.value); document.getElementById('textRotVal_${t.id}').textContent=this.value+'°'">
-    <div class="cr-hint" style="margin-top:-4px">Slide left of center to shrink/rotate counter-clockwise, right to grow/rotate clockwise. Size auto-shrinks so it always stays inside the safe area.</div>
-    <div class="cr-field-label" style="margin-top:10px">Color</div>
-    <label class="cr-color-picker-btn" id="textColorBtn_${t.id}" style="background:${t.color}">
+  if (!t) return '';
+  if (tool==='edit'){
+    return `
+      <input type="text" class="cr-text-input" value="${escHtml(t.text)}" maxlength="24"
+        oninput="updateTextLine(${t.id},'text',this.value)" placeholder="Your text">
+      <div class="cr-hint">Drag the text directly on the pin to reposition it.</div>`;
+  }
+  if (tool==='font'){
+    return `<select class="cr-select" style="width:100%" onchange="updateTextLine(${t.id},'font',this.value)">
+      ${FONTS.map(f=>`<option value="${f}" ${t.font===f?'selected':''}>${f}</option>`).join('')}
+    </select>`;
+  }
+  if (tool==='placement'){
+    return `<select class="cr-select" style="width:100%" onchange="updateTextLine(${t.id},'placement',this.value)">
+      <option value="straight" ${t.placement==='straight'?'selected':''}>Straight</option>
+      <option value="top-arc" ${t.placement==='top-arc'?'selected':''}>Top Arc</option>
+      <option value="bottom-arc" ${t.placement==='bottom-arc'?'selected':''}>Bottom Arc</option>
+    </select>`;
+  }
+  if (tool==='color'){
+    const safeColor = /^#[0-9a-fA-F]{6}$/.test(t.color) ? t.color : '#000000';
+    return `<label class="cr-color-picker-btn" id="textColorBtn_${t.id}" style="background:${t.color}">
       <input type="color" value="${safeColor}"
         oninput="updateTextLine(${t.id},'color',this.value); document.getElementById('textColorBtn_${t.id}').style.background=this.value">
       <span>Tap to pick any color</span>
-    </label>
-    <label class="cr-checkbox-row">
-      <input type="checkbox" ${t.shadow?'checked':''} onchange="toggleTextShadow(${t.id},this.checked)">
-      Drop shadow
-    </label>
-    <div class="cr-hint" style="margin-top:10px">Drag the text directly on the pin to reposition it.</div>
-    ${lockRowHtml('text', t.id, t.locked)}
-    <button class="cr-text-line-remove" style="margin-top:10px" onclick="removeTextLine(${t.id})">Remove this text line</button>`;
+    </label>`;
+  }
+  if (tool==='size'){
+    const sizePct = Math.round(t.size*100);
+    return `
+      <div class="cr-field-label">Size <span class="cr-slider-val" id="textSizeVal_${t.id}">${sizePct}%</span></div>
+      <input type="range" class="cr-range cr-range-mid" min="1" max="199" value="${sizePct}"
+        oninput="setTextSizePct(${t.id},this.value); document.getElementById('textSizeVal_${t.id}').textContent=this.value+'%'">
+      <div class="cr-hint" style="margin-top:-2px">Auto-shrinks so it always stays inside the safe area.</div>`;
+  }
+  if (tool==='rotate'){
+    const rotDeg = Math.round((t.rotation||0)*180/Math.PI);
+    return `
+      <div class="cr-field-label">Rotation <span class="cr-slider-val" id="textRotVal_${t.id}">${rotDeg}°</span></div>
+      <input type="range" class="cr-range cr-range-mid" min="-180" max="180" value="${rotDeg}"
+        oninput="setTextRotation(${t.id},this.value); document.getElementById('textRotVal_${t.id}').textContent=this.value+'°'">`;
+  }
+  return '';
 }
 
 function setTextSizePct(id, pct){
@@ -829,29 +1029,39 @@ function bleedNoteText(){
 // way of canvas taps," not just "can't be dragged." A locked element that
 // still intercepted taps could block anything underneath it from ever being
 // reachable (e.g. a large locked text box sitting over a small sticker).
-function hitTestSticker(xFrac, yFrac){
-  for (let i = state.stickers.length - 1; i >= 0; i--){
-    const s = state.stickers[i];
-    if (s.locked) continue;
-    const r = STICKER_BASE_R * s.scale;
-    if (dist2(xFrac,yFrac,s.xFrac,s.yFrac) <= r*r) return s;
-  }
-  return null;
+function hitTestOneSticker(s, xFrac, yFrac){
+  const r = STICKER_BASE_R * s.scale;
+  return dist2(xFrac,yFrac,s.xFrac,s.yFrac) <= r*r;
 }
-// Text is drawn last (topmost), so it's checked first when tapping the canvas.
-function hitTestText(xFrac, yFrac){
+function hitTestOneText(t, xFrac, yFrac){
   const ctx = document.getElementById('designCanvas').getContext('2d');
   const scalePxPerInch = CANVAS_PX / artboardDiameter();
   const cutRadiusPx = (state.size/2) * scalePxPerInch;
-  for (let i = state.textLines.length - 1; i >= 0; i--){
-    const t = state.textLines[i];
-    if (t.locked) continue;
-    ctx.font = `bold ${28*t.size}px "${t.font}", 'Nunito', sans-serif`;
-    const width = ctx.measureText(t.text || 'Text').width;
-    const height = 28*t.size*1.15;
-    const rPx = t.placement==='straight' ? Math.hypot(width/2, height/2) : (cutRadiusPx*0.78) + height/2;
-    const rFrac = rPx / CANVAS_PX;
-    if (dist2(xFrac,yFrac,t.xFrac||0,t.yFrac||0) <= rFrac*rFrac) return t;
+  ctx.font = `bold ${28*t.size}px "${t.font}", 'Nunito', sans-serif`;
+  const width = ctx.measureText(t.text || 'Text').width;
+  const height = 28*t.size*1.15;
+  const rPx = t.placement==='straight' ? Math.hypot(width/2, height/2) : (cutRadiusPx*0.78) + height/2;
+  const rFrac = rPx / CANVAS_PX;
+  return dist2(xFrac,yFrac,t.xFrac||0,t.yFrac||0) <= rFrac*rFrac;
+}
+// Walks state.layerOrder front-to-back so whichever element the user put on
+// top (via the Layers tab) is the one a tap lands on, regardless of kind.
+// Locked elements are skipped entirely — see the note above bindCanvasInteractions.
+function hitTestTopmost(xFrac, yFrac){
+  const list = state.layerOrder;
+  for (let i = list.length - 1; i >= 0; i--){
+    const d = list[i];
+    if (d.kind==='text'){
+      const t = state.textLines.find(x=>x.id===d.id);
+      if (t && !t.locked && hitTestOneText(t, xFrac, yFrac)) return { kind:'text', el:t };
+    } else if (d.kind==='sticker'){
+      const s = state.stickers.find(x=>x.id===d.id);
+      if (s && !s.locked && hitTestOneSticker(s, xFrac, yFrac)) return { kind:'sticker', el:s };
+    } else if (d.kind==='character'){
+      if (state.character && !state.character.locked && dist2(xFrac,yFrac,0,0) <= Math.pow(elementRadiusFrac(state.character,'character'),2)){
+        return { kind:'character', el:state.character };
+      }
+    }
   }
   return null;
 }
@@ -901,22 +1111,13 @@ function bindCanvasInteractions(canvas){
       }
     }
 
-    // 2. Text (topmost layer), then stickers, then the center character
-    const textHit = hitTestText(p.x, p.y);
-    if (textHit){
-      if (layerKey(state.selected)!==layerKey({kind:'text',id:textHit.id})) selectLayer({ kind:'text', id: textHit.id });
-      if (!textHit.locked) startElementDrag(canvas, e, 'move', textHit);
+    // 2. Whichever element is topmost at this point, per the user's layer order.
+    const hit = hitTestTopmost(p.x, p.y);
+    if (hit){
+      const d = hit.kind==='character' ? { kind:'character' } : { kind:hit.kind, id:hit.el.id };
+      if (layerKey(state.selected)!==layerKey(d)) selectLayer(d);
+      if (hit.kind!=='character') startElementDrag(canvas, e, 'move', hit.el); // character is always centered — select only, no move-drag
       return;
-    }
-    const sticker = hitTestSticker(p.x, p.y);
-    if (sticker){
-      if (layerKey(state.selected)!==layerKey({kind:'sticker',id:sticker.id})) selectLayer({ kind:'sticker', id: sticker.id });
-      if (!sticker.locked) startElementDrag(canvas, e, 'move', sticker);
-      return;
-    }
-    if (state.character && !state.character.locked && dist2(p.x,p.y,0,0) <= Math.pow(elementRadiusFrac(state.character,'character'),2)){
-      if (layerKey(state.selected)!==layerKey({kind:'character'})) selectLayer({ kind:'character' });
-      return; // character position is always centered — select only, no move-drag
     }
 
     // 3. Nothing hit — fall back to the background layer, and drag the photo if there is one (unless locked)
@@ -1008,10 +1209,14 @@ function drawDesignLayer(ctx, sizePx){
   ctx.arc(artboardPx/2, artboardPx/2, artboardPx/2, 0, Math.PI*2);
   ctx.clip();
 
-  drawBackground(ctx, artboardPx);
-  drawCharacter(ctx, artboardPx);   // center character sits below stickers
-  drawStickers(ctx, artboardPx);    // stickers layer on top
-  drawTextLines(ctx, artboardPx);
+  drawBackground(ctx, artboardPx);  // always the back-most layer (color, then image)
+  // Everything else draws in the user-defined stacking order (state.layerOrder,
+  // back-to-front), managed via the Layers tab.
+  state.layerOrder.forEach(d => {
+    if (d.kind==='character') drawOneCharacter(ctx, artboardPx);
+    else if (d.kind==='sticker') drawOneSticker(ctx, artboardPx, state.stickers.find(s=>s.id===d.id));
+    else if (d.kind==='text') drawOneTextLine(ctx, artboardPx, state.textLines.find(t=>t.id===d.id));
+  });
 
   ctx.restore();
 }
@@ -1051,14 +1256,12 @@ function drawBackground(ctx, artboardPx){
 const STICKER_BASE_R = 0.14;    // fraction of artboard diameter, at scale=1
 const CHARACTER_BASE_R = 0.275;
 
-function drawStickers(ctx, artboardPx){
-  state.stickers.forEach(s=>{
-    if (!s.img) return;
-    drawPlacedImage(ctx, artboardPx, s.img, s.xFrac, s.yFrac, STICKER_BASE_R*2*s.scale, s.rotation||0);
-  });
+function drawOneSticker(ctx, artboardPx, s){
+  if (!s || !s.img) return;
+  drawPlacedImage(ctx, artboardPx, s.img, s.xFrac, s.yFrac, STICKER_BASE_R*2*s.scale, s.rotation||0);
 }
 
-function drawCharacter(ctx, artboardPx){
+function drawOneCharacter(ctx, artboardPx){
   if (!state.character || !state.character.img) return;
   const c = state.character;
   drawPlacedImage(ctx, artboardPx, c.img, 0, 0, CHARACTER_BASE_R*2*c.scale, c.rotation||0);
@@ -1132,36 +1335,35 @@ function clampTextPosition(t){
   }
 }
 
-function drawTextLines(ctx, artboardPx){
+function drawOneTextLine(ctx, artboardPx, t){
+  if (!t) return;
   const scalePxPerInch = artboardPx / artboardDiameter();
   const cutRadiusPx = (state.size/2) * scalePxPerInch;
-  state.textLines.forEach(t=>{
-    ctx.save();
-    ctx.font = `bold ${28*t.size}px "${t.font}", 'Nunito', sans-serif`;
-    ctx.fillStyle = t.color;
-    if (t.shadow){
-      ctx.shadowColor = 'rgba(0,0,0,0.45)';
-      ctx.shadowBlur = 6;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 2;
-    }
-    const cx = artboardPx/2 + (t.xFrac||0)*artboardPx;
-    const cy = artboardPx/2 + (t.yFrac||0)*artboardPx;
-    // Rotate the whole element (straight text or the entire arc) around its
-    // own anchor point, matching how sticker/character rotation works.
-    if (t.rotation){
-      ctx.translate(cx, cy);
-      ctx.rotate(t.rotation);
-      ctx.translate(-cx, -cy);
-    }
-    if (t.placement==='straight'){
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(t.text, cx, cy);
-    } else {
-      drawArcText(ctx, t.text, cx, cy, cutRadiusPx*0.78, t.placement==='bottom-arc');
-    }
-    ctx.restore();
-  });
+  ctx.save();
+  ctx.font = `bold ${28*t.size}px "${t.font}", 'Nunito', sans-serif`;
+  ctx.fillStyle = t.color;
+  if (t.shadow){
+    ctx.shadowColor = 'rgba(0,0,0,0.45)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 2;
+  }
+  const cx = artboardPx/2 + (t.xFrac||0)*artboardPx;
+  const cy = artboardPx/2 + (t.yFrac||0)*artboardPx;
+  // Rotate the whole element (straight text or the entire arc) around its
+  // own anchor point, matching how sticker/character rotation works.
+  if (t.rotation){
+    ctx.translate(cx, cy);
+    ctx.rotate(t.rotation);
+    ctx.translate(-cx, -cy);
+  }
+  if (t.placement==='straight'){
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(t.text, cx, cy);
+  } else {
+    drawArcText(ctx, t.text, cx, cy, cutRadiusPx*0.78, t.placement==='bottom-arc');
+  }
+  ctx.restore();
 }
 
 function drawArcText(ctx, text, cx, cy, radius, bottom){
