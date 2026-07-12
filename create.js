@@ -354,13 +354,13 @@ function toolIconsForSelection(){
     { id:'photo', label:'Photo', icon:ICON_BG, panel:true },
     { id:'colors', label:'Colors', icon:ICON_PALETTE, panel:true },
     { id:'opacity', label:'Opacity', icon:ICON_OPACITY, panel:true },
-    { id:'lock', label: state.bg.locked?'Locked':'Lock', icon: state.bg.locked?ICON_LOCK:ICON_UNLOCK, instant:'toggleLock("background")', on: state.bg.locked },
+    { id:'lock', label: state.bg.locked?'Locked':'Lock', icon: state.bg.locked?ICON_LOCK:ICON_UNLOCK, instant:"toggleLock('background')", on: state.bg.locked },
   ];
   if (kind==='character') return state.character ? [
     { id:'replace', label:'Replace', icon:ICON_UPLOAD, instant:"promptUpload('character')" },
     { id:'size', label:'Size', icon:ICON_SIZE, panel:true },
     { id:'rotate', label:'Rotate', icon:ICON_ROTATE, panel:true },
-    { id:'lock', label: state.character.locked?'Locked':'Lock', icon: state.character.locked?ICON_LOCK:ICON_UNLOCK, instant:'toggleLock("character")', on: state.character.locked },
+    { id:'lock', label: state.character.locked?'Locked':'Lock', icon: state.character.locked?ICON_LOCK:ICON_UNLOCK, instant:"toggleLock('character')", on: state.character.locked },
     { id:'remove', label:'Remove', icon:ICON_TRASH, instant:'removeCharacter()', danger:true },
   ] : [];
   if (kind==='sticker'){
@@ -371,7 +371,7 @@ function toolIconsForSelection(){
       { id:'size', label:'Size', icon:ICON_SIZE, panel:true },
       { id:'rotate', label:'Rotate', icon:ICON_ROTATE, panel:true },
       { id:'duplicate', label:'Duplicate', icon:ICON_DUPLICATE, instant:`duplicateSticker(${s.id})` },
-      { id:'lock', label: s.locked?'Locked':'Lock', icon: s.locked?ICON_LOCK:ICON_UNLOCK, instant:`toggleLock("sticker",${s.id})`, on: s.locked },
+      { id:'lock', label: s.locked?'Locked':'Lock', icon: s.locked?ICON_LOCK:ICON_UNLOCK, instant:`toggleLock('sticker',${s.id})`, on: s.locked },
       { id:'remove', label:'Remove', icon:ICON_TRASH, instant:`removeSticker(${s.id})`, danger:true },
     ];
   }
@@ -386,7 +386,7 @@ function toolIconsForSelection(){
       { id:'size', label:'Size', icon:ICON_SIZE, panel:true },
       { id:'rotate', label:'Rotate', icon:ICON_ROTATE, panel:true },
       { id:'shadow', label:'Shadow', icon:ICON_SHADOW, instant:`toggleTextShadow(${t.id},${!t.shadow})`, on:t.shadow },
-      { id:'lock', label: t.locked?'Locked':'Lock', icon: t.locked?ICON_LOCK:ICON_UNLOCK, instant:`toggleLock("text",${t.id})`, on: t.locked },
+      { id:'lock', label: t.locked?'Locked':'Lock', icon: t.locked?ICON_LOCK:ICON_UNLOCK, instant:`toggleLock('text',${t.id})`, on: t.locked },
       { id:'remove', label:'Remove', icon:ICON_TRASH, instant:`removeTextLine(${t.id})`, danger:true },
     ];
   }
@@ -398,7 +398,7 @@ function toolRowHtml(){
   const btns = icons.map(t => {
     const onclick = t.panel ? `openToolPanel('${t.id}')` : t.instant;
     const cls = ['cr-tool-btn', t.panel && _activeTool===t.id ? 'active' : '', t.on ? 'on' : '', t.danger ? 'danger' : ''].filter(Boolean).join(' ');
-    return `<button class="${cls}" onclick='${onclick}'>
+    return `<button class="${cls}" onclick="${escHtml(onclick)}">
       <span class="cr-tool-icon">${t.icon}</span>
       <span class="cr-tool-label">${t.label}</span>
     </button>`;
