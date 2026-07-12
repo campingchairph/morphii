@@ -30,9 +30,9 @@
    ═══════════════════════════════════════════════ */
 
 const EMAILJS_CONFIG = {
-  publicKey: 'PASTE_PUBLIC_KEY',
-  serviceId: 'PASTE_SERVICE_ID',
-  templateId: 'PASTE_TEMPLATE_ID',
+  publicKey: 'RkLPj3FJdxbTIfngc',
+  serviceId: 'service_xuv2xhp',
+  templateId: 'template_d37gxpe',
 };
 
 const _emailReady = !EMAILJS_CONFIG.publicKey.includes('PASTE');
