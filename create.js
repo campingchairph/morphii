@@ -76,7 +76,7 @@ const state = {
     // PNG areas) — each has its own on/off checkbox.
     colorOn:false, color:null,             // one of GRADIENTS
     imageOn:false, img:null, tainted:false, opacity:0.7,
-    offsetXFrac:0, offsetYFrac:0, scale:1,
+    offsetXFrac:0, offsetYFrac:0, scale:1, locked:false,
   },
   textLines: [],
   stickers: [],             // [{id, img, xFrac, yFrac, scale, rotation}]
@@ -204,6 +204,24 @@ window.addEventListener('resize', ()=>{
   if (document.getElementById('step-design').classList.contains('active')) sizeCanvasStage();
 });
 
+const ICON_EXPAND   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/></svg>';
+const ICON_COLLAPSE  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v3a2 2 0 01-2 2H4M15 3v3a2 2 0 002 2h3M9 21v-3a2 2 0 00-2-2H4M15 21v-3a2 2 0 012-2h3"/></svg>';
+
+// Full-screen "isolate" mode: hides everything except the canvas so the pin
+// has maximum room to drag/position elements precisely. The watermark stays
+// visible because it's baked directly into the canvas drawing by drawPreview().
+function toggleIsolateMode(){
+  const app = document.querySelector('.cr-design-app');
+  const btn = document.getElementById('isolateBtn');
+  if (!app || !btn) return;
+  const on = app.classList.toggle('isolate');
+  btn.classList.toggle('active', on);
+  btn.title = on ? 'Exit full-screen view' : 'Full-screen view';
+  btn.innerHTML = on ? ICON_COLLAPSE : ICON_EXPAND;
+  sizeCanvasStage();
+  requestAnimationFrame(sizeCanvasStage);
+}
+
 // The settings panel's height changes constantly (different layers have
 // different amounts of content), which shrinks/grows cr-canvas-wrap on every
 // selection — a plain resize listener misses that. A ResizeObserver on the
@@ -252,7 +270,7 @@ function renderLayerStrip(){
   const activeKey = layerKey(state.selected);
   const chips = [];
 
-  chips.push({ d:{kind:'background'}, label:'Background', thumb: bgChipThumb(), lockable:false });
+  chips.push({ d:{kind:'background'}, label:'Background', thumb: bgChipThumb(), lockable:true, locked: state.bg.locked });
   chips.push({ d:{kind:'character'}, label:'Character', thumb: state.character ? `<img src="${state.character.img.src}" alt="">` : ICON_CHARACTER, lockable: !!state.character, locked: state.character?.locked });
   state.stickers.forEach((s,i)=> chips.push({ d:{kind:'sticker', id:s.id}, label:'Sticker '+(i+1), thumb:`<img src="${s.img.src}" alt="">`, lockable:true, locked:s.locked }));
   state.textLines.forEach((t,i)=> chips.push({ d:{kind:'text', id:t.id}, label: (t.text||'Text').slice(0,10), thumb: ICON_TEXT, lockable:true, locked:t.locked }));
@@ -348,7 +366,8 @@ function bgPanelHtml(){
     <div class="cr-hint">Turn on both a photo and a color to mix them — the color shows through anywhere the photo doesn't fully cover.</div>
     <div class="cr-field-label" style="margin-top:16px">Opacity</div>
     <input type="range" min="0.1" max="1" step="0.05" value="${state.bg.opacity}" oninput="setBgOpacity(this.value)" class="cr-range">
-    <div class="cr-hint">Drag the photo to reposition · scroll or pinch to zoom</div>`;
+    <div class="cr-hint">Drag the photo to reposition · scroll or pinch to zoom</div>
+    ${lockRowHtml('background', null, state.bg.locked)}`;
 }
 
 function selectGradient(i){
@@ -622,7 +641,8 @@ function lockRowHtml(kind, id, locked){
   </button>`;
 }
 function toggleLock(kind, id){
-  const el = kind==='character' ? state.character
+  const el = kind==='background' ? state.bg
+    : kind==='character' ? state.character
     : kind==='sticker' ? state.stickers.find(s=>s.id===id)
     : state.textLines.find(t=>t.id===id);
   if (!el) return;
@@ -631,6 +651,7 @@ function toggleLock(kind, id){
   renderSettingsPanel();
 }
 window.toggleLock = toggleLock;
+window.toggleIsolateMode = toggleIsolateMode;
 
 function setCharacterFromPreset(i){
   const preset = CHARACTER_PRESETS[i];
@@ -898,9 +919,9 @@ function bindCanvasInteractions(canvas){
       return; // character position is always centered — select only, no move-drag
     }
 
-    // 3. Nothing hit — fall back to the background layer, and drag the photo if there is one
+    // 3. Nothing hit — fall back to the background layer, and drag the photo if there is one (unless locked)
     if (layerKey(state.selected)!=='background') selectLayer({ kind:'background' });
-    if (state.bg.imageOn && state.bg.img){
+    if (state.bg.imageOn && state.bg.img && !state.bg.locked){
       state.dragging = true;
       state.dragTarget = 'bg';
       state.dragMode = 'move';
@@ -943,7 +964,7 @@ function bindCanvasInteractions(canvas){
   const stickerOrCharSelected = () => state.selected && (state.selected.kind==='sticker' || state.selected.kind==='character');
 
   canvas.addEventListener('wheel', e=>{
-    if (!state.bg.imageOn || !state.bg.img || stickerOrCharSelected()) return;
+    if (!state.bg.imageOn || !state.bg.img || state.bg.locked || stickerOrCharSelected()) return;
     e.preventDefault();
     const delta = e.deltaY > 0 ? 0.92 : 1.08;
     state.bg.scale = state.bg.scale*delta;
@@ -960,7 +981,7 @@ function bindCanvasInteractions(canvas){
     }
   }, { passive:true });
   canvas.addEventListener('touchmove', e=>{
-    if (e.touches.length===2 && pinchStartDist && state.bg.imageOn && !stickerOrCharSelected()){
+    if (e.touches.length===2 && pinchStartDist && state.bg.imageOn && !state.bg.locked && !stickerOrCharSelected()){
       e.preventDefault();
       const d = touchDist(e.touches);
       state.bg.scale = pinchStartScale * (d/pinchStartDist);
@@ -1396,7 +1417,7 @@ window.submitDesign = submitDesign;
 function showDoneScreen(code, emailResult){
   document.getElementById('saveCodeDisplay').textContent = code;
   document.getElementById('emailStatusNote').textContent = (emailResult && emailResult.sent)
-    ? "We've also emailed this code to you."
+    ? "We've also emailed this code to you — if you don't see it in a few minutes, please check your Spam or Junk folder."
     : "We couldn't send the confirmation email automatically — please screenshot or write down your code now.";
   goStep('done');
 }
