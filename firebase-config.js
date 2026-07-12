@@ -24,16 +24,16 @@
    ═══════════════════════════════════════════════ */
 
 const FIREBASE_CONFIG = {
-  apiKey:            "PASTE_API_KEY",
-  authDomain:        "PASTE_PROJECT_ID.firebaseapp.com",
-  projectId:         "PASTE_PROJECT_ID",
-  storageBucket:     "PASTE_PROJECT_ID.firebasestorage.app",
-  messagingSenderId: "PASTE_SENDER_ID",
-  appId:             "PASTE_APP_ID",
+  apiKey:            "AIzaSyCDqbt4-zlCAUe098zLqpV74rhE4RGaiLo",
+  authDomain:        "morphii.firebaseapp.com",
+  projectId:         "morphii",
+  storageBucket:     "morphii.firebasestorage.app",
+  messagingSenderId: "541452960838",
+  appId:             "1:541452960838:web:40b51d70a1873bde16f647",
 };
 
 const ADMIN_EMAILS = [
-  // 'you@example.com',
+  'buboyseph@gmail.com',
 ];
 
 /* ── INIT ─────────────────────────────────────── */
@@ -57,7 +57,9 @@ function isAdmin(user) {
      size:        1.25 | 1.5 | 2.25 | 3.0   (inches, nominal cut diameter)
      bleedMode:   'wrap' | 'diecut'
      designDataUrl: base64 PNG, clean (no watermark), full artboard incl. bleed
-     customerName, customerContact, shopeeOrderId, notes
+     customerName, customerEmail, customerPhone, notes
+     saveCode:    6-char code the customer gets to reference in Shopee chat
+     shopeeOrderId (optional — filled in later once you match a payment)
      createdAt:   server timestamp
    }
    ─────────────────────────────────────────────── */
@@ -79,10 +81,8 @@ async function submitOrder(order) {
        match /morphii_orders/{orderId} {
          allow create: if true;
          allow read, update, delete: if request.auth != null
-           && request.auth.token.email in ['you@example.com'];
+           && request.auth.token.email in ['buboyseph@gmail.com'];
        }
      }
    }
-
-   (Replace the email list with your ADMIN_EMAILS above.)
    ─────────────────────────────────────────────── */
