@@ -75,7 +75,7 @@ const state = {
     // through wherever the image doesn't fully cover, or through transparent
     // PNG areas) — each has its own on/off checkbox.
     colorOn:false, color:null,             // one of GRADIENTS
-    imageOn:false, img:null, tainted:false, opacity:1,
+    imageOn:false, img:null, tainted:false, opacity:0.7,
     offsetXFrac:0, offsetYFrac:0, scale:1,
   },
   textLines: [],
@@ -322,14 +322,9 @@ function bgPanelHtml(){
   let tabBody = '';
   if (tab==='upload'){
     tabBody = `
-      <button type="button" class="cr-upload-btn" onclick="promptUpload('background')">
+      <button type="button" class="cr-upload-btn" onclick="document.getElementById('bgFileInput').click()">
         ${ICON_UPLOAD}<span id="bgUploadLabelText">Choose a Photo</span>
       </button>
-      ${state.bg.img ? `<label class="cr-checkbox-row"><input type="checkbox" ${state.bg.imageOn?'checked':''} onchange="toggleImageLayer(this.checked)">Show the photo</label>` : ''}`;
-  } else if (tab==='link'){
-    tabBody = `
-      <input type="text" id="bgLinkInput" placeholder="https://example.com/image.jpg" class="cr-text-input">
-      <button class="cr-btn-secondary" onclick="loadBgFromLink()">Load Image</button>
       ${state.bg.img ? `<label class="cr-checkbox-row"><input type="checkbox" ${state.bg.imageOn?'checked':''} onchange="toggleImageLayer(this.checked)">Show the photo</label>` : ''}`;
   } else {
     tabBody = `
@@ -345,8 +340,7 @@ function bgPanelHtml(){
   return `
     <div class="cr-bg-tabs">
       <button class="cr-bg-tab ${tab==='upload'?'active':''}" onclick="setBgTab('upload')">Upload</button>
-      <button class="cr-bg-tab ${tab==='link'?'active':''}" onclick="setBgTab('link')">Image Link</button>
-      <button class="cr-bg-tab ${tab==='gradient'?'active':''}" onclick="setBgTab('gradient')">Colors</button>
+      <button class="cr-bg-tab ${tab==='gradient'?'active':''}" onclick="setBgTab('gradient')">Background Colors</button>
     </div>
     ${tabBody}
     <div id="bgWarning" class="cr-warning" style="display:none"></div>
@@ -443,6 +437,12 @@ function applyBgImage(img, tainted){
   state.bg.img = img;
   state.bg.tainted = tainted;
   state.bg.offsetXFrac = 0; state.bg.offsetYFrac = 0; state.bg.scale = 1;
+  // A color is always applied underneath — at less than full opacity the
+  // photo alone would look washed out with nothing behind it.
+  if (!state.bg.color){
+    state.bg.color = GRADIENTS[0];
+    state.bg.colorOn = true;
+  }
   renderLayerStrip();
   renderSettingsPanel();
   drawPreview();
@@ -651,7 +651,7 @@ window.setCharacterScale = setCharacterScale;
 
 /* ── TEXT PANEL ───────────────────────────────── */
 function addTextLine(){
-  const line = { id: state.nextTextId++, text:'Your Text', font:FONTS[0], color:'#FFFFFF', placement:'straight', size:1, shadow:false, xFrac:0, yFrac:0, locked:false };
+  const line = { id: state.nextTextId++, text:'Your Text', font:FONTS[0], color:'#FFFFFF', placement:'straight', size:1, shadow:false, xFrac:0, yFrac:0, rotation:0, locked:false };
   state.textLines.push(line);
   selectLayer({ kind:'text', id: line.id });
 }
@@ -715,19 +715,18 @@ function textPanelHtml(id){
         ${FONTS.map(f=>`<option value="${f}" ${t.font===f?'selected':''}>${f}</option>`).join('')}
       </select>
     </div>
-    <div class="cr-field-label" style="margin-top:10px">Size</div>
-    <input type="range" id="textSizeSlider_${t.id}" class="cr-range" min="0.5" max="2.2" step="0.1" value="${t.size}"
-      oninput="updateTextLine(${t.id},'size',+this.value)">
-    <div class="cr-hint" style="margin-top:-6px">Size auto-shrinks so text always stays inside the safe area.</div>
     <div class="cr-field-label" style="margin-top:10px">Color</div>
     <div class="cr-swatch-row">
       ${TEXT_COLORS.map(c=>`<button class="cr-swatch ${t.color===c?'active':''}" style="background:${c}" onclick="updateTextLine(${t.id},'color','${c}');renderSettingsPanel()"></button>`).join('')}
+      <label class="cr-color-picker-swatch" title="Custom color" style="background:${t.color}">
+        <input type="color" value="${/^#[0-9a-fA-F]{6}$/.test(t.color)?t.color:'#000000'}" oninput="updateTextLine(${t.id},'color',this.value);renderSettingsPanel()">
+      </label>
     </div>
     <label class="cr-checkbox-row">
       <input type="checkbox" ${t.shadow?'checked':''} onchange="toggleTextShadow(${t.id},this.checked)">
       Drop shadow
     </label>
-    <div class="cr-hint" style="margin-top:10px">Drag the text directly on the pin to reposition it.</div>
+    <div class="cr-hint" style="margin-top:10px">Drag the text on the pin to move it · use the handles to resize/rotate. Size auto-shrinks so it always stays inside the safe area.</div>
     ${lockRowHtml('text', t.id, t.locked)}
     <button class="cr-text-line-remove" style="margin-top:10px" onclick="removeTextLine(${t.id})">Remove this text line</button>`;
 }
@@ -796,9 +795,10 @@ function startElementDrag(canvas, e, mode, el){
   state.dragging = true;
   state.dragTarget = el;
   state.dragMode = mode;
+  state.dragIsText = state.textLines.includes(el); // text uses .size, stickers/character use .scale
   state.dragStartX = e.clientX; state.dragStartY = e.clientY;
   state.dragStartOffX = el.xFrac; state.dragStartOffY = el.yFrac;
-  state.dragStartScale = el.scale;
+  state.dragStartScale = state.dragIsText ? el.size : el.scale;
   state.dragStartRotation = el.rotation || 0;
   state.dragStartDist = Math.max(0.01, Math.hypot(p.x-el.xFrac, p.y-el.yFrac));
   state.dragStartAngle = Math.atan2(p.y-el.yFrac, p.x-el.xFrac);
@@ -814,11 +814,10 @@ function bindCanvasInteractions(canvas){
     const HANDLE_R = 0.05;
 
     // 1. Handles of the currently selected element take priority (skipped if locked)
-    if (state.selected && (state.selected.kind==='sticker' || state.selected.kind==='character')){
-      const isChar = state.selected.kind==='character';
-      const el = isChar ? state.character : state.stickers.find(s=>s.id===state.selected.id);
-      if (el && !el.locked){
-        const hp = handlePositions(el, isChar);
+    {
+      const { el, kind } = selectedElementAndKind();
+      if (el && !el.locked && (kind==='sticker' || kind==='character' || kind==='text')){
+        const hp = handlePositions(el, kind);
         if (dist2(p.x,p.y,hp.resize.x,hp.resize.y) <= HANDLE_R*HANDLE_R){
           startElementDrag(canvas, e, 'resize', el); return;
         }
@@ -841,7 +840,7 @@ function bindCanvasInteractions(canvas){
       if (!sticker.locked) startElementDrag(canvas, e, 'move', sticker);
       return;
     }
-    if (state.character && !state.character.locked && dist2(p.x,p.y,0,0) <= Math.pow(elementRadiusFrac(state.character,true),2)){
+    if (state.character && !state.character.locked && dist2(p.x,p.y,0,0) <= Math.pow(elementRadiusFrac(state.character,'character'),2)){
       if (layerKey(state.selected)!==layerKey({kind:'character'})) selectLayer({ kind:'character' });
       return; // character position is always centered — select only, no move-drag
     }
@@ -874,10 +873,17 @@ function bindCanvasInteractions(canvas){
       const dyFrac = (e.clientY - state.dragStartY) / rect.height;
       state.dragTarget.xFrac = state.dragStartOffX + dxFrac;
       state.dragTarget.yFrac = state.dragStartOffY + dyFrac;
-      if (state.textLines.includes(state.dragTarget)) clampTextPosition(state.dragTarget);
+      if (state.dragIsText) clampTextPosition(state.dragTarget);
     } else if (state.dragTarget && state.dragMode==='resize'){
       const dist = Math.hypot(p.x-state.dragTarget.xFrac, p.y-state.dragTarget.yFrac);
-      state.dragTarget.scale = Math.max(0.3, Math.min(3, state.dragStartScale * (dist/state.dragStartDist)));
+      const newScale = Math.max(0.3, Math.min(3, state.dragStartScale * (dist/state.dragStartDist)));
+      if (state.dragIsText){
+        state.dragTarget.size = newScale;
+        clampTextSize(state.dragTarget);
+        clampTextPosition(state.dragTarget);
+      } else {
+        state.dragTarget.scale = newScale;
+      }
     } else if (state.dragTarget && state.dragMode==='rotate'){
       const angle = Math.atan2(p.y-state.dragTarget.yFrac, p.x-state.dragTarget.xFrac);
       state.dragTarget.rotation = state.dragStartRotation + (angle - state.dragStartAngle);
@@ -1003,6 +1009,19 @@ function drawPlacedImage(ctx, artboardPx, img, xFrac, yFrac, dFrac, rotation){
   ctx.restore();
 }
 
+// The text's own bounding radius (in artboard-fraction units) — used for hit
+// testing, position clamping, and sizing the resize/rotate handle ring.
+function textFootprintFrac(t){
+  const ctx = document.getElementById('designCanvas').getContext('2d');
+  const scalePxPerInch = CANVAS_PX / artboardDiameter();
+  const cutRadiusPx = (state.size/2) * scalePxPerInch;
+  ctx.font = `bold ${28*t.size}px "${t.font}", 'Nunito', sans-serif`;
+  const width = ctx.measureText(t.text || 'Text').width;
+  const height = 28*t.size*1.15;
+  const rPx = t.placement==='straight' ? Math.hypot(width/2, height/2) : (cutRadiusPx*0.78) + height/2;
+  return rPx / CANVAS_PX;
+}
+
 // Auto-shrinks a text line's size so it never renders past the safe-area
 // circle — called whenever text/size/font/placement changes.
 function clampTextSize(t){
@@ -1060,6 +1079,13 @@ function drawTextLines(ctx, artboardPx){
     }
     const cx = artboardPx/2 + (t.xFrac||0)*artboardPx;
     const cy = artboardPx/2 + (t.yFrac||0)*artboardPx;
+    // Rotate the whole element (straight text or the entire arc) around its
+    // own anchor point, matching how sticker/character rotation works.
+    if (t.rotation){
+      ctx.translate(cx, cy);
+      ctx.rotate(t.rotation);
+      ctx.translate(-cx, -cy);
+    }
     if (t.placement==='straight'){
       ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText(t.text, cx, cy);
@@ -1094,12 +1120,15 @@ function drawArcText(ctx, text, cx, cy, radius, bottom){
   });
 }
 
-/* ── SELECTION HANDLES (resize + rotate) ─────── */
-function elementRadiusFrac(el, isCharacter){
-  return (isCharacter ? CHARACTER_BASE_R : STICKER_BASE_R) * el.scale;
+/* ── SELECTION HANDLES (resize + rotate) — sticker, character, and text ── */
+function elementRadiusFrac(el, kind){
+  if (kind==='character') return CHARACTER_BASE_R * el.scale;
+  if (kind==='sticker')   return STICKER_BASE_R * el.scale;
+  if (kind==='text')      return textFootprintFrac(el);
+  return 0.14;
 }
-function handlePositions(el, isCharacter){
-  const r = elementRadiusFrac(el, isCharacter);
+function handlePositions(el, kind){
+  const r = elementRadiusFrac(el, kind);
   const rot = el.rotation || 0;
   const resizeA = rot + Math.PI/4;
   const rotateA = rot - Math.PI/2;
@@ -1108,15 +1137,21 @@ function handlePositions(el, isCharacter){
     rotate: { x: el.xFrac + r*1.6*Math.cos(rotateA),  y: el.yFrac + r*1.6*Math.sin(rotateA) },
   };
 }
+function selectedElementAndKind(){
+  if (!state.selected) return {};
+  const kind = state.selected.kind;
+  const el = kind==='character' ? state.character
+    : kind==='sticker' ? state.stickers.find(s=>s.id===state.selected.id)
+    : kind==='text' ? state.textLines.find(t=>t.id===state.selected.id)
+    : null;
+  return { el, kind };
+}
 function drawSelectionHandles(ctx, artboardPx){
-  if (!state.selected) return;
-  if (state.selected.kind!=='sticker' && state.selected.kind!=='character') return;
-  const isChar = state.selected.kind==='character';
-  const el = isChar ? state.character : state.stickers.find(s=>s.id===state.selected.id);
-  if (!el) return;
-  const r = elementRadiusFrac(el, isChar) * artboardPx;
+  const { el, kind } = selectedElementAndKind();
+  if (!el || (kind!=='sticker' && kind!=='character' && kind!=='text')) return;
+  const r = elementRadiusFrac(el, kind) * artboardPx;
   const cx = artboardPx/2 + el.xFrac*artboardPx, cy = artboardPx/2 + el.yFrac*artboardPx;
-  const hp = handlePositions(el, isChar);
+  const hp = handlePositions(el, kind);
 
   ctx.save();
   ctx.strokeStyle = '#8FAE7C'; ctx.lineWidth = 2; ctx.setLineDash([5,4]);
@@ -1319,22 +1354,7 @@ function showDoneScreen(code, emailResult){
   goStep('done');
 }
 
-/* ── DEVTOOLS DETECTION (deterrent-level only) ──
-   Cannot reliably block a determined user — this only
-   discourages casual screenshot/inspect attempts. */
-function watchDevtools(){
-  const threshold = 160;
-  setInterval(()=>{
-    const shield = document.getElementById('devtoolsShield');
-    if (!shield) return;
-    const open = (window.outerWidth - window.innerWidth > threshold) ||
-                 (window.outerHeight - window.innerHeight > threshold);
-    shield.classList.toggle('show', open && document.getElementById('step-design')?.classList.contains('active'));
-  }, 800);
-}
-
 /* ── INIT ─────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', ()=>{
   renderProductGrid();
-  watchDevtools();
 });
