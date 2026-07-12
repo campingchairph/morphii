@@ -1180,6 +1180,15 @@ function drawPreview(){
   drawWatermark(ctx, CANVAS_PX);
 }
 
+// Watermarked but WITHOUT guides/handles — those are live-editing chrome and
+// shouldn't appear in the submit-step review thumbnail or anywhere else the
+// design is just being looked at rather than edited.
+function renderWatermarkedPreview(canvas){
+  const ctx = canvas.getContext('2d');
+  drawDesignLayer(ctx, canvas.width);
+  drawWatermark(ctx, canvas.width);
+}
+
 /* ── CLEAN EXPORT (no watermark/guides) — admin only ── */
 function compositeCleanDesign(){
   const px = Math.round(artboardDiameter() * EXPORT_DPI);
@@ -1219,7 +1228,10 @@ function updateSubmitAvailability(){
 
 function renderSubmitSummary(){
   const wrap = document.getElementById('submitSummary');
-  const thumb = document.getElementById('designCanvas').toDataURL('image/png');
+  const off = document.createElement('canvas');
+  off.width = CANVAS_PX; off.height = CANVAS_PX;
+  renderWatermarkedPreview(off);
+  const thumb = off.toDataURL('image/png');
   wrap.innerHTML = `
     <img src="${thumb}" alt="Your design preview">
     <div style="font-size:12px;font-weight:800;color:var(--ink-dim)">
