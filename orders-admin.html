@@ -40,9 +40,15 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 .adm-stat b{display:block;font-family:'Fredoka One',cursive;font-size:20px;}
 .adm-stat span{font-size:10.5px;color:var(--ink-dim);font-weight:800;text-transform:uppercase;letter-spacing:0.4px;}
 
-.adm-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
-.adm-tab{padding:8px 16px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:white;font-size:12px;font-weight:800;cursor:pointer;}
+.adm-filter-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
+.adm-tabs{display:flex;gap:8px;flex-wrap:wrap;flex:1;}
+.adm-tab{padding:8px 16px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:white;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;}
 .adm-tab.active{background:var(--pink);border-color:var(--pink);}
+.adm-status-select{
+  padding:8px 14px;border-radius:20px;border:1.5px solid var(--border);background:rgba(255,255,255,0.06);
+  color:white;font-size:12px;font-weight:800;cursor:pointer;outline:none;flex-shrink:0;
+}
+.adm-status-select option{color:#000;}
 
 .adm-search-row{margin-bottom:14px;}
 .adm-search-wrap{position:relative;max-width:360px;}
@@ -67,13 +73,14 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 .adm-badge-pending{background:rgba(255,255,0,0.18);color:#FFFF00;}
 .adm-badge-approved{background:rgba(85,239,196,0.18);color:#55EFC4;}
 .adm-badge-rejected{background:rgba(255,94,91,0.18);color:#ff9b98;}
-.adm-badge-fulfilled{background:rgba(77,200,240,0.18);color:#4DC8F0;}
 .adm-card-actions{display:flex;gap:3px;flex-wrap:wrap;margin-top:6px;}
 .adm-btn{flex:1;min-width:44px;padding:4px;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:white;font-size:8px;font-weight:800;cursor:pointer;}
 .adm-btn.approve{border-color:#55EFC4;color:#55EFC4;}
+.adm-btn.approve.active{background:#55EFC4;color:#0B2E4E;}
 .adm-btn.reject{border-color:#ff9b98;color:#ff9b98;}
-.adm-btn.fulfill{border-color:#4DC8F0;color:#4DC8F0;}
+.adm-btn.reject.active{background:#ff9b98;color:#0B2E4E;}
 .adm-btn.printed{border-color:var(--yellow);color:var(--yellow);}
+.adm-btn.printed.active{background:var(--yellow);color:#0B2E4E;}
 .adm-empty{text-align:center;padding:60px 20px;color:var(--ink-dim);font-weight:700;}
 
 .adm-card-select{
@@ -164,13 +171,15 @@ h1,.logo{font-family:'Fredoka One',cursive;}
         <input type="text" class="adm-search-input" id="admSearch" placeholder="Search by code, email, or name…" oninput="setSearch(this.value)">
       </div>
     </div>
-    <div class="adm-tabs" id="admTabs">
-      <button class="adm-tab active" data-status="all" onclick="setFilter('all')">All</button>
-      <button class="adm-tab" data-status="pending" onclick="setFilter('pending')">Pending</button>
-      <button class="adm-tab" data-status="approved" onclick="setFilter('approved')">Approved</button>
-      <button class="adm-tab" data-status="rejected" onclick="setFilter('rejected')">Rejected</button>
-      <button class="adm-tab" data-status="fulfilled" onclick="setFilter('fulfilled')">Fulfilled</button>
-      <button class="adm-tab" data-status="printed" onclick="setFilter('printed')">Printed</button>
+    <div class="adm-filter-row">
+      <div class="adm-tabs" id="admTabs"></div>
+      <select class="adm-status-select" id="admStatusSelect" onchange="setStatusFilter(this.value)">
+        <option value="all">All Statuses</option>
+        <option value="pending">Pending</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
+        <option value="printed">Printed</option>
+      </select>
     </div>
     <div class="adm-grid" id="ordersGrid"></div>
   </div>
@@ -221,7 +230,6 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script>
-let currentFilter = 'all';
 let allOrders = [];
 let ordersUnsub = null;
 let selectedOrders = new Set();
@@ -277,31 +285,54 @@ function subscribeOrders(){
       const liveIds = new Set(allOrders.map(o=>o.id));
       selectedOrders.forEach(id => { if (!liveIds.has(id)) selectedOrders.delete(id); });
       renderStats();
+      renderTypeTabs();
       renderOrders();
       updateLayoutFab();
     }, err => console.warn('Orders listener error:', err));
 }
 
 function renderStats(){
-  const counts = { all: allOrders.length, pending:0, approved:0, rejected:0, fulfilled:0, printed:0 };
+  const counts = { all: allOrders.length, pending:0, approved:0, rejected:0, printed:0 };
   allOrders.forEach(o => { if (counts[o.status] != null) counts[o.status]++; if (o.printed) counts.printed++; });
   const el = document.getElementById('admStats');
   el.innerHTML = Object.entries(counts).map(([k,v]) =>
     `<div class="adm-stat"><b>${v}</b><span>${k}</span></div>`).join('');
 }
 
-function setFilter(status){
-  currentFilter = status;
-  document.querySelectorAll('.adm-tab').forEach(t => t.classList.toggle('active', t.dataset.status===status));
+let currentTypeFilter = 'all';
+let currentStatusFilter = 'all';
+
+// Tabs are the pin types actually present in the orders, not a fixed list —
+// so this stays correct if new product types get enabled in create.js later.
+function renderTypeTabs(){
+  const el = document.getElementById('admTabs');
+  const types = new Map(); // product id -> label
+  allOrders.forEach(o => { if (o.product) types.set(o.product, o.productLabel||o.product); });
+  const tabs = [{ id:'all', label:'All' }, ...[...types.entries()].map(([id,label])=>({id,label}))];
+  el.innerHTML = tabs.map(t =>
+    `<button class="adm-tab ${currentTypeFilter===t.id?'active':''}" onclick="setTypeFilter('${t.id}')">${escHtml(t.label)}</button>`
+  ).join('');
+}
+
+function setTypeFilter(type){
+  currentTypeFilter = type;
+  renderTypeTabs();
   renderOrders();
 }
-window.setFilter = setFilter;
+window.setTypeFilter = setTypeFilter;
+
+function setStatusFilter(status){
+  currentStatusFilter = status;
+  renderOrders();
+}
+window.setStatusFilter = setStatusFilter;
 
 function renderOrders(){
   const grid = document.getElementById('ordersGrid');
-  let list = currentFilter==='all' ? allOrders
-    : currentFilter==='printed' ? allOrders.filter(o=>o.printed)
-    : allOrders.filter(o=>o.status===currentFilter);
+  let list = currentTypeFilter==='all' ? allOrders : allOrders.filter(o=>o.product===currentTypeFilter);
+  list = currentStatusFilter==='all' ? list
+    : currentStatusFilter==='printed' ? list.filter(o=>o.printed)
+    : list.filter(o=>o.status===currentStatusFilter);
   if (searchQuery){
     list = list.filter(o =>
       (o.saveCode||'').toLowerCase().includes(searchQuery) ||
@@ -331,10 +362,9 @@ function renderOrders(){
         ${o.shopeeOrderId ? `<div class="adm-card-row"><b>Shopee:</b> ${escHtml(o.shopeeOrderId)}</div>` : ''}
         ${o.notes ? `<div class="adm-card-row"><b>Notes:</b> ${escHtml(o.notes)}</div>` : ''}
         <div class="adm-card-actions">
-          <button class="adm-btn approve" onclick="setStatus('${o.id}','approved')">Approve</button>
-          <button class="adm-btn reject" onclick="setStatus('${o.id}','rejected')">Reject</button>
-          <button class="adm-btn fulfill" onclick="setStatus('${o.id}','fulfilled')">Fulfilled</button>
-          <button class="adm-btn printed" onclick="togglePrinted('${o.id}')">${o.printed?'✓ Printed':'🖨 Queue'}</button>
+          <button class="adm-btn approve ${o.status==='approved'?'active':''}" onclick="setStatus('${o.id}','approved')">Approve</button>
+          <button class="adm-btn reject ${o.status==='rejected'?'active':''}" onclick="setStatus('${o.id}','rejected')">Reject</button>
+          <button class="adm-btn printed ${o.printed?'active':''}" onclick="togglePrinted('${o.id}')">${o.printed?'✓ Printed':'🖨 Queue'}</button>
         </div>
       </div>
     </div>`;
