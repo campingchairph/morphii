@@ -44,37 +44,48 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 .adm-tab{padding:8px 16px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:white;font-size:12px;font-weight:800;cursor:pointer;}
 .adm-tab.active{background:var(--pink);border-color:var(--pink);}
 
-.adm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;}
-.adm-card{background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+.adm-search-row{margin-bottom:14px;}
+.adm-search-wrap{position:relative;max-width:360px;}
+.adm-search-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--ink-dim);pointer-events:none;}
+.adm-search-input{
+  width:100%;padding:10px 12px 10px 34px;border-radius:20px;border:1.5px solid var(--border);
+  background:rgba(255,255,255,0.06);color:white;font-size:12.5px;font-weight:700;outline:none;
+}
+.adm-search-input:focus{border-color:var(--pink);}
+.adm-search-input::placeholder{color:var(--ink-dim);}
+
+/* Small, dense cards — expect a lot of submissions to page through. */
+.adm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px;}
+.adm-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden;position:relative;}
 .adm-card img{width:100%;aspect-ratio:1/1;object-fit:cover;cursor:zoom-in;background:#082138;}
-.adm-card-body{padding:14px;}
-.adm-card-title{font-weight:900;font-size:13.5px;margin-bottom:2px;}
-.adm-card-meta{font-size:11px;color:var(--ink-dim);font-weight:700;margin-bottom:8px;}
-.adm-card-row{font-size:12px;font-weight:700;margin-bottom:3px;}
+.adm-card-body{padding:8px;}
+.adm-card-title{font-weight:900;font-size:10.5px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.adm-card-meta{font-size:8px;color:var(--ink-dim);font-weight:700;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.adm-card-row{font-size:9px;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .adm-card-row b{color:var(--ink-dim);font-weight:800;}
-.adm-badge{display:inline-block;font-size:9.5px;font-weight:900;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;}
+.adm-badge{display:inline-block;font-size:7.5px;font-weight:900;padding:2px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:0.3px;margin-bottom:5px;}
 .adm-badge-pending{background:rgba(255,255,0,0.18);color:#FFFF00;}
 .adm-badge-approved{background:rgba(85,239,196,0.18);color:#55EFC4;}
 .adm-badge-rejected{background:rgba(255,94,91,0.18);color:#ff9b98;}
 .adm-badge-fulfilled{background:rgba(77,200,240,0.18);color:#4DC8F0;}
-.adm-card-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
-.adm-btn{flex:1;min-width:70px;padding:7px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:white;font-size:11px;font-weight:800;cursor:pointer;}
+.adm-card-actions{display:flex;gap:3px;flex-wrap:wrap;margin-top:6px;}
+.adm-btn{flex:1;min-width:44px;padding:4px;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:white;font-size:8px;font-weight:800;cursor:pointer;}
 .adm-btn.approve{border-color:#55EFC4;color:#55EFC4;}
 .adm-btn.reject{border-color:#ff9b98;color:#ff9b98;}
 .adm-btn.fulfill{border-color:#4DC8F0;color:#4DC8F0;}
 .adm-btn.printed{border-color:var(--yellow);color:var(--yellow);}
 .adm-empty{text-align:center;padding:60px 20px;color:var(--ink-dim);font-weight:700;}
 
-.adm-card{position:relative;}
 .adm-card-select{
-  position:absolute;top:10px;left:10px;z-index:2;width:24px;height:24px;border-radius:7px;
-  border:2px solid rgba(255,255,255,0.5);background:rgba(11,46,78,0.6);cursor:pointer;
-  display:flex;align-items:center;justify-content:center;font-size:13px;color:white;font-weight:900;
+  position:absolute;top:6px;left:6px;z-index:2;width:19px;height:19px;border-radius:6px;
+  border:2px solid rgba(255,255,255,0.5);background:rgba(11,46,78,0.65);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:11px;color:white;font-weight:900;
 }
 .adm-card-select.checked{background:var(--pink);border-color:var(--pink);}
 .adm-card.printed-flag::after{
-  content:'🖨 Printed';position:absolute;top:10px;right:10px;z-index:2;
-  background:rgba(255,255,0,0.9);color:#0B2E4E;font-size:9.5px;font-weight:900;padding:3px 8px;border-radius:20px;
+  content:'🖨';position:absolute;top:6px;right:6px;z-index:2;
+  background:rgba(255,255,0,0.9);color:#0B2E4E;font-size:10px;font-weight:900;width:19px;height:19px;
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
 }
 
 .adm-lightbox{display:none;position:fixed;inset:0;z-index:99;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:24px;}
@@ -112,8 +123,13 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 .pmi-sidebar{width:200px;flex-shrink:0;}
 .pmi-sidebar-title{font-family:'Fredoka One',cursive;font-size:14px;color:var(--ink-dim);margin-bottom:10px;}
 .pmi-pin-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;}
-.pmi-pin-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,0.05);font-size:11px;color:var(--ink-dim);font-weight:700;cursor:pointer;}
-.pmi-pin-item canvas{border-radius:50%;flex-shrink:0;}
+.pmi-pin-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,0.05);font-size:11px;color:var(--ink-dim);font-weight:700;}
+.pmi-pin-item canvas{border-radius:50%;flex-shrink:0;cursor:pointer;}
+.pmi-qty-input{
+  width:34px;flex-shrink:0;padding:4px 2px;border-radius:6px;border:1.5px solid var(--border);
+  background:rgba(255,255,255,0.08);color:white;font-size:11px;font-weight:800;text-align:center;outline:none;
+}
+.pmi-qty-input:focus{border-color:var(--sky);}
 .print-action-btn{width:100%;padding:12px;background:var(--yellow);color:#0B2E4E;border:none;border-radius:14px;font-family:'Fredoka One',cursive;font-size:16px;cursor:pointer;box-shadow:0 5px 0 #B8B800;margin-top:12px;}
 </style>
 </head>
@@ -142,6 +158,12 @@ h1,.logo{font-family:'Fredoka One',cursive;}
   </div>
   <div class="adm-main">
     <div class="adm-stats" id="admStats"></div>
+    <div class="adm-search-row">
+      <div class="adm-search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" class="adm-search-input" id="admSearch" placeholder="Search by code, email, or name…" oninput="setSearch(this.value)">
+      </div>
+    </div>
     <div class="adm-tabs" id="admTabs">
       <button class="adm-tab active" data-status="all" onclick="setFilter('all')">All</button>
       <button class="adm-tab" data-status="pending" onclick="setFilter('pending')">Pending</button>
@@ -186,7 +208,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
       </div>
       <div class="pmi-sidebar">
         <div class="pmi-sidebar-title">Pin Queue</div>
-        <div style="font-size:9px;font-weight:700;color:var(--ink-dim);margin-bottom:8px;">Click to include on paper</div>
+        <div style="font-size:9px;font-weight:700;color:var(--ink-dim);margin-bottom:8px;">Set how many copies of each design to print</div>
         <div class="pmi-pin-list" id="pmiPinList"></div>
       </div>
     </div>
@@ -203,6 +225,13 @@ let currentFilter = 'all';
 let allOrders = [];
 let ordersUnsub = null;
 let selectedOrders = new Set();
+let searchQuery = '';
+
+function setSearch(v){
+  searchQuery = v.trim().toLowerCase();
+  renderOrders();
+}
+window.setSearch = setSearch;
 
 function doLogin(){
   const errEl = document.getElementById('loginErr');
@@ -270,11 +299,18 @@ window.setFilter = setFilter;
 
 function renderOrders(){
   const grid = document.getElementById('ordersGrid');
-  const list = currentFilter==='all' ? allOrders
+  let list = currentFilter==='all' ? allOrders
     : currentFilter==='printed' ? allOrders.filter(o=>o.printed)
     : allOrders.filter(o=>o.status===currentFilter);
+  if (searchQuery){
+    list = list.filter(o =>
+      (o.saveCode||'').toLowerCase().includes(searchQuery) ||
+      (o.customerEmail||o.customerContact||'').toLowerCase().includes(searchQuery) ||
+      (o.customerName||'').toLowerCase().includes(searchQuery)
+    );
+  }
   if (!list.length){
-    grid.innerHTML = '<div class="adm-empty">No orders here yet.</div>';
+    grid.innerHTML = `<div class="adm-empty">${searchQuery ? 'No orders match your search.' : 'No orders here yet.'}</div>`;
     return;
   }
   grid.innerHTML = list.map(o => {
@@ -355,6 +391,8 @@ const PREVIEW_W = 420;
 let layoutPins = []; // {order, cx, cy, rad, dPx, active, img}
 let dragIdx = -1, dragOffX = 0, dragOffY = 0;
 let printScale = 1, printMg = 0;
+let orderQty = {};      // order id -> how many copies to pack
+let requestedTotal = 0; // total copies requested, for the "didn't fit" note
 
 function openPrintModal(){
   if (selectedOrders.size===0) return;
@@ -379,9 +417,18 @@ function packPins(){
 
   const orders = allOrders.filter(o => selectedOrders.has(o.id));
 
+  // Expand each selected order into `qty` copies of the same design so the
+  // same pin can be packed onto the sheet multiple times.
+  const items = [];
+  orders.forEach(order => {
+    const qty = Math.max(1, Math.min(99, parseInt(orderQty[order.id],10) || 1));
+    for (let i=0; i<qty; i++) items.push(order);
+  });
+  requestedTotal = items.length;
+
   let shelfX=printMg, shelfY=printMg, shelfH=0;
   layoutPins = [];
-  for (const order of orders){
+  for (const order of items){
     const d = (parseFloat(order.size)||2.25) * printScale;
     const rad = d/2 - 2;
     if (shelfX+d > printMg+(usableW*printScale) && shelfX>printMg){ shelfY+=shelfH+gapPx; shelfX=printMg; shelfH=0; }
@@ -447,7 +494,9 @@ function renderPaperCanvas(){
   const active = layoutPins.filter(p=>p.active);
   const counts = {}; active.forEach(p => { counts[p.order.size] = (counts[p.order.size]||0)+1; });
   const bd = Object.entries(counts).map(([s,n])=>`${n}×${s}"`).join(' · ');
-  document.getElementById('packInfo').textContent = `${active.length} pins on paper${bd?' · '+bd:''}`;
+  let info = `${active.length} pins on paper${bd?' · '+bd:''}`;
+  if (requestedTotal > active.length) info += ` · ${requestedTotal-active.length} didn't fit — try a bigger paper or fewer copies`;
+  document.getElementById('packInfo').textContent = info;
 }
 
 function renderPmiSidebar(){
@@ -455,38 +504,44 @@ function renderPmiSidebar(){
   list.innerHTML = '';
   const orders = allOrders.filter(o => selectedOrders.has(o.id));
   orders.forEach(order => {
-    const idx = layoutPins.findIndex(p=>p.order.id===order.id);
-    const onPaper = idx>=0;
-    const isActive = onPaper && layoutPins[idx].active;
+    const onPaperCount = layoutPins.filter(p=>p.order.id===order.id).length;
+    const qty = Math.max(1, Math.min(99, parseInt(orderQty[order.id],10) || 1));
     const item = document.createElement('div');
     item.className = 'pmi-pin-item';
-    item.style.cssText = `border:1.5px solid ${isActive?'#55EFC4':'rgba(255,255,255,0.08)'};background:${isActive?'rgba(85,239,196,0.08)':'rgba(255,255,255,0.03)'};`;
+
     const mc = document.createElement('canvas'); mc.width=28; mc.height=28;
     const mctx = mc.getContext('2d');
     const mi = new Image();
     mi.onload = function(){ mctx.save(); mctx.beginPath(); mctx.arc(14,14,13,0,Math.PI*2); mctx.clip(); mctx.drawImage(mi,0,0,28,28); mctx.restore(); };
     if (order.designDataUrl) mi.src = order.designDataUrl;
     item.appendChild(mc);
+
     const info = document.createElement('div'); info.style.flex = '1';
-    info.innerHTML = `<div style="font-size:10px;color:white;font-weight:800">${escHtml(order.customerName||'')}</div><div style="font-size:8px;color:var(--ink-dim)">${order.size}" · ${escHtml(order.productLabel||order.product||'')}</div>`;
+    info.innerHTML = `<div style="font-size:10px;color:white;font-weight:800">${escHtml(order.customerName||'')}</div><div style="font-size:8px;color:var(--ink-dim)">${order.size}" · ${onPaperCount}/${qty} on paper</div>`;
     item.appendChild(info);
-    const cb = document.createElement('div');
-    cb.style.cssText = `width:18px;height:18px;border-radius:5px;border:2px solid ${isActive?'#55EFC4':'rgba(255,255,255,0.2)'};background:${isActive?'#55EFC4':'transparent'};display:flex;align-items:center;justify-content:center;font-size:10px;color:#0B2E4E;flex-shrink:0;`;
-    if (isActive) cb.textContent = '✓';
-    item.appendChild(cb);
-    item.onclick = () => {
-      if (idx>=0){ layoutPins[idx].active = !layoutPins[idx].active; }
-      else {
-        const d = (parseFloat(order.size)||2.25) * printScale;
-        layoutPins.push({ order, cx:printMg+d/2+10, cy:printMg+d/2+10, rad:d/2-2, dPx:d, active:true, img:null });
-        if (order.designDataUrl){
-          const img = new Image();
-          img.onload = () => { layoutPins[layoutPins.length-1].img = img; renderPaperCanvas(); };
-          img.src = order.designDataUrl;
-        }
-      }
-      renderPaperCanvas(); renderPmiSidebar();
+
+    const qtyInput = document.createElement('input');
+    qtyInput.type = 'number'; qtyInput.min = '1'; qtyInput.max = '99'; qtyInput.value = qty;
+    qtyInput.className = 'pmi-qty-input';
+    qtyInput.title = 'Copies to print';
+    qtyInput.oninput = () => {
+      orderQty[order.id] = Math.max(1, Math.min(99, parseInt(qtyInput.value,10) || 1));
+      packPins();
     };
+    item.appendChild(qtyInput);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.textContent = '✕';
+    removeBtn.title = 'Remove from print queue';
+    removeBtn.style.cssText = 'background:none;border:none;color:#ff9b98;font-size:13px;font-weight:900;cursor:pointer;flex-shrink:0;padding:0 2px;';
+    removeBtn.onclick = () => {
+      selectedOrders.delete(order.id);
+      renderOrders();
+      updateLayoutFab();
+      if (selectedOrders.size===0) closePrintModal(); else packPins();
+    };
+    item.appendChild(removeBtn);
+
     list.appendChild(item);
   });
 }
@@ -543,8 +598,13 @@ function doPrint(){
     </style></head><body>
     <img src="${img}" onload="setTimeout(()=>{window.print();window.close();},200)">
     </body></html>`);
+  // A design can appear as several copies (print quantity), but a Firestore
+  // batch can only write to each document once — dedupe by order id.
   const batch = DB.batch();
+  const seen = new Set();
   layoutPins.filter(p=>p.active).forEach(p => {
+    if (seen.has(p.order.id)) return;
+    seen.add(p.order.id);
     batch.update(DB.collection('morphii_orders').doc(p.order.id), { printed:true });
   });
   batch.commit().catch(err => console.warn('Failed to mark orders printed:', err));
