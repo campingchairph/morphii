@@ -416,7 +416,8 @@ function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&l
    sub.thumb/sub.size. ── */
 const PAPER_SIZES = { letter:{ w:8.5, h:11 }, a4:{ w:8.27, h:11.69 } };
 const MARGIN_IN = 0.4;
-const PREVIEW_W = 420;
+const PREVIEW_W = 420;   // on-screen editing canvas only — never sent to the printer
+const PRINT_DPI = 300;   // actual output resolution used to build the print image
 
 let layoutPins = []; // {order, cx, cy, rad, dPx, active, img}
 let dragIdx = -1, dragOffX = 0, dragOffY = 0;
@@ -616,11 +617,38 @@ function initPaperDrag(){
   pc.addEventListener('touchend', endDrag);
 }
 
-function doPrint(){
-  const pc = document.getElementById('paperCanvas');
+// Builds the actual printable sheet at PRINT_DPI, completely separate from
+// the small #paperCanvas used for on-screen dragging/editing. That preview
+// canvas is only ~420px wide for the whole sheet (~49px/inch) and also has
+// the "included on paper" checkmark badge baked in — neither belongs in the
+// physical print, so this redraws just the clean pin images at full size.
+function buildPrintCanvas(){
   const paper = PAPER_SIZES[document.getElementById('paperSize').value];
+  const off = document.createElement('canvas');
+  off.width = Math.round(paper.w * PRINT_DPI);
+  off.height = Math.round(paper.h * PRINT_DPI);
+  const ctx = off.getContext('2d');
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, off.width, off.height);
+
+  // Pin positions/radii are stored in on-screen preview pixels (printScale
+  // px/inch) — convert to print-resolution pixels (PRINT_DPI px/inch).
+  const ratio = PRINT_DPI / printScale;
+  layoutPins.filter(p=>p.active && p.img).forEach(p => {
+    const cx = p.cx*ratio, cy = p.cy*ratio, rad = p.rad*ratio;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI*2); ctx.clip();
+    ctx.drawImage(p.img, cx-rad, cy-rad, rad*2, rad*2);
+    ctx.restore();
+  });
+  return off;
+}
+
+function doPrint(){
+  const paper = PAPER_SIZES[document.getElementById('paperSize').value];
+  const printCanvas = buildPrintCanvas();
   const win = window.open('', '_blank');
-  const img = pc.toDataURL('image/png');
+  const img = printCanvas.toDataURL('image/png');
   win.document.write(`<!DOCTYPE html><html><head><title>Morphii Print</title>
     <style>*{margin:0;padding:0;}body{background:white;}
     img{width:${paper.w}in;height:${paper.h}in;display:block;}
