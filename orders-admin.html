@@ -108,12 +108,16 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 .adm-layout-fab.show{display:block;}
 
 /* ── PRINT LAYOUT MODAL (ported from the kiosk) ── */
-#printModal{
+#printModal, #fontsModal{
   display:none;position:fixed;inset:0;z-index:200;
   background:rgba(7,25,41,0.92);backdrop-filter:blur(8px);
   flex-direction:column;align-items:center;overflow-y:auto;padding:24px;
 }
-#printModal.open{display:flex;}
+#printModal.open, #fontsModal.open{display:flex;}
+.font-row{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:8px 10px;}
+.font-row-preview{font-size:18px;flex-shrink:0;width:38px;text-align:center;color:white;}
+.font-row-name{flex:1;font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.font-row-remove{background:none;border:none;color:#ff9b98;font-size:11px;font-weight:800;cursor:pointer;flex-shrink:0;}
 .print-modal-inner{background:var(--navy);border-radius:24px;width:100%;max-width:900px;border:2px solid var(--border);overflow:hidden;margin:auto;}
 .pmi-header{padding:18px 24px;background:#071929;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--border);}
 .pmi-title{font-family:'Fredoka One',cursive;font-size:20px;color:white;}
@@ -159,6 +163,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
   <div class="adm-header">
     <div class="logo">morphii<span>.</span> Order Admin</div>
     <div style="display:flex;align-items:center;gap:12px">
+      <button class="adm-signout" onclick="openFontsModal()">🔤 Fonts</button>
       <div class="adm-user" id="admUserEmail"></div>
       <button class="adm-signout" onclick="doSignOut()">Sign Out</button>
     </div>
@@ -220,6 +225,28 @@ h1,.logo{font-family:'Fredoka One',cursive;}
         <div style="font-size:9px;font-weight:700;color:var(--ink-dim);margin-bottom:8px;">Set how many copies of each design to print</div>
         <div class="pmi-pin-list" id="pmiPinList"></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CUSTOM FONTS MODAL ══ -->
+<div id="fontsModal">
+  <div class="print-modal-inner" style="max-width:460px">
+    <div class="pmi-header">
+      <div class="pmi-title">🔤 Custom Fonts</div>
+      <button class="pmi-close" onclick="closeFontsModal()">✕</button>
+    </div>
+    <div class="pmi-body" style="flex-direction:column;flex-wrap:nowrap">
+      <div style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-bottom:12px;line-height:1.5;">
+        Paste a Google Fonts link (Google Fonts → select a font → "Get font" → copy the embed &lt;link&gt; URL) to add it as a text choice in the pin designer.
+      </div>
+      <div id="fontsList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>
+      <label class="login-sub" style="text-align:left;margin-bottom:4px">Font link</label>
+      <input type="text" id="fontUrlInput" class="login-input" placeholder="https://fonts.googleapis.com/css2?family=Bangers&display=swap" oninput="onFontUrlInput()">
+      <label class="login-sub" style="text-align:left;margin-bottom:4px">Font name</label>
+      <input type="text" id="fontNameInput" class="login-input" placeholder="Auto-filled from Google Fonts links">
+      <button class="print-action-btn" style="margin-top:4px" onclick="addCustomFont()">+ Add Font</button>
+      <div id="fontsError" style="color:#ff9b98;font-size:11px;font-weight:700;margin-top:10px;display:none"></div>
     </div>
   </div>
 </div>
@@ -407,6 +434,92 @@ function closeLightbox(){ document.getElementById('lightbox').classList.remove('
 window.closeLightbox = closeLightbox;
 
 function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ── CUSTOM FONTS (morphii_config/fonts) ─────────────────────────────
+   Admin pastes a font stylesheet link (Google Fonts embed URL, or any
+   @font-face CSS link); create.js reads the same doc to offer these as
+   text font choices in the pin designer. ── */
+let customFonts = [];
+
+async function openFontsModal(){
+  customFonts = await getCustomFonts();
+  ensureFontLinksLoaded();
+  renderFontsList();
+  document.getElementById('fontsModal').classList.add('open');
+}
+window.openFontsModal = openFontsModal;
+function closeFontsModal(){
+  document.getElementById('fontsModal').classList.remove('open');
+}
+window.closeFontsModal = closeFontsModal;
+
+// Injects each font's stylesheet once so the "Aa" preview + rest of the
+// admin UI can render text in it — separate from re-rendering the list.
+function ensureFontLinksLoaded(){
+  customFonts.forEach(f => {
+    if (!document.querySelector(`link[data-font-url="${f.url}"]`)){
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = f.url;
+      link.dataset.fontUrl = f.url;
+      document.head.appendChild(link);
+    }
+  });
+}
+
+function renderFontsList(){
+  const list = document.getElementById('fontsList');
+  if (!customFonts.length){
+    list.innerHTML = '<div style="font-size:11px;color:var(--ink-dim);font-weight:700;">No custom fonts yet.</div>';
+    return;
+  }
+  list.innerHTML = customFonts.map((f,i) => `
+    <div class="font-row">
+      <span class="font-row-preview" style="font-family:'${escHtml(f.name)}',sans-serif">Aa</span>
+      <span class="font-row-name">${escHtml(f.name)}</span>
+      <button class="font-row-remove" onclick="removeCustomFont(${i})">Remove</button>
+    </div>`).join('');
+}
+
+// Auto-fills the name field from a Google Fonts css2 URL's family= param
+// (e.g. ?family=Bangers or ?family=Baloo+2:wght@600 → "Bangers"/"Baloo 2").
+function onFontUrlInput(){
+  const url = document.getElementById('fontUrlInput').value.trim();
+  const m = url.match(/[?&]family=([^&]+)/);
+  if (m){
+    const fam = decodeURIComponent(m[1]).split(':')[0].replace(/\+/g,' ');
+    document.getElementById('fontNameInput').value = fam;
+  }
+}
+window.onFontUrlInput = onFontUrlInput;
+
+async function addCustomFont(){
+  const errEl = document.getElementById('fontsError');
+  errEl.style.display = 'none';
+  const url = document.getElementById('fontUrlInput').value.trim();
+  const name = document.getElementById('fontNameInput').value.trim();
+  if (!url || !name){ errEl.textContent = 'Enter both a font link and a name.'; errEl.style.display = 'block'; return; }
+  if (customFonts.some(f=>f.name===name)){ errEl.textContent = 'A font with that name already exists.'; errEl.style.display = 'block'; return; }
+  customFonts.push({ name, url });
+  try {
+    await saveCustomFonts(customFonts);
+    document.getElementById('fontUrlInput').value = '';
+    document.getElementById('fontNameInput').value = '';
+    ensureFontLinksLoaded();
+    renderFontsList();
+  } catch(e){
+    customFonts.pop();
+    errEl.textContent = 'Error: '+e.message; errEl.style.display = 'block';
+  }
+}
+window.addCustomFont = addCustomFont;
+
+async function removeCustomFont(i){
+  const [removed] = customFonts.splice(i, 1);
+  try { await saveCustomFonts(customFonts); renderFontsList(); }
+  catch(e){ customFonts.splice(i, 0, removed); alert('Error: '+e.message); }
+}
+window.removeCustomFont = removeCustomFont;
 
 /* ── PRINT LAYOUT (ported from the kiosk's morphii.js) ──────────────
    Same shelf-packing approach: place circles left-to-right on a shelf,

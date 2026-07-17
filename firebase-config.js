@@ -73,6 +73,22 @@ async function submitOrder(order) {
   });
 }
 
+/* ── CUSTOM FONTS (morphii_config/fonts doc) ───
+   { list: [ { name:'Bangers', url:'https://fonts.googleapis.com/css2?family=Bangers&display=swap' }, ... ] }
+   Public read (create.html needs it, unauthenticated) — admin-only write.
+   Used by both the admin Fonts manager and the pin designer's text tool. */
+async function getCustomFonts() {
+  if (!DB) return [];
+  try {
+    const doc = await DB.collection('morphii_config').doc('fonts').get();
+    return (doc.exists && doc.data().list) || [];
+  } catch (e) { return []; }
+}
+async function saveCustomFonts(list) {
+  if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
+  return DB.collection('morphii_config').doc('fonts').set({ list });
+}
+
 /* ── Firestore Security Rules ──────────────────
    Publish these in Firebase Console → Firestore → Rules:
 
@@ -82,6 +98,11 @@ async function submitOrder(order) {
        match /morphii_orders/{orderId} {
          allow create: if true;
          allow read, update, delete: if request.auth != null
+           && request.auth.token.email in ['buboyseph@gmail.com'];
+       }
+       match /morphii_config/{docId} {
+         allow read: if true;
+         allow write: if request.auth != null
            && request.auth.token.email in ['buboyseph@gmail.com'];
        }
      }

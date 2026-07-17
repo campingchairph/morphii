@@ -1796,8 +1796,30 @@ async function loadPinAssetManifest(){
   }
 }
 
+// Admin-added fonts (orders-admin.html → Fonts) — stored in Firestore
+// (morphii_config/fonts), loaded into the FONTS list the text tool offers.
+async function loadCustomFonts(){
+  try {
+    const list = await getCustomFonts();
+    list.forEach(f => {
+      if (!f || !f.name || !f.url || FONTS.includes(f.name)) return;
+      if (!document.querySelector(`link[data-font-url="${f.url}"]`)){
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = f.url;
+        link.dataset.fontUrl = f.url;
+        document.head.appendChild(link);
+      }
+      FONTS.push(f.name);
+    });
+  } catch(e){
+    // not configured / offline — text tool just keeps the built-in fonts
+  }
+}
+
 /* ── INIT ─────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', ()=>{
   renderProductGrid();
   loadPinAssetManifest();
+  loadCustomFonts();
 });
