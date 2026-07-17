@@ -108,14 +108,28 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 .adm-layout-fab.show{display:block;}
 
 /* ── PRINT LAYOUT MODAL (ported from the kiosk) ── */
-#printModal, #fontsModal{
+#printModal, #fontsModal, #assetsModal{
   display:none;position:fixed;inset:0;z-index:200;
   background:rgba(7,25,41,0.92);backdrop-filter:blur(8px);
   flex-direction:column;align-items:center;overflow-y:auto;padding:24px;
 }
-#printModal.open, #fontsModal.open{display:flex;}
+#printModal.open, #fontsModal.open, #assetsModal.open{display:flex;}
 .font-row{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:8px 10px;}
 .font-row-preview{font-size:18px;flex-shrink:0;width:38px;text-align:center;color:white;}
+.asset-row{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:8px 10px;}
+.asset-row img{width:38px;height:38px;object-fit:contain;border-radius:8px;background:#0d3557;flex-shrink:0;}
+.asset-row-name{font-size:9px;color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px;}
+.asset-label-input{
+  width:100%;padding:6px 9px;border-radius:8px;border:1.5px solid var(--border);
+  background:rgba(255,255,255,0.08);color:white;font-size:11px;font-weight:700;outline:none;
+}
+.asset-label-input:focus{border-color:var(--sky);}
+.asset-row-btn{
+  flex-shrink:0;padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);
+  color:white;font-size:10.5px;font-weight:800;cursor:pointer;
+}
+.asset-row-btn.saved{border-color:#55EFC4;color:#55EFC4;}
+.asset-row-remove{background:none;border:none;color:#ff9b98;font-size:10.5px;font-weight:800;cursor:pointer;flex-shrink:0;}
 .font-row-name{flex:1;font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .font-row-remove{background:none;border:none;color:#ff9b98;font-size:11px;font-weight:800;cursor:pointer;flex-shrink:0;}
 .print-modal-inner{background:var(--navy);border-radius:24px;width:100%;max-width:900px;border:2px solid var(--border);overflow:hidden;margin:auto;}
@@ -163,6 +177,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
   <div class="adm-header">
     <div class="logo">morphii<span>.</span> Order Admin</div>
     <div style="display:flex;align-items:center;gap:12px">
+      <button class="adm-signout" onclick="openAssetsModal()">🖼 Assets</button>
       <button class="adm-signout" onclick="openFontsModal()">🔤 Fonts</button>
       <div class="adm-user" id="admUserEmail"></div>
       <button class="adm-signout" onclick="doSignOut()">Sign Out</button>
@@ -247,6 +262,23 @@ h1,.logo{font-family:'Fredoka One',cursive;}
       <input type="text" id="fontNameInput" class="login-input" placeholder="Auto-filled from Google Fonts links">
       <button class="print-action-btn" style="margin-top:4px" onclick="addCustomFont()">+ Add Font</button>
       <div id="fontsError" style="color:#ff9b98;font-size:11px;font-weight:700;margin-top:10px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ASSET LIBRARY MODAL ══ -->
+<div id="assetsModal">
+  <div class="print-modal-inner" style="max-width:640px">
+    <div class="pmi-header">
+      <div class="pmi-title">🖼 Asset Library</div>
+      <button class="pmi-close" onclick="closeAssetsModal()">✕</button>
+    </div>
+    <div class="pmi-body" style="flex-direction:column;flex-wrap:nowrap">
+      <div style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-bottom:12px;line-height:1.5;">
+        Push image files to <code>assets/pins/&lt;category&gt;/</code> on GitHub first — they'll show up here to label. Labeling adds them to the pin designer's library; nothing shows up in the designer until it's labeled here.
+      </div>
+      <div class="adm-tabs" id="assetCatTabs" style="margin-bottom:14px"></div>
+      <div id="assetFilesList" style="display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto"></div>
     </div>
   </div>
 </div>
@@ -520,6 +552,121 @@ async function removeCustomFont(i){
   catch(e){ customFonts.splice(i, 0, removed); alert('Error: '+e.message); }
 }
 window.removeCustomFont = removeCustomFont;
+
+/* ── ASSET LIBRARY ────────────────────────────────────────────────
+   Two-step workflow: (1) push image files to assets/pins/<category>/ on
+   GitHub — only repo collaborators can do that, so that step is the access
+   control; (2) label them here, which just writes {label,url} pairs into
+   Firestore (morphii_config/assets) — no GitHub write/token needed. The
+   pin designer only shows files that have been labeled here. ── */
+const ASSET_CATEGORIES = [
+  { id:'stickers', label:'Stickers' },
+  { id:'shapes', label:'Shapes' },
+  { id:'holders', label:'Holders' },
+  { id:'texts', label:'Word Art' },
+  { id:'borders', label:'Borders' },
+  { id:'background', label:'Background' },
+  { id:'characters', label:'Characters' },
+];
+const ASSET_REPO_CONTENTS_BASE = 'https://api.github.com/repos/campingchairph/morphii/contents/assets/pins/';
+const ASSET_RAW_BASE = 'https://raw.githubusercontent.com/campingchairph/morphii/main/assets/pins/';
+
+let assetLibrary = {};
+let currentAssetCat = 'stickers';
+let currentAssetFiles = [];
+
+async function openAssetsModal(){
+  assetLibrary = await getAssetLibrary();
+  renderAssetCatTabs();
+  await loadAssetCatFiles();
+  document.getElementById('assetsModal').classList.add('open');
+}
+window.openAssetsModal = openAssetsModal;
+function closeAssetsModal(){
+  document.getElementById('assetsModal').classList.remove('open');
+}
+window.closeAssetsModal = closeAssetsModal;
+
+function renderAssetCatTabs(){
+  document.getElementById('assetCatTabs').innerHTML = ASSET_CATEGORIES.map(c =>
+    `<button class="adm-tab ${currentAssetCat===c.id?'active':''}" onclick="setAssetCat('${c.id}')">${c.label}</button>`
+  ).join('');
+}
+
+async function setAssetCat(id){
+  currentAssetCat = id;
+  renderAssetCatTabs();
+  await loadAssetCatFiles();
+}
+window.setAssetCat = setAssetCat;
+
+// GitHub's Contents API lists whatever is actually in the folder right now —
+// unauthenticated (fine for a public repo, just rate-limited to 60/hr, which
+// is plenty for occasional admin use).
+async function loadAssetCatFiles(){
+  const list = document.getElementById('assetFilesList');
+  list.innerHTML = '<div style="color:var(--ink-dim);font-size:12px;">Loading files from GitHub…</div>';
+  try {
+    const res = await fetch(ASSET_REPO_CONTENTS_BASE + currentAssetCat);
+    if (!res.ok) throw new Error('GitHub returned ' + res.status);
+    const items = await res.json();
+    currentAssetFiles = items
+      .filter(it => it.type==='file' && /\.(png|jpe?g|webp|gif)$/i.test(it.name))
+      .map(it => ({ name: it.name, url: ASSET_RAW_BASE + currentAssetCat + '/' + it.name }));
+  } catch(e){
+    currentAssetFiles = [];
+    list.innerHTML = `<div style="color:#ff9b98;font-size:12px;font-weight:700;">Couldn't load files from GitHub: ${escHtml(e.message)}</div>`;
+    return;
+  }
+  renderAssetFilesList();
+}
+
+function renderAssetFilesList(){
+  const list = document.getElementById('assetFilesList');
+  if (!currentAssetFiles.length){
+    list.innerHTML = `<div style="color:var(--ink-dim);font-size:12px;">No files in assets/pins/${escHtml(currentAssetCat)}/ yet — push some images there first.</div>`;
+    return;
+  }
+  const labeled = assetLibrary[currentAssetCat] || [];
+  list.innerHTML = currentAssetFiles.map((f,i) => {
+    const existing = labeled.find(e=>e.url===f.url);
+    return `
+    <div class="asset-row">
+      <img src="${f.url}" alt="">
+      <div style="flex:1;min-width:0;">
+        <div class="asset-row-name">${escHtml(f.name)}</div>
+        <input type="text" class="asset-label-input" placeholder="Label…" value="${escHtml(existing ? existing.label : '')}" id="assetLabelInput_${i}">
+      </div>
+      <button class="asset-row-btn ${existing?'saved':''}" onclick="saveAssetLabel(${i})">${existing?'✓ Saved':'Add'}</button>
+      ${existing ? `<button class="asset-row-remove" onclick="removeAssetFromLibrary(${i})">Remove</button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function saveAssetLabel(i){
+  const f = currentAssetFiles[i];
+  const label = document.getElementById('assetLabelInput_'+i).value.trim();
+  if (!label){ alert('Enter a label first.'); return; }
+  if (!assetLibrary[currentAssetCat]) assetLibrary[currentAssetCat] = [];
+  const idx = assetLibrary[currentAssetCat].findIndex(e=>e.url===f.url);
+  if (idx>=0) assetLibrary[currentAssetCat][idx].label = label;
+  else assetLibrary[currentAssetCat].push({ label, url:f.url });
+  try {
+    await saveAssetLibrary(assetLibrary);
+    renderAssetFilesList();
+  } catch(e){ alert('Error saving: '+e.message); }
+}
+window.saveAssetLabel = saveAssetLabel;
+
+async function removeAssetFromLibrary(i){
+  const f = currentAssetFiles[i];
+  assetLibrary[currentAssetCat] = (assetLibrary[currentAssetCat]||[]).filter(e=>e.url!==f.url);
+  try {
+    await saveAssetLibrary(assetLibrary);
+    renderAssetFilesList();
+  } catch(e){ alert('Error removing: '+e.message); }
+}
+window.removeAssetFromLibrary = removeAssetFromLibrary;
 
 /* ── PRINT LAYOUT (ported from the kiosk's morphii.js) ──────────────
    Same shelf-packing approach: place circles left-to-right on a shelf,

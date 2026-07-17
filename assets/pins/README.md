@@ -5,35 +5,46 @@ separate from the kiosk's own `assets/avatar/` library. Nobody can add files
 here unless they're a collaborator on this repo with write access — see the
 repo's top-level README/CLAUDE.md for what that means in practice.
 
-## How it works
+## How it works (two steps)
 
-`create.js` fetches `manifest.json` from this folder at page load
-(`loadPinAssetManifest()`), via `raw.githubusercontent.com` — no build step,
-no redeploy needed. Each key below is a list of `{ "label": "...", "url": "..." }`
-entries. Adding a new preset is just:
+**1. Push the raw image file to GitHub.** Add it to the matching subfolder
+below. This is the access-control step — only repo collaborators can do it,
+so nothing gets in this folder without someone trusted pushing it.
 
-1. Drop the image file into the matching subfolder.
-2. Add a `{ "label": ..., "url": ... }` entry for it in `manifest.json`, where
-   `url` is the raw GitHub URL:
-   `https://raw.githubusercontent.com/campingchairph/morphii/main/assets/pins/<folder>/<file>`
-3. Commit and push. No code changes required.
+**2. Label it in the admin page.** Open `orders-admin.html` → **🖼 Assets** →
+pick the category tab → the file you just pushed shows up with a thumbnail →
+type a label → **Add**. That's what actually makes it show up in the pin
+designer — a file sitting in the folder unlabeled is invisible to customers.
 
-## Folders → manifest keys → in-app category
+There's no code change or redeploy for either step. The admin page reads the
+folder contents straight from GitHub (so it always shows exactly what's
+there), and writes labels to Firestore (`morphii_config/assets`), which
+`create.js` reads at page load.
 
-| Folder | Manifest key | Shows up as | Notes |
-|---|---|---|---|
-| `stickers/` | `stickers` | Sticker | Freely placed, resizable/rotatable |
-| `shapes/` | `shapes` | Shapes | Decorative shape graphics |
-| `holders/` | `holders` | Shapes | Banners/badges meant to sit *behind* text — merged into the same "Shapes" gallery as `shapes/` |
-| `texts/` | `texts` | Word Art | Premade, non-editable text graphics (e.g. "BEST MOM") — distinct from the typed Text tool |
-| `borders/` | `borders` | Border | A single full-circle frame overlay, drawn above the background and below everything else. Author as a **square PNG with a transparent center** so it maps cleanly onto the round pin |
-| `background/` | `background` | Background → Photo → Presets | Curated stock background photos, shown alongside the upload option |
+## Folders → in-app category
 
-PNG with a transparent background is required for stickers/shapes/holders/texts
+| Folder | Shows up as | Notes |
+|---|---|---|
+| `stickers/` | Sticker | Freely placed, resizable/rotatable, upload also allowed |
+| `shapes/` | Shapes | Decorative shape graphics — library only, no customer upload |
+| `holders/` | Shapes | Banners/badges meant to sit *behind* text — shares the same "Shapes" gallery as `shapes/` in-app, library only |
+| `texts/` | Word Art | Premade, non-editable text graphics (e.g. "BEST MOM") — library only, distinct from the typed Text tool |
+| `borders/` | Border | A single full-circle frame overlay, drawn above the background and below everything else. Author as a **square PNG with a transparent center**. Upload also allowed |
+| `background/` | Background → Photo → Presets | Curated stock background photos, shown alongside the upload option |
+| `characters/` | Character | The centered mascot/logo slot. Upload also allowed |
+
+PNG with a transparent background is required for stickers/shapes/holders/texts/characters
 so they blend into the design (same rule as customer uploads). Borders and
 backgrounds should be square images.
 
-## Not covered here
+## Where the data actually lives
 
-`characters/` intentionally doesn't exist — the Character slot stays
-upload-only for now (no curated preset gallery).
+- **Files**: this folder, in git, served via `raw.githubusercontent.com`.
+- **Labels / which files are "in the library"**: Firestore doc
+  `morphii_config/assets`, shaped like:
+  ```json
+  { "stickers": [{ "label": "Gold Star", "url": "https://raw.githubusercontent.com/..." }], "shapes": [...], "holders": [...], "texts": [...], "borders": [...], "background": [...], "characters": [...] }
+  ```
+  Public read, admin-only write (same rule as `morphii_config/fonts`) — see
+  `firebase-config.js` for the security rules to publish in the Firebase
+  Console.

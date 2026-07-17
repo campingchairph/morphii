@@ -89,6 +89,26 @@ async function saveCustomFonts(list) {
   return DB.collection('morphii_config').doc('fonts').set({ list });
 }
 
+/* ── ASSET LIBRARY (morphii_config/assets doc) ──
+   { stickers:[{label,url}], shapes:[...], holders:[...], texts:[...],
+     borders:[...], background:[...], characters:[...] }
+   Raw image files live in the repo (assets/pins/<category>/ — only repo
+   collaborators can push there); this doc is just the curated "which files
+   are in the library, with what label" list, edited from the admin's Asset
+   Library screen (no GitHub write needed). Public read, admin-only write —
+   same as fonts above. Used by both the admin page and the pin designer. */
+async function getAssetLibrary() {
+  if (!DB) return {};
+  try {
+    const doc = await DB.collection('morphii_config').doc('assets').get();
+    return (doc.exists && doc.data()) || {};
+  } catch (e) { return {}; }
+}
+async function saveAssetLibrary(data) {
+  if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
+  return DB.collection('morphii_config').doc('assets').set(data);
+}
+
 /* ── Firestore Security Rules ──────────────────
    Publish these in Firebase Console → Firestore → Rules:
 

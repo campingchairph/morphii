@@ -1776,19 +1776,15 @@ function showDoneScreen(code, emailResult){
   goStep('done');
 }
 
-/* ── ASSET MANIFEST (stickers/shapes/word-art/borders/background presets) ──
-   Mirrors the kiosk's assets/avatar/manifest.json pattern (morphii.js) — a
-   JSON file listing {label,url} per category, fetched at runtime so new
-   presets can be added by pushing files + editing the manifest, no code
-   changes needed. See assets/pins/README.md for the exact schema. ── */
-const PINS_GITHUB_BASE = 'https://raw.githubusercontent.com/campingchairph/morphii/main/assets/pins/';
-const PINS_MANIFEST_URL = PINS_GITHUB_BASE + 'manifest.json';
-
+/* ── ASSET LIBRARY (stickers/shapes/word-art/borders/background/character
+   presets) — raw image files live in assets/pins/<category>/ (only repo
+   collaborators can push there); which ones are "in the library" and what
+   they're labeled is stored in Firestore (morphii_config/assets, see
+   firebase-config.js) so the admin can curate it from a page instead of
+   editing a file. See assets/pins/README.md for the full workflow. ── */
 async function loadPinAssetManifest(){
   try {
-    const res = await fetch(PINS_MANIFEST_URL);
-    if (!res.ok) return; // no manifest yet — presets stay empty, uploads still work
-    const manifest = await res.json();
+    const manifest = await getAssetLibrary();
     const fill = (arr, items) => { (items||[]).forEach(it => { if (it && it.url) arr.push({ label: it.label, src: it.url }); }); };
     fill(STICKER_PRESETS, manifest.stickers);
     fill(SHAPE_PRESETS, manifest.shapes);
@@ -1796,8 +1792,9 @@ async function loadPinAssetManifest(){
     fill(WORDART_PRESETS, manifest.texts);
     fill(BORDER_PRESETS, manifest.borders);
     fill(BACKGROUND_PRESETS, manifest.background);
+    fill(CHARACTER_PRESETS, manifest.characters);
   } catch(e){
-    // offline or manifest missing — non-fatal, presets just stay empty
+    // not configured / offline — non-fatal, presets just stay empty
   }
 }
 
