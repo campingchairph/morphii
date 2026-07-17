@@ -60,11 +60,40 @@ const GRADIENTS = [
   {label:'Lullaby',  grad4:['#E8D5FF','#B3E5FF','#FFD6E0','#FFFACD']},
 ];
 
-// Preset sticker/character libraries — empty for now, assets to be added later
-// (either hardcoded here or via the admin asset library once that's built).
-// Uploading your own PNG always works regardless of what's in these lists.
+// Preset libraries — populated at runtime from assets/pins/manifest.json
+// (see loadPinAssetManifest below). Uploading your own PNG always works
+// regardless of what's in these lists.
 const STICKER_PRESETS = [];
 const CHARACTER_PRESETS = [];
+const SHAPE_PRESETS = [];      // shapes + holders (text banners/badges) — same category
+const WORDART_PRESETS = [];    // premade word-art graphics ("BEST MOM" etc.)
+const BORDER_PRESETS = [];     // full-circle decorative frame overlays
+const BACKGROUND_PRESETS = []; // curated stock background photos
+
+// Sticker/Shape/Word Art are structurally identical placed-image elements
+// ({id, img, xFrac, yFrac, scale, rotation, locked}) that only differ in
+// which array holds them, which preset gallery feeds them, and their
+// dock label/upload wording — so their CRUD is written once and shared.
+const PLACED_META = {
+  sticker: { label:'Sticker',  uploadNoun:'sticker' },
+  shape:   { label:'Shape',    uploadNoun:'shape' },
+  wordart: { label:'Word Art', uploadNoun:'word art graphic' },
+};
+function placedArray(kind){
+  if (kind==='sticker') return state.stickers;
+  if (kind==='shape') return state.shapes;
+  return state.wordArts;
+}
+function placedPresets(kind){
+  if (kind==='sticker') return STICKER_PRESETS;
+  if (kind==='shape') return SHAPE_PRESETS;
+  return WORDART_PRESETS;
+}
+function nextPlacedId(kind){
+  if (kind==='sticker') return state.nextStickerId++;
+  if (kind==='shape') return state.nextShapeId++;
+  return state.nextWordArtId++;
+}
 
 const state = {
   product: null,
@@ -80,13 +109,18 @@ const state = {
   },
   textLines: [],
   stickers: [],             // [{id, img, xFrac, yFrac, scale, rotation}]
+  shapes: [],                // same shape as stickers — decorative shapes/holders
+  wordArts: [],               // same shape as stickers — premade word-art graphics
   character: null,          // {img, scale, rotation} | null
+  border: null,              // {img, src, label} | null — single preset, fixed above background
   nextStickerId: 1,
+  nextShapeId: 1,
+  nextWordArtId: 1,
   selected: null,           // {kind:'sticker', id} | {kind:'character'} | {kind:'background'} | null
-  // Z-order of everything EXCEPT the background (which is always fixed at the
-  // very back: color, then image, then everything in this list). Index 0 is
-  // the back-most of these, the last index is the front-most (drawn last).
-  layerOrder: [],           // [{kind:'character'}|{kind:'sticker',id}|{kind:'text',id}]
+  // Z-order of everything EXCEPT the background and border (which are always
+  // fixed at the very back: color, then image, then border, then everything
+  // in this list). Index 0 is the back-most of these, the last is front-most.
+  layerOrder: [],           // [{kind:'character'}|{kind:'sticker'|'shape'|'wordart', id}|{kind:'text',id}]
   dragging:false, dragTarget:null, dragMode:'move', dragStartX:0, dragStartY:0, dragStartOffX:0, dragStartOffY:0,
   dragStartScale:1, dragStartRotation:0, dragStartDist:0, dragStartAngle:0,
   nextTextId: 1,
@@ -251,6 +285,9 @@ const ICON_BG        = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 const ICON_STICKER    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/></svg>';
 const ICON_CHARACTER  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>';
 const ICON_TEXT       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h7"/></svg>';
+const ICON_SHAPE      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="16" r="3.5"/><rect x="13" y="12.5" width="7" height="7" rx="1.2"/><path d="M9 3l4 7H5z"/></svg>';
+const ICON_WORDART    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l4-3 4 3 4-3 4 3v10l-4-3-4 3-4-3-4 3z"/></svg>';
+const ICON_BORDER     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5" stroke-dasharray="2 2.4"/></svg>';
 const ICON_PRINT      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M6 16h12v5H6z"/></svg>';
 const ICON_PLUS       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>';
 const ICON_DUPLICATE  = '<svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>';
@@ -319,6 +356,15 @@ window.quickSelectCharacter = quickSelectCharacter;
 function quickSelectBackground(){ selectLayer({ kind:'background' }); }
 window.quickSelectBackground = quickSelectBackground;
 
+function quickSelectBorder(){ selectLayer({ kind:'border' }); }
+window.quickSelectBorder = quickSelectBorder;
+
+function quickAddShape(){ promptUpload('shape'); }
+window.quickAddShape = quickAddShape;
+
+function quickAddWordArt(){ promptUpload('wordart'); }
+window.quickAddWordArt = quickAddWordArt;
+
 /* ── BOTTOM DOCK (GoDaddy-style icon bar) ──────────────────────────
    Two swappable rows live in #dockArea:
    - Add-row (nothing selected): tap an element type to add/select it.
@@ -336,8 +382,11 @@ function renderDock(){
 function addRowHtml(){
   const items = [
     { onclick:'quickSelectBackground()', icon: bgChipThumb(), label:'Background', thumb:true },
+    { onclick:'quickSelectBorder()', icon: state.border ? `<img src="${state.border.img.src}" alt="">` : ICON_BORDER, label:'Border', thumb: !!state.border },
     { onclick:'quickSelectCharacter()', icon: state.character ? `<img src="${state.character.img.src}" alt="">` : ICON_CHARACTER, label:'Character', thumb: !!state.character },
     { onclick:'quickAddSticker()', icon: ICON_STICKER, label:'Sticker' },
+    { onclick:'quickAddShape()', icon: ICON_SHAPE, label:'Shapes' },
+    { onclick:'quickAddWordArt()', icon: ICON_WORDART, label:'Word Art' },
     { onclick:'quickAddText()', icon: ICON_TEXT, label:'Text' },
     { onclick:'openLayersModal()', icon: ICON_LAYERS, label:'Layers' },
   ];
@@ -363,16 +412,20 @@ function toolIconsForSelection(){
     { id:'lock', label: state.character.locked?'Locked':'Lock', icon: state.character.locked?ICON_LOCK:ICON_UNLOCK, instant:"toggleLock('character')", on: state.character.locked },
     { id:'remove', label:'Remove', icon:ICON_TRASH, instant:'removeCharacter()', danger:true },
   ] : [];
-  if (kind==='sticker'){
-    const s = state.stickers.find(x=>x.id===state.selected.id);
-    if (!s) return [];
+  if (kind==='border') return [
+    { id:'presets', label:'Presets', icon:ICON_PALETTE, panel:true },
+    { id:'remove', label:'Remove', icon:ICON_TRASH, instant:'removeBorder()', danger:true },
+  ];
+  if (kind==='sticker' || kind==='shape' || kind==='wordart'){
+    const el = placedArray(kind).find(x=>x.id===state.selected.id);
+    if (!el) return [];
     return [
-      { id:'replace', label:'Replace', icon:ICON_UPLOAD, instant:"promptUpload('sticker')" },
+      { id:'replace', label:'Replace', icon:ICON_UPLOAD, instant:`promptUpload('${kind}')` },
       { id:'size', label:'Size', icon:ICON_SIZE, panel:true },
       { id:'rotate', label:'Rotate', icon:ICON_ROTATE, panel:true },
-      { id:'duplicate', label:'Duplicate', icon:ICON_DUPLICATE, instant:`duplicateSticker(${s.id})` },
-      { id:'lock', label: s.locked?'Locked':'Lock', icon: s.locked?ICON_LOCK:ICON_UNLOCK, instant:`toggleLock('sticker',${s.id})`, on: s.locked },
-      { id:'remove', label:'Remove', icon:ICON_TRASH, instant:`removeSticker(${s.id})`, danger:true },
+      { id:'duplicate', label:'Duplicate', icon:ICON_DUPLICATE, instant:`duplicatePlaced('${kind}',${el.id})` },
+      { id:'lock', label: el.locked?'Locked':'Lock', icon: el.locked?ICON_LOCK:ICON_UNLOCK, instant:`toggleLock('${kind}',${el.id})`, on: el.locked },
+      { id:'remove', label:'Remove', icon:ICON_TRASH, instant:`removePlaced('${kind}',${el.id})`, danger:true },
     ];
   }
   if (kind==='text'){
@@ -431,8 +484,9 @@ function renderToolPanelContent(){
   const kind = state.selected.kind;
   let html = '';
   if (kind==='background') html = bgToolPanelHtml(_activeTool);
+  else if (kind==='border') html = borderToolPanelHtml(_activeTool);
   else if (kind==='character' && state.character) html = characterToolPanelHtml(_activeTool);
-  else if (kind==='sticker') html = stickerToolPanelHtml(_activeTool, state.selected.id);
+  else if (kind==='sticker' || kind==='shape' || kind==='wordart') html = placedToolPanelHtml(kind, _activeTool, state.selected.id);
   else if (kind==='text') html = textToolPanelHtml(_activeTool, state.selected.id);
   if (!html){ wrap.classList.remove('show'); body.innerHTML=''; return; }
   body.innerHTML = html;
@@ -443,6 +497,11 @@ function renderToolPanelContent(){
 function bgToolPanelHtml(tool){
   if (tool==='photo'){
     return `
+      ${BACKGROUND_PRESETS.length ? `
+        <div class="cr-field-label" style="margin-top:0">Presets</div>
+        <div class="cr-preset-grid">${BACKGROUND_PRESETS.map((p,i)=>
+          `<button class="cr-preset-thumb ${state.bg.img && state.bg.img.src===p.src ? 'active' : ''}" onclick="selectBgPreset(${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`
+        ).join('')}</div>` : ''}
       <button type="button" class="cr-upload-btn" onclick="document.getElementById('bgFileInput').click()">
         ${ICON_UPLOAD}<span id="bgUploadLabelText">Choose a Photo</span>
       </button>
@@ -480,6 +539,33 @@ function selectGradient(i){
 }
 window.selectGradient = selectGradient;
 
+/* ── BORDER TOOL PANEL (single preset, fixed above the background) ── */
+function borderToolPanelHtml(tool){
+  if (tool!=='presets') return '';
+  if (!BORDER_PRESETS.length) return `<div class="cr-empty-hint">No border designs yet — check back soon!</div>`;
+  return `<div class="cr-preset-grid">${BORDER_PRESETS.map((p,i)=>
+    `<button class="cr-preset-thumb ${state.border && state.border.src===p.src ? 'active' : ''}" onclick="selectBorderPreset(${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`
+  ).join('')}</div>`;
+}
+
+function selectBorderPreset(i){
+  const preset = BORDER_PRESETS[i];
+  if (!preset) return;
+  const img = new Image();
+  img.onload = () => {
+    state.border = { img, src: preset.src, label: preset.label };
+    renderDock(); renderToolPanelContent(); drawPreview();
+  };
+  img.src = preset.src;
+}
+window.selectBorderPreset = selectBorderPreset;
+
+function removeBorder(){
+  state.border = null;
+  renderDock(); renderToolPanelContent(); drawPreview();
+}
+window.removeBorder = removeBorder;
+
 function toggleColorLayer(on){
   state.bg.colorOn = on;
   drawPreview();
@@ -509,6 +595,13 @@ function loadBgFromLink(){
   setBgImage(url, true);
 }
 window.loadBgFromLink = loadBgFromLink;
+
+function selectBgPreset(i){
+  const preset = BACKGROUND_PRESETS[i];
+  if (!preset) return;
+  setBgImage(preset.src, true); // raw.githubusercontent.com sends CORS headers, so this loads clean (untainted)
+}
+window.selectBgPreset = selectBgPreset;
 
 function setBgImage(src, isExternal){
   if (!isExternal){
@@ -604,15 +697,41 @@ function clampBgTransform(){
   state.bg.offsetYFrac = Math.max(-maxY, Math.min(maxY, state.bg.offsetYFrac));
 }
 
-/* ── UPLOAD INSTRUCTIONS MODAL (with PNG/transparency infographic) ── */
+/* ── UPLOAD INSTRUCTIONS MODAL (with PNG/transparency infographic) ──
+   Also doubles as the preset picker for sticker/shape/wordart/character —
+   if a curated gallery exists for the kind, it's shown above the upload
+   button so "add one" always offers presets first, upload as a fallback. */
+function presetsForKind(kind){
+  if (kind==='character') return CHARACTER_PRESETS;
+  if (PLACED_META[kind]) return placedPresets(kind);
+  return [];
+}
+const UPLOAD_INPUT_IDS = { sticker:'stickerFileInput', character:'characterFileInput', shape:'shapeFileInput', wordart:'wordartFileInput' };
+
 function promptUpload(kind){
+  const noun = PLACED_META[kind] ? PLACED_META[kind].uploadNoun : kind;
   document.getElementById('uploadHintText').textContent =
-    `Your ${kind} file should be a PNG with a transparent (no) background, so it blends cleanly into the design.`;
-  document.getElementById('uploadHintInputId').value =
-    kind==='sticker' ? 'stickerFileInput' : kind==='character' ? 'characterFileInput' : 'bgFileInput';
+    `Your ${noun} file should be a PNG with a transparent (no) background, so it blends cleanly into the design.`;
+  document.getElementById('uploadHintInputId').value = UPLOAD_INPUT_IDS[kind] || 'bgFileInput';
+
+  const presets = presetsForKind(kind);
+  const grid = document.getElementById('uploadHintPresetGrid');
+  if (grid){
+    grid.style.display = presets.length ? '' : 'none';
+    grid.innerHTML = presets.length
+      ? presets.map((p,i)=>`<button class="cr-preset-thumb" onclick="choosePresetAndClose('${kind}',${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`).join('')
+      : '';
+  }
   document.getElementById('uploadHintOverlay').classList.add('show');
 }
 window.promptUpload = promptUpload;
+
+function choosePresetAndClose(kind, i){
+  closeUploadHint();
+  if (kind==='character') setCharacterFromPreset(i);
+  else addPlacedFromPreset(kind, i);
+}
+window.choosePresetAndClose = choosePresetAndClose;
 function closeUploadHint(){
   document.getElementById('uploadHintOverlay').classList.remove('show');
 }
@@ -638,20 +757,21 @@ function closeLayersModal(){
 }
 window.closeLayersModal = closeLayersModal;
 
+const PLACED_ICON = { sticker: ICON_STICKER, shape: ICON_SHAPE, wordart: ICON_WORDART };
 function layerThumbFor(d){
   if (d.kind==='character') return state.character ? `<img src="${state.character.img.src}" alt="">` : ICON_CHARACTER;
-  if (d.kind==='sticker'){ const s=state.stickers.find(x=>x.id===d.id); return s ? `<img src="${s.img.src}" alt="">` : ICON_STICKER; }
+  if (PLACED_META[d.kind]){ const el=placedArray(d.kind).find(x=>x.id===d.id); return el ? `<img src="${el.img.src}" alt="">` : PLACED_ICON[d.kind]; }
   return ICON_TEXT;
 }
 function layerLabelFor(d){
   if (d.kind==='character') return 'Character';
-  if (d.kind==='sticker'){ const idx=state.stickers.findIndex(x=>x.id===d.id); return 'Sticker '+(idx+1); }
+  if (PLACED_META[d.kind]){ const idx=placedArray(d.kind).findIndex(x=>x.id===d.id); return PLACED_META[d.kind].label+' '+(idx+1); }
   const t = state.textLines.find(x=>x.id===d.id);
   return (t && t.text ? t.text : 'Text').slice(0,18);
 }
 function layerLockedFor(d){
   if (d.kind==='character') return !!(state.character && state.character.locked);
-  if (d.kind==='sticker'){ const s=state.stickers.find(x=>x.id===d.id); return !!(s && s.locked); }
+  if (PLACED_META[d.kind]){ const el=placedArray(d.kind).find(x=>x.id===d.id); return !!(el && el.locked); }
   const t = state.textLines.find(x=>x.id===d.id);
   return !!(t && t.locked);
 }
@@ -676,6 +796,7 @@ function renderLayersModal(){
     const css = g.grad4 ? `linear-gradient(135deg,${g.grad4[0]},${g.grad4[3]})` : `linear-gradient(135deg,${g.grad[0]},${g.grad[1]})`;
     fixedRows.push({ label:'Background Color', thumb:`<span style="display:block;width:100%;height:100%;background:${css}"></span>` });
   }
+  if (state.border) fixedRows.push({ label:'Border', thumb:`<img src="${state.border.img.src}" alt="">` });
   fixed.innerHTML = fixedRows.length ? `
     <div class="cr-layers-fixed-label">Always at the back</div>
     ${fixedRows.map(r=>`
@@ -726,84 +847,101 @@ function endLayerDrag(){
   document.removeEventListener('pointermove', onLayerDragMove);
 }
 
-/* ── STICKER TOOL PANELS ──────────────────────── */
-function stickerToolPanelHtml(tool, id){
-  const s = state.stickers.find(x=>x.id===id);
-  if (!s) return '';
+/* ── STICKER / SHAPE / WORD ART TOOL PANELS (shared) ──────────────── */
+function placedToolPanelHtml(kind, tool, id){
+  const el = placedArray(kind).find(x=>x.id===id);
+  if (!el) return '';
+  const noun = PLACED_META[kind].label.toLowerCase();
   if (tool==='size'){
     return `
       <div class="cr-field-label">Size</div>
-      <input type="range" class="cr-range" min="0.4" max="2.5" step="0.1" value="${s.scale}" oninput="setStickerScale(${s.id},this.value)">
-      <div class="cr-hint">Drag the sticker on the pin to reposition.</div>`;
+      <input type="range" class="cr-range" min="0.4" max="2.5" step="0.1" value="${el.scale}" oninput="setPlacedScale('${kind}',${el.id},this.value)">
+      <div class="cr-hint">Drag the ${noun} on the pin to reposition.</div>`;
   }
   if (tool==='rotate'){
-    return `<div class="cr-hint" style="margin-top:2px">Use the blue handle that appears on the pin to rotate this sticker.</div>`;
+    return `<div class="cr-hint" style="margin-top:2px">Use the blue handle that appears on the pin to rotate this ${noun}.</div>`;
   }
   return '';
 }
 
-function duplicateSticker(id){
-  const s = state.stickers.find(x=>x.id===id);
-  if (!s) return;
-  const copy = {
-    id: state.nextStickerId++, img: s.img,
-    xFrac: Math.max(-0.4, Math.min(0.4, s.xFrac + 0.08)),
-    yFrac: Math.max(-0.4, Math.min(0.4, s.yFrac + 0.08)),
-    scale: s.scale, rotation: s.rotation, locked: false,
-  };
-  state.stickers.push(copy);
-  pushLayer({ kind:'sticker', id: copy.id });
-  selectLayer({ kind:'sticker', id: copy.id });
-}
-window.duplicateSticker = duplicateSticker;
-
-function addStickerFromPreset(i){
-  const preset = STICKER_PRESETS[i];
+function addPlacedFromPreset(kind, i){
+  const preset = placedPresets(kind)[i];
   if (!preset) return;
   const img = new Image();
   img.onload = () => {
-    const s = { id: state.nextStickerId++, img, xFrac:0.15, yFrac:-0.15, scale:1, rotation:0, locked:false };
-    state.stickers.push(s);
-    pushLayer({ kind:'sticker', id:s.id });
-    selectLayer({ kind:'sticker', id:s.id });
+    const el = { id: nextPlacedId(kind), img, xFrac:0.15, yFrac:-0.15, scale:1, rotation:0, locked:false };
+    placedArray(kind).push(el);
+    pushLayer({ kind, id: el.id });
+    selectLayer({ kind, id: el.id });
   };
   img.src = preset.src;
 }
-window.addStickerFromPreset = addStickerFromPreset;
+window.addPlacedFromPreset = addPlacedFromPreset;
 
-function onStickerFileChosen(e){
+function onPlacedFileChosen(kind, e){
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = ev => {
     const img = new Image();
     img.onload = () => {
-      const s = { id: state.nextStickerId++, img, xFrac:0.15, yFrac:-0.15, scale:1, rotation:0, locked:false };
-      state.stickers.push(s);
-      pushLayer({ kind:'sticker', id:s.id });
-      selectLayer({ kind:'sticker', id:s.id });
+      const el = { id: nextPlacedId(kind), img, xFrac:0.15, yFrac:-0.15, scale:1, rotation:0, locked:false };
+      placedArray(kind).push(el);
+      pushLayer({ kind, id: el.id });
+      selectLayer({ kind, id: el.id });
     };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
   e.target.value = '';
 }
-window.onStickerFileChosen = onStickerFileChosen;
+window.onPlacedFileChosen = onPlacedFileChosen;
 
-function removeSticker(id){
-  state.stickers = state.stickers.filter(s=>s.id!==id);
-  removeLayerFromOrder('sticker', id);
-  if (state.selected && state.selected.kind==='sticker' && state.selected.id===id) deselectLayer();
+function duplicatePlaced(kind, id){
+  const arr = placedArray(kind);
+  const el = arr.find(x=>x.id===id);
+  if (!el) return;
+  const copy = {
+    id: nextPlacedId(kind), img: el.img,
+    xFrac: Math.max(-0.4, Math.min(0.4, el.xFrac + 0.08)),
+    yFrac: Math.max(-0.4, Math.min(0.4, el.yFrac + 0.08)),
+    scale: el.scale, rotation: el.rotation, locked: false,
+  };
+  arr.push(copy);
+  pushLayer({ kind, id: copy.id });
+  selectLayer({ kind, id: copy.id });
+}
+window.duplicatePlaced = duplicatePlaced;
+
+function removePlaced(kind, id){
+  const arr = placedArray(kind);
+  const idx = arr.findIndex(x=>x.id===id);
+  if (idx>=0) arr.splice(idx,1);
+  removeLayerFromOrder(kind, id);
+  if (state.selected && state.selected.kind===kind && state.selected.id===id) deselectLayer();
   else { renderDock(); drawPreview(); }
 }
-window.removeSticker = removeSticker;
+window.removePlaced = removePlaced;
 
-function setStickerScale(id, val){
-  const s = state.stickers.find(x=>x.id===id);
-  if (!s) return;
-  s.scale = +val;
+function setPlacedScale(kind, id, val){
+  const el = placedArray(kind).find(x=>x.id===id);
+  if (!el) return;
+  el.scale = +val;
   drawPreview();
 }
+window.setPlacedScale = setPlacedScale;
+
+// Thin sticker-specific names kept so existing call sites (tool icons,
+// panel HTML built before this refactor) don't need to change.
+function duplicateSticker(id){ duplicatePlaced('sticker', id); }
+window.duplicateSticker = duplicateSticker;
+function addStickerFromPreset(i){ addPlacedFromPreset('sticker', i); }
+window.addStickerFromPreset = addStickerFromPreset;
+function onStickerFileChosen(e){ onPlacedFileChosen('sticker', e); }
+window.onStickerFileChosen = onStickerFileChosen;
+function removeSticker(id){ removePlaced('sticker', id); }
+window.removeSticker = removeSticker;
+function setStickerScale(id, val){ setPlacedScale('sticker', id, val); }
 window.setStickerScale = setStickerScale;
 
 /* ── CENTER CHARACTER TOOL PANELS (single, big, always centered) ── */
@@ -831,7 +969,7 @@ function characterToolPanelHtml(tool){
 function toggleLock(kind, id){
   const el = kind==='background' ? state.bg
     : kind==='character' ? state.character
-    : kind==='sticker' ? state.stickers.find(s=>s.id===id)
+    : (kind==='sticker' || kind==='shape' || kind==='wordart') ? placedArray(kind).find(x=>x.id===id)
     : state.textLines.find(t=>t.id===id);
   if (!el) return;
   el.locked = !el.locked;
@@ -1054,9 +1192,9 @@ function hitTestTopmost(xFrac, yFrac){
     if (d.kind==='text'){
       const t = state.textLines.find(x=>x.id===d.id);
       if (t && !t.locked && hitTestOneText(t, xFrac, yFrac)) return { kind:'text', el:t };
-    } else if (d.kind==='sticker'){
-      const s = state.stickers.find(x=>x.id===d.id);
-      if (s && !s.locked && hitTestOneSticker(s, xFrac, yFrac)) return { kind:'sticker', el:s };
+    } else if (d.kind==='sticker' || d.kind==='shape' || d.kind==='wordart'){
+      const el = placedArray(d.kind).find(x=>x.id===d.id);
+      if (el && !el.locked && hitTestOneSticker(el, xFrac, yFrac)) return { kind:d.kind, el };
     } else if (d.kind==='character'){
       if (state.character && !state.character.locked && dist2(xFrac,yFrac,0,0) <= Math.pow(elementRadiusFrac(state.character,'character'),2)){
         return { kind:'character', el:state.character };
@@ -1096,11 +1234,11 @@ function bindCanvasInteractions(canvas){
     const HANDLE_R = 0.05;
 
     // 1. Handles of the currently selected element take priority (skipped if locked).
-    // Stickers only — text/character resize+rotate via sliders instead, since
-    // their handles could end up off-canvas (ungrabbable) once enlarged.
+    // Sticker/shape/wordart only — text/character resize+rotate via sliders
+    // instead, since their handles could end up off-canvas once enlarged.
     {
       const { el, kind } = selectedElementAndKind();
-      if (el && !el.locked && kind==='sticker'){
+      if (el && !el.locked && (kind==='sticker' || kind==='shape' || kind==='wordart')){
         const hp = handlePositions(el, kind);
         if (dist2(p.x,p.y,hp.resize.x,hp.resize.y) <= HANDLE_R*HANDLE_R){
           startElementDrag(canvas, e, 'resize', el); return;
@@ -1162,7 +1300,7 @@ function bindCanvasInteractions(canvas){
   canvas.addEventListener('pointerup', ()=>{ state.dragging=false; state.dragTarget=null; });
   canvas.addEventListener('pointercancel', ()=>{ state.dragging=false; state.dragTarget=null; });
 
-  const stickerOrCharSelected = () => state.selected && (state.selected.kind==='sticker' || state.selected.kind==='character');
+  const stickerOrCharSelected = () => state.selected && ['sticker','shape','wordart','character'].includes(state.selected.kind);
 
   canvas.addEventListener('wheel', e=>{
     if (!state.bg.imageOn || !state.bg.img || state.bg.locked || stickerOrCharSelected()) return;
@@ -1209,12 +1347,13 @@ function drawDesignLayer(ctx, sizePx){
   ctx.arc(artboardPx/2, artboardPx/2, artboardPx/2, 0, Math.PI*2);
   ctx.clip();
 
-  drawBackground(ctx, artboardPx);  // always the back-most layer (color, then image)
+  drawBackground(ctx, artboardPx);  // back-most (color, then image)
+  drawBorder(ctx, artboardPx);      // fixed just above background, below everything else
   // Everything else draws in the user-defined stacking order (state.layerOrder,
   // back-to-front), managed via the Layers tab.
   state.layerOrder.forEach(d => {
     if (d.kind==='character') drawOneCharacter(ctx, artboardPx);
-    else if (d.kind==='sticker') drawOneSticker(ctx, artboardPx, state.stickers.find(s=>s.id===d.id));
+    else if (d.kind==='sticker' || d.kind==='shape' || d.kind==='wordart') drawOnePlaced(ctx, artboardPx, placedArray(d.kind).find(x=>x.id===d.id));
     else if (d.kind==='text') drawOneTextLine(ctx, artboardPx, state.textLines.find(t=>t.id===d.id));
   });
 
@@ -1253,12 +1392,20 @@ function drawBackground(ctx, artboardPx){
   }
 }
 
-const STICKER_BASE_R = 0.14;    // fraction of artboard diameter, at scale=1
+const STICKER_BASE_R = 0.14;    // fraction of artboard diameter, at scale=1 — shared by sticker/shape/wordart
 const CHARACTER_BASE_R = 0.275;
 
-function drawOneSticker(ctx, artboardPx, s){
-  if (!s || !s.img) return;
-  drawPlacedImage(ctx, artboardPx, s.img, s.xFrac, s.yFrac, STICKER_BASE_R*2*s.scale, s.rotation||0);
+function drawOnePlaced(ctx, artboardPx, el){
+  if (!el || !el.img) return;
+  drawPlacedImage(ctx, artboardPx, el.img, el.xFrac, el.yFrac, STICKER_BASE_R*2*el.scale, el.rotation||0);
+}
+
+// Single full-circle decorative frame, fixed above the background — the
+// asset should be authored as a square PNG with a transparent center so it
+// overlays the whole artboard edge-to-edge like a picture frame.
+function drawBorder(ctx, artboardPx){
+  if (!state.border || !state.border.img) return;
+  drawPlacedImage(ctx, artboardPx, state.border.img, 0, 0, 1, 0);
 }
 
 function drawOneCharacter(ctx, artboardPx){
@@ -1390,10 +1537,10 @@ function drawArcText(ctx, text, cx, cy, radius, bottom){
   });
 }
 
-/* ── SELECTION HANDLES (resize + rotate) — sticker, character, and text ── */
+/* ── SELECTION HANDLES (resize + rotate) — sticker/shape/wordart, character, text ── */
 function elementRadiusFrac(el, kind){
   if (kind==='character') return CHARACTER_BASE_R * el.scale;
-  if (kind==='sticker')   return STICKER_BASE_R * el.scale;
+  if (kind==='sticker' || kind==='shape' || kind==='wordart') return STICKER_BASE_R * el.scale;
   if (kind==='text')      return textFootprintFrac(el);
   return 0.14;
 }
@@ -1411,14 +1558,14 @@ function selectedElementAndKind(){
   if (!state.selected) return {};
   const kind = state.selected.kind;
   const el = kind==='character' ? state.character
-    : kind==='sticker' ? state.stickers.find(s=>s.id===state.selected.id)
+    : (kind==='sticker' || kind==='shape' || kind==='wordart') ? placedArray(kind).find(x=>x.id===state.selected.id)
     : kind==='text' ? state.textLines.find(t=>t.id===state.selected.id)
     : null;
   return { el, kind };
 }
 function drawSelectionHandles(ctx, artboardPx){
   const { el, kind } = selectedElementAndKind();
-  if (!el || kind!=='sticker') return;
+  if (!el || (kind!=='sticker' && kind!=='shape' && kind!=='wordart')) return;
   const r = elementRadiusFrac(el, kind) * artboardPx;
   const cx = artboardPx/2 + el.xFrac*artboardPx, cy = artboardPx/2 + el.yFrac*artboardPx;
   const hp = handlePositions(el, kind);
@@ -1624,7 +1771,33 @@ function showDoneScreen(code, emailResult){
   goStep('done');
 }
 
+/* ── ASSET MANIFEST (stickers/shapes/word-art/borders/background presets) ──
+   Mirrors the kiosk's assets/avatar/manifest.json pattern (morphii.js) — a
+   JSON file listing {label,url} per category, fetched at runtime so new
+   presets can be added by pushing files + editing the manifest, no code
+   changes needed. See assets/pins/README.md for the exact schema. ── */
+const PINS_GITHUB_BASE = 'https://raw.githubusercontent.com/campingchairph/morphii/main/assets/pins/';
+const PINS_MANIFEST_URL = PINS_GITHUB_BASE + 'manifest.json';
+
+async function loadPinAssetManifest(){
+  try {
+    const res = await fetch(PINS_MANIFEST_URL);
+    if (!res.ok) return; // no manifest yet — presets stay empty, uploads still work
+    const manifest = await res.json();
+    const fill = (arr, items) => { (items||[]).forEach(it => { if (it && it.url) arr.push({ label: it.label, src: it.url }); }); };
+    fill(STICKER_PRESETS, manifest.stickers);
+    fill(SHAPE_PRESETS, manifest.shapes);
+    fill(SHAPE_PRESETS, manifest.holders); // holders share the Shapes gallery
+    fill(WORDART_PRESETS, manifest.texts);
+    fill(BORDER_PRESETS, manifest.borders);
+    fill(BACKGROUND_PRESETS, manifest.background);
+  } catch(e){
+    // offline or manifest missing — non-fatal, presets just stay empty
+  }
+}
+
 /* ── INIT ─────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', ()=>{
   renderProductGrid();
+  loadPinAssetManifest();
 });

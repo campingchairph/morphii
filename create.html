@@ -90,11 +90,14 @@
     <input type="file" id="bgFileInput" accept="image/*" onchange="onBgFileChosen(event)" class="cr-visually-hidden">
     <input type="file" id="stickerFileInput" accept="image/png" onchange="onStickerFileChosen(event)" class="cr-visually-hidden">
     <input type="file" id="characterFileInput" accept="image/png" onchange="onCharacterFileChosen(event)" class="cr-visually-hidden">
+    <input type="file" id="shapeFileInput" accept="image/png" onchange="onPlacedFileChosen('shape', event)" class="cr-visually-hidden">
+    <input type="file" id="wordartFileInput" accept="image/png" onchange="onPlacedFileChosen('wordart', event)" class="cr-visually-hidden">
 
-    <!-- UPLOAD INSTRUCTIONS MODAL -->
+    <!-- UPLOAD INSTRUCTIONS MODAL (doubles as the preset picker, when one exists) -->
     <div class="cr-modal-overlay" id="uploadHintOverlay">
       <div class="cr-modal">
         <div class="cr-modal-title">Before you upload</div>
+        <div class="cr-preset-grid" id="uploadHintPresetGrid" style="display:none;margin-bottom:12px"></div>
         <div class="cr-modal-body" id="uploadHintText"></div>
         <div class="cr-png-infographic">
           <div class="cr-png-card bad">
