@@ -15,9 +15,8 @@
   <div class="cr-steps" id="crSteps">
     <div class="cr-step active" data-step="product"><span class="cr-step-num">1</span><span class="cr-step-label">Product</span></div>
     <div class="cr-step" data-step="size"><span class="cr-step-num">2</span><span class="cr-step-label">Size</span></div>
-    <div class="cr-step" data-step="print"><span class="cr-step-num">3</span><span class="cr-step-label">Print</span></div>
-    <div class="cr-step" data-step="design"><span class="cr-step-num">4</span><span class="cr-step-label">Design</span></div>
-    <div class="cr-step" data-step="submit"><span class="cr-step-num">5</span><span class="cr-step-label">Submit</span></div>
+    <div class="cr-step" data-step="design"><span class="cr-step-num">3</span><span class="cr-step-label">Design</span></div>
+    <div class="cr-step" data-step="submit"><span class="cr-step-num">4</span><span class="cr-step-label">Submit</span></div>
   </div>
 </header>
 
@@ -37,20 +36,12 @@
     <div class="cr-size-grid" id="sizeGrid"></div>
   </section>
 
-  <!-- STEP 3: PRINT SETTINGS -->
-  <section class="cr-panel" id="step-print">
-    <h1 class="cr-title">Print settings</h1>
-    <p class="cr-sub"><button class="cr-link-back" onclick="goStep('size')">&larr; Change size</button></p>
-    <div id="printStepBody" style="max-width:420px"></div>
-    <button class="cr-btn-primary" style="max-width:420px;margin-top:10px" onclick="goStep('design')">Continue to Design &rarr;</button>
-  </section>
-
-  <!-- STEP 4: DESIGN (mobile-first — pin always visible, controls in popup sheets) -->
+  <!-- STEP 3: DESIGN (mobile-first — pin always visible, controls in popup sheets) -->
   <section class="cr-panel cr-panel-design" id="step-design">
     <div class="cr-design-app">
 
       <div class="cr-design-topbar">
-        <button class="cr-icon-btn" onclick="goStep('print')">
+        <button class="cr-icon-btn" onclick="goStep('size')">
           <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
           Back
         </button>
@@ -90,31 +81,32 @@
     <input type="file" id="bgFileInput" accept="image/*" onchange="onBgFileChosen(event)" class="cr-visually-hidden">
     <input type="file" id="stickerFileInput" accept="image/png" onchange="onStickerFileChosen(event)" class="cr-visually-hidden">
     <input type="file" id="characterFileInput" accept="image/png" onchange="onCharacterFileChosen(event)" class="cr-visually-hidden">
-    <input type="file" id="shapeFileInput" accept="image/png" onchange="onPlacedFileChosen('shape', event)" class="cr-visually-hidden">
-    <input type="file" id="wordartFileInput" accept="image/png" onchange="onPlacedFileChosen('wordart', event)" class="cr-visually-hidden">
+    <input type="file" id="borderFileInput" accept="image/png" onchange="onBorderFileChosen(event)" class="cr-visually-hidden">
 
     <!-- UPLOAD INSTRUCTIONS MODAL (doubles as the preset picker, when one exists) -->
     <div class="cr-modal-overlay" id="uploadHintOverlay">
       <div class="cr-modal">
-        <div class="cr-modal-title">Before you upload</div>
+        <div class="cr-modal-title" id="uploadHintTitle">Before you upload</div>
         <div class="cr-preset-grid" id="uploadHintPresetGrid" style="display:none;margin-bottom:12px"></div>
         <div class="cr-modal-body" id="uploadHintText"></div>
-        <div class="cr-png-infographic">
-          <div class="cr-png-card bad">
-            <div class="cr-png-swatch solid"><span class="cr-png-shape"></span></div>
-            <div class="cr-png-label">✕ Has a background</div>
+        <div id="uploadHintPngSection">
+          <div class="cr-png-infographic">
+            <div class="cr-png-card bad">
+              <div class="cr-png-swatch solid"><span class="cr-png-shape"></span></div>
+              <div class="cr-png-label">✕ Has a background</div>
+            </div>
+            <div class="cr-png-arrow">→</div>
+            <div class="cr-png-card good">
+              <div class="cr-png-swatch checker"><span class="cr-png-shape"></span></div>
+              <div class="cr-png-label">✓ Transparent PNG</div>
+            </div>
           </div>
-          <div class="cr-png-arrow">→</div>
-          <div class="cr-png-card good">
-            <div class="cr-png-swatch checker"><span class="cr-png-shape"></span></div>
-            <div class="cr-png-label">✓ Transparent PNG</div>
+          <div class="cr-modal-body" style="margin-top:12px">
+            <b>PNG</b> is an image format that can save a see-through (transparent) background instead of a solid color — that's the checkerboard pattern above. Most photo apps export JPG by default, which always has a solid background, so you may need to use a "remove background" tool first.
           </div>
-        </div>
-        <div class="cr-modal-body" style="margin-top:12px">
-          <b>PNG</b> is an image format that can save a see-through (transparent) background instead of a solid color — that's the checkerboard pattern above. Most photo apps export JPG by default, which always has a solid background, so you may need to use a "remove background" tool first.
         </div>
         <input type="hidden" id="uploadHintInputId">
-        <button class="cr-btn-primary" onclick="confirmUploadHint()">Got it — Choose File</button>
+        <button class="cr-btn-primary" id="uploadHintConfirmBtn" onclick="confirmUploadHint()">Got it — Choose File</button>
         <button class="cr-link-back" style="display:block;margin:12px auto 0" onclick="closeUploadHint()">Cancel</button>
       </div>
     </div>

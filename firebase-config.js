@@ -55,8 +55,8 @@ function isAdmin(user) {
      status:      'pending' | 'approved' | 'rejected'
      printed:     boolean (set true once sent through the print-layout tool)
      product:     'lapel-pin' | 'challenge-coin' | 'medal' | 'golf-marker'
-     size:        1.25 | 1.5 | 2.25 | 3.0   (inches, nominal cut diameter)
-     bleedMode:   'wrap' | 'diecut'
+     size:        25 | 32 | 37 | 44 | 58 | 75   (mm, finished/cut diameter — see create.js SIZES)
+     paperSize:   mm, full print/PVC-wrap sheet diameter incl. bleed (fixed per size)
      designDataUrl: base64 PNG, clean (no watermark), full artboard incl. bleed
      customerName, customerEmail, customerPhone, notes
      saveCode:    6-char code the customer gets to reference in Shopee chat

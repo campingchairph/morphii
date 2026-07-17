@@ -15,16 +15,22 @@ const PRODUCTS = [
   { id:'luggage-tag',  label:'Luggage Tags',             icon:'🏷️', enabled:false },
 ];
 
+// Standard badge-making sizes — mm (finished/cut diameter) + paperMM (the
+// full print/PVC-wrap sheet diameter, incl. bleed) per the supplier's size
+// chart. Paper size is a fixed property of each size now, not a customer
+// choice (see the removed Print Settings step).
 const SIZES = [
-  { inches:1.25, tag:'Promo & branding' },
-  { inches:1.50, tag:'Versatile size' },
-  { inches:2.25, tag:'Most popular' },
-  { inches:3.00, tag:'Large & bold' },
+  { mm:25, paperMM:35.2, tag:'Smallest' },
+  { mm:32, paperMM:44,   tag:'Compact' },
+  { mm:37, paperMM:48.8, tag:'Popular' },
+  { mm:44, paperMM:56.4, tag:'Standard' }, // ⚠ estimated (not legible on the chart) — confirm and update
+  { mm:58, paperMM:70,   tag:'Large' },
+  { mm:75, paperMM:86.3, tag:'XL' },
 ];
 
-const STEP_ORDER = ['product','size','print','design','submit','done'];
+const STEP_ORDER = ['product','size','design','submit','done'];
 const CANVAS_PX   = 480;   // fixed on-screen render resolution
-const EXPORT_DPI  = 220;   // export resolution for the clean (admin-facing) design
+const EXPORT_PPMM = 11.8;  // export resolution for the clean (admin-facing) design, px per mm (~300 DPI)
 const FONTS = ['Luckiest Guy','Shrikhand','Carter One','Ceviche One','Kavoon','Cherry Bomb One','Lobster','Spicy Rice','Chicle'];
 
 // Same gradient presets as the kiosk avatar builder (morphii.js CATS.bg.items),
@@ -97,8 +103,8 @@ function nextPlacedId(kind){
 
 const state = {
   product: null,
-  size: null,
-  bleedMode: 'wrap',
+  size: null,       // finished/cut diameter, mm
+  paperSize: null,  // full print/PVC-wrap sheet diameter incl. bleed, mm — fixed per size, not a customer choice
   bg: {
     // Color and image are independent layers that can be mixed (color shows
     // through wherever the image doesn't fully cover, or through transparent
@@ -146,7 +152,6 @@ function goStep(name){
     el.classList.toggle('done', i<idx && i>=0);
   });
   window.scrollTo({top:0,behavior:'smooth'});
-  if (name==='print'){ renderPrintStep(); }
   if (name==='design'){ setupCanvas(); drawPreview(); }
   if (name==='submit'){ renderSubmitSummary(); }
 }
@@ -173,43 +178,31 @@ window.selectProduct = selectProduct;
 function renderSizeGrid(){
   const grid = document.getElementById('sizeGrid');
   grid.innerHTML = SIZES.map(s=>`
-    <div class="cr-size-card" onclick="selectSize(${s.inches})">
-      <div class="cr-size-ring" style="width:${34+s.inches*14}px;height:${34+s.inches*14}px"></div>
-      <div class="cr-size-num">${s.inches.toFixed(2)}" Circle</div>
+    <div class="cr-size-card" onclick="selectSize(${s.mm})">
+      <div class="cr-size-ring" style="width:${24+s.mm*0.85}px;height:${24+s.mm*0.85}px"></div>
+      <div class="cr-size-num">${s.mm}mm Circle</div>
       <div class="cr-size-tag">${s.tag}</div>
     </div>`).join('');
 }
-function selectSize(inches){
-  state.size = inches;
-  goStep('print');
+// Bleed/paper size is a fixed property of the chosen size (see SIZES above)
+// — customers don't control it, so picking a size goes straight to Design.
+function selectSize(mm){
+  const s = SIZES.find(x=>x.mm===mm);
+  if (!s) return;
+  state.size = s.mm;
+  state.paperSize = s.paperMM;
+  goStep('design');
 }
 window.selectSize = selectSize;
 
-/* ── BLEED MATH ───────────────────────────────── */
-// "5% of size" / "0.0313in trim" describe the TOTAL bleed added to the
-// artboard diameter, so per-side is half of that.
-function bleedPerSide(){
-  const total = state.bleedMode==='wrap' ? state.size*0.05 : 0.0313;
-  return +(total/2).toFixed(4);
-}
-function artboardDiameter(){ return state.size + 2*bleedPerSide(); }
-function safeInset(){
-  return state.bleedMode==='wrap' ? bleedPerSide()*2 : 0.03;
-}
-function setBleedMode(mode){
-  state.bleedMode = mode;
-  // Font sizes/positions were fit to the old safe area — re-check them against the new one.
-  state.textLines.forEach(t => { clampTextSize(t); clampTextPosition(t); });
-  renderPrintStep();
-  drawPreview();
-}
-window.setBleedMode = setBleedMode;
-
-function renderPrintStep(){
-  const el = document.getElementById('printStepBody');
-  if (!el) return;
-  el.innerHTML = printPanelHtml();
-}
+/* ── BLEED MATH (mm) ───────────────────────────── */
+// Paper size (the full print/PVC-wrap sheet) is fixed per SIZES entry —
+// bleed is just the gap between the cut line and that paper edge.
+function bleedPerSide(){ return (state.paperSize - state.size) / 2; }
+function artboardDiameter(){ return state.paperSize; }
+// No exact "image size" spec on the chart, so keep important content a
+// reasonable margin inside the cut line rather than right up against it.
+function safeInset(){ return Math.max(1, bleedPerSide()*0.5); }
 
 /* ── CANVAS SETUP ─────────────────────────────── */
 function setupCanvas(){
@@ -217,7 +210,7 @@ function setupCanvas(){
   canvas.width = CANVAS_PX;
   canvas.height = CANVAS_PX;
   document.getElementById('previewLabel').textContent =
-    `${state.product.label} · ${state.size.toFixed(2)}" Circle (${artboardDiameter().toFixed(2)}" with bleed)`;
+    `${state.product.label} · ${state.size}mm Circle (${artboardDiameter().toFixed(1)}mm with bleed)`;
   renderDock();
   renderToolPanelContent();
   updateSubmitAvailability();
@@ -414,19 +407,22 @@ function toolIconsForSelection(){
   ] : [];
   if (kind==='border') return [
     { id:'presets', label:'Presets', icon:ICON_PALETTE, panel:true },
+    { id:'replace', label:'Upload', icon:ICON_UPLOAD, instant:"promptUpload('border')" },
     { id:'remove', label:'Remove', icon:ICON_TRASH, instant:'removeBorder()', danger:true },
   ];
   if (kind==='sticker' || kind==='shape' || kind==='wordart'){
     const el = placedArray(kind).find(x=>x.id===state.selected.id);
     if (!el) return [];
-    return [
-      { id:'replace', label:'Replace', icon:ICON_UPLOAD, instant:`promptUpload('${kind}')` },
+    // Only stickers can be uploaded — shapes and word art are library-only.
+    const icons = kind==='sticker' ? [{ id:'replace', label:'Replace', icon:ICON_UPLOAD, instant:"promptUpload('sticker')" }] : [];
+    icons.push(
       { id:'size', label:'Size', icon:ICON_SIZE, panel:true },
       { id:'rotate', label:'Rotate', icon:ICON_ROTATE, panel:true },
       { id:'duplicate', label:'Duplicate', icon:ICON_DUPLICATE, instant:`duplicatePlaced('${kind}',${el.id})` },
       { id:'lock', label: el.locked?'Locked':'Lock', icon: el.locked?ICON_LOCK:ICON_UNLOCK, instant:`toggleLock('${kind}',${el.id})`, on: el.locked },
       { id:'remove', label:'Remove', icon:ICON_TRASH, instant:`removePlaced('${kind}',${el.id})`, danger:true },
-    ];
+    );
+    return icons;
   }
   if (kind==='text'){
     const t = state.textLines.find(x=>x.id===state.selected.id);
@@ -566,6 +562,23 @@ function removeBorder(){
 }
 window.removeBorder = removeBorder;
 
+function onBorderFileChosen(e){
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      state.border = { img, src: ev.target.result, label: null };
+      renderDock(); renderToolPanelContent(); drawPreview();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+window.onBorderFileChosen = onBorderFileChosen;
+
 function toggleColorLayer(on){
   state.bg.colorOn = on;
   drawPreview();
@@ -698,30 +711,42 @@ function clampBgTransform(){
 }
 
 /* ── UPLOAD INSTRUCTIONS MODAL (with PNG/transparency infographic) ──
-   Also doubles as the preset picker for sticker/shape/wordart/character —
-   if a curated gallery exists for the kind, it's shown above the upload
-   button so "add one" always offers presets first, upload as a fallback. */
+   Also doubles as the preset picker for sticker/shape/wordart/character/
+   border — if a curated gallery exists for the kind, it's shown above the
+   upload button so "add one" always offers presets first, upload as a
+   fallback. Shapes and Word Art are library-only (no customer upload), so
+   the upload button/instructions are hidden for those two. */
 function presetsForKind(kind){
   if (kind==='character') return CHARACTER_PRESETS;
+  if (kind==='border') return BORDER_PRESETS;
   if (PLACED_META[kind]) return placedPresets(kind);
   return [];
 }
-const UPLOAD_INPUT_IDS = { sticker:'stickerFileInput', character:'characterFileInput', shape:'shapeFileInput', wordart:'wordartFileInput' };
+const UPLOAD_INPUT_IDS = { sticker:'stickerFileInput', character:'characterFileInput', border:'borderFileInput' };
+const LIBRARY_ONLY_KINDS = ['shape','wordart'];
 
 function promptUpload(kind){
+  const isLibraryOnly = LIBRARY_ONLY_KINDS.includes(kind);
+  const label = PLACED_META[kind] ? PLACED_META[kind].label : capitalize(kind);
   const noun = PLACED_META[kind] ? PLACED_META[kind].uploadNoun : kind;
-  document.getElementById('uploadHintText').textContent =
-    `Your ${noun} file should be a PNG with a transparent (no) background, so it blends cleanly into the design.`;
+
+  document.getElementById('uploadHintTitle').textContent = isLibraryOnly ? `Choose a ${label}` : 'Before you upload';
+  document.getElementById('uploadHintText').textContent = isLibraryOnly
+    ? `Pick one from our library below.`
+    : `Your ${noun} file should be a PNG with a transparent (no) background, so it blends cleanly into the design.`;
   document.getElementById('uploadHintInputId').value = UPLOAD_INPUT_IDS[kind] || 'bgFileInput';
 
   const presets = presetsForKind(kind);
   const grid = document.getElementById('uploadHintPresetGrid');
-  if (grid){
-    grid.style.display = presets.length ? '' : 'none';
-    grid.innerHTML = presets.length
-      ? presets.map((p,i)=>`<button class="cr-preset-thumb" onclick="choosePresetAndClose('${kind}',${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`).join('')
-      : '';
-  }
+  const showGrid = presets.length>0 || isLibraryOnly;
+  grid.style.display = showGrid ? '' : 'none';
+  grid.innerHTML = !showGrid ? '' : presets.length
+    ? presets.map((p,i)=>`<button class="cr-preset-thumb" onclick="choosePresetAndClose('${kind}',${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`).join('')
+    : `<div class="cr-empty-hint">No ${label.toLowerCase()}s available yet — check back soon!</div>`;
+
+  document.getElementById('uploadHintPngSection').style.display = isLibraryOnly ? 'none' : '';
+  document.getElementById('uploadHintConfirmBtn').style.display = isLibraryOnly ? 'none' : '';
+
   document.getElementById('uploadHintOverlay').classList.add('show');
 }
 window.promptUpload = promptUpload;
@@ -729,6 +754,7 @@ window.promptUpload = promptUpload;
 function choosePresetAndClose(kind, i){
   closeUploadHint();
   if (kind==='character') setCharacterFromPreset(i);
+  else if (kind==='border') selectBorderPreset(i);
   else addPlacedFromPreset(kind, i);
 }
 window.choosePresetAndClose = choosePresetAndClose;
@@ -1141,27 +1167,6 @@ function setTextRotation(id, deg){
 }
 window.setTextRotation = setTextRotation;
 
-/* ── PRINT SETTINGS PANEL ─────────────────────── */
-function printPanelHtml(){
-  return `
-    <div class="cr-bleed-row">
-      <button class="cr-bleed-btn ${state.bleedMode==='wrap'?'active':''}" onclick="setBleedMode('wrap')">
-        <div class="cr-bleed-name">Wrap</div>
-        <div class="cr-bleed-sub">5% of size</div>
-      </button>
-      <button class="cr-bleed-btn ${state.bleedMode==='diecut'?'active':''}" onclick="setBleedMode('diecut')">
-        <div class="cr-bleed-name">Die-Cut</div>
-        <div class="cr-bleed-sub">0.0313" trim</div>
-      </button>
-    </div>
-    <div class="cr-bleed-note">${bleedNoteText()}</div>`;
-}
-function bleedNoteText(){
-  return state.bleedMode==='wrap'
-    ? `Wrap Mode: artwork extends past the blue safe line to the red cut line (${bleedPerSide().toFixed(3)}" bleed per side). That extra area wraps around the pin shell during assembly.`
-    : `Die-Cut Mode: artwork is cut to exact size along the red line (${bleedPerSide().toFixed(4)}" trim). Keep important content inside the blue safe line.`;
-}
-
 /* ── CANVAS INTERACTIONS: drag bg, move/resize/rotate stickers+character ── */
 // Locked elements are skipped entirely here — locking means "get out of the
 // way of canvas taps," not just "can't be dragged." A locked element that
@@ -1173,8 +1178,8 @@ function hitTestOneSticker(s, xFrac, yFrac){
 }
 function hitTestOneText(t, xFrac, yFrac){
   const ctx = document.getElementById('designCanvas').getContext('2d');
-  const scalePxPerInch = CANVAS_PX / artboardDiameter();
-  const cutRadiusPx = (state.size/2) * scalePxPerInch;
+  const scalePxPerMM = CANVAS_PX / artboardDiameter();
+  const cutRadiusPx = (state.size/2) * scalePxPerMM;
   ctx.font = `bold ${28*t.size}px "${t.font}", 'Nunito', sans-serif`;
   const width = ctx.measureText(t.text || 'Text').width;
   const height = 28*t.size*1.15;
@@ -1431,8 +1436,8 @@ function drawPlacedImage(ctx, artboardPx, img, xFrac, yFrac, dFrac, rotation){
 // testing, position clamping, and sizing the resize/rotate handle ring.
 function textFootprintFrac(t){
   const ctx = document.getElementById('designCanvas').getContext('2d');
-  const scalePxPerInch = CANVAS_PX / artboardDiameter();
-  const cutRadiusPx = (state.size/2) * scalePxPerInch;
+  const scalePxPerMM = CANVAS_PX / artboardDiameter();
+  const cutRadiusPx = (state.size/2) * scalePxPerMM;
   ctx.font = `bold ${28*t.size}px "${t.font}", 'Nunito', sans-serif`;
   const width = ctx.measureText(t.text || 'Text').width;
   const height = 28*t.size*1.15;
@@ -1444,9 +1449,9 @@ function textFootprintFrac(t){
 // circle — called whenever text/size/font/placement changes.
 function clampTextSize(t){
   const ctx = document.getElementById('designCanvas').getContext('2d');
-  const scalePxPerInch = CANVAS_PX / artboardDiameter();
-  const cutRadiusPx = (state.size/2) * scalePxPerInch;
-  const safeRadiusPx = cutRadiusPx - safeInset()*scalePxPerInch;
+  const scalePxPerMM = CANVAS_PX / artboardDiameter();
+  const cutRadiusPx = (state.size/2) * scalePxPerMM;
+  const safeRadiusPx = cutRadiusPx - safeInset()*scalePxPerMM;
   const text = t.text || 'Text';
 
   for (let i=0; i<20; i++){
@@ -1471,9 +1476,9 @@ function clampTextSize(t){
 // center point is constrained to the safe radius (not center-minus-footprint,
 // which used to shrink the movable range to almost nothing for larger text).
 function clampTextPosition(t){
-  const scalePxPerInch = CANVAS_PX / artboardDiameter();
-  const cutRadiusPx = (state.size/2) * scalePxPerInch;
-  const safeRadiusPx = cutRadiusPx - safeInset()*scalePxPerInch;
+  const scalePxPerMM = CANVAS_PX / artboardDiameter();
+  const cutRadiusPx = (state.size/2) * scalePxPerMM;
+  const safeRadiusPx = cutRadiusPx - safeInset()*scalePxPerMM;
   const maxOffsetFrac = safeRadiusPx / CANVAS_PX;
   const dist = Math.hypot(t.xFrac, t.yFrac);
   if (dist > maxOffsetFrac && dist > 0){
@@ -1484,8 +1489,8 @@ function clampTextPosition(t){
 
 function drawOneTextLine(ctx, artboardPx, t){
   if (!t) return;
-  const scalePxPerInch = artboardPx / artboardDiameter();
-  const cutRadiusPx = (state.size/2) * scalePxPerInch;
+  const scalePxPerMM = artboardPx / artboardDiameter();
+  const cutRadiusPx = (state.size/2) * scalePxPerMM;
   ctx.save();
   ctx.font = `bold ${28*t.size}px "${t.font}", 'Nunito', sans-serif`;
   ctx.fillStyle = t.color;
@@ -1591,9 +1596,9 @@ function drawHandleDot(ctx, x, y, color){
 }
 
 function drawGuides(ctx, sizePx){
-  const scalePxPerInch = sizePx / artboardDiameter();
-  const cutR = (state.size/2) * scalePxPerInch;
-  const safeR = cutR - safeInset()*scalePxPerInch;
+  const scalePxPerMM = sizePx / artboardDiameter();
+  const cutR = (state.size/2) * scalePxPerMM;
+  const safeR = cutR - safeInset()*scalePxPerMM;
   const cx = sizePx/2, cy = sizePx/2;
 
   ctx.save();
@@ -1643,7 +1648,7 @@ function renderWatermarkedPreview(canvas){
 
 /* ── CLEAN EXPORT (no watermark/guides) — admin only ── */
 function compositeCleanDesign(){
-  const px = Math.round(artboardDiameter() * EXPORT_DPI);
+  const px = Math.round(artboardDiameter() * EXPORT_PPMM);
   const off = document.createElement('canvas');
   off.width = px; off.height = px;
   const ctx = off.getContext('2d');
@@ -1687,7 +1692,7 @@ function renderSubmitSummary(){
   wrap.innerHTML = `
     <img src="${thumb}" alt="Your design preview">
     <div style="font-size:12px;font-weight:800;color:var(--ink-dim)">
-      ${state.product.label}<br>${state.size.toFixed(2)}" Circle · ${state.bleedMode==='wrap'?'Wrap':'Die-Cut'} bleed
+      ${state.product.label}<br>${state.size}mm Circle
     </div>`;
 }
 
@@ -1738,7 +1743,7 @@ async function submitDesign(){
       product: state.product.id,
       productLabel: state.product.label,
       size: state.size,
-      bleedMode: state.bleedMode,
+      paperSize: state.paperSize,
       designDataUrl,
       customerName: name,
       customerEmail: email,
@@ -1751,7 +1756,7 @@ async function submitDesign(){
       to_name: name,
       code: saveCode,
       product: state.product.label,
-      size: state.size.toFixed(2),
+      size: state.size + 'mm',
     });
     showDoneScreen(saveCode, emailResult);
   } catch(e){

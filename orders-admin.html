@@ -206,8 +206,8 @@ h1,.logo{font-family:'Fredoka One',cursive;}
     <div class="pmi-controls">
       <span class="pmi-label">Paper:</span>
       <select class="pmi-select" id="paperSize" onchange="packPins()">
-        <option value="letter">Letter (8.5×11")</option>
-        <option value="a4">A4 (8.27×11.69")</option>
+        <option value="letter">Letter (216×279mm)</option>
+        <option value="a4">A4 (210×297mm)</option>
       </select>
       <span style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-left:12px;">Drag pins to reposition</span>
       <button class="pmi-pack-btn" onclick="packPins()">↺ Auto-arrange</button>
@@ -381,7 +381,7 @@ function renderOrders(){
       <div class="adm-card-body">
         <span class="adm-badge adm-badge-${o.status}">${o.status}</span>
         <div class="adm-card-title">${escHtml(o.productLabel||o.product||'')}</div>
-        <div class="adm-card-meta">${(o.size||'').toFixed ? o.size.toFixed(2) : o.size}" Circle · ${o.bleedMode==='wrap'?'Wrap':'Die-Cut'} · ${escHtml(dt)}</div>
+        <div class="adm-card-meta">${o.size}mm Circle${o.paperSize ? ` (${o.paperSize}mm w/ bleed)` : ''} · ${escHtml(dt)}</div>
         ${o.saveCode ? `<div class="adm-card-row"><b>Code:</b> <span style="font-family:monospace;letter-spacing:1px">${escHtml(o.saveCode)}</span></div>` : ''}
         <div class="adm-card-row"><b>Name:</b> ${escHtml(o.customerName)}</div>
         <div class="adm-card-row"><b>Email:</b> ${escHtml(o.customerEmail||o.customerContact)}</div>
@@ -525,12 +525,12 @@ window.removeCustomFont = removeCustomFont;
    Same shelf-packing approach: place circles left-to-right on a shelf,
    start a new shelf when the next one doesn't fit, shelf height = the
    tallest pin on it. Orders use `designDataUrl` (already a clean,
-   watermark-free composite) and `size` (inches) same as the kiosk's
-   sub.thumb/sub.size. ── */
-const PAPER_SIZES = { letter:{ w:8.5, h:11 }, a4:{ w:8.27, h:11.69 } };
-const MARGIN_IN = 0.4;
+   watermark-free composite) and `size` (mm, finished/cut diameter —
+   matches create.js's SIZES chart) same as the kiosk's sub.thumb/sub.size. ── */
+const PAPER_SIZES = { letter:{ w:215.9, h:279.4 }, a4:{ w:210, h:297 } }; // mm
+const MARGIN_MM = 10;
 const PREVIEW_W = 420;   // on-screen editing canvas only — never sent to the printer
-const PRINT_DPI = 300;   // actual output resolution used to build the print image
+const PRINT_PPMM = 11.8; // actual output resolution used to build the print image, px per mm (~300 DPI)
 
 let layoutPins = []; // {order, cx, cy, rad, dPx, active, img}
 let dragIdx = -1, dragOffX = 0, dragOffY = 0;
@@ -552,11 +552,11 @@ window.closePrintModal = closePrintModal;
 
 function packPins(){
   const paper = PAPER_SIZES[document.getElementById('paperSize').value];
-  const GAP = 0.12;
-  const usableW = paper.w - MARGIN_IN*2;
-  const usableH = paper.h - MARGIN_IN*2;
+  const GAP = 3; // mm
+  const usableW = paper.w - MARGIN_MM*2;
+  const usableH = paper.h - MARGIN_MM*2;
   printScale = PREVIEW_W / paper.w;
-  printMg = MARGIN_IN * printScale;
+  printMg = MARGIN_MM * printScale;
   const gapPx = GAP * printScale;
 
   const orders = allOrders.filter(o => selectedOrders.has(o.id));
@@ -573,7 +573,7 @@ function packPins(){
   let shelfX=printMg, shelfY=printMg, shelfH=0;
   layoutPins = [];
   for (const order of items){
-    const d = (parseFloat(order.size)||2.25) * printScale;
+    const d = (parseFloat(order.size)||37) * printScale;
     const rad = d/2 - 2;
     if (shelfX+d > printMg+(usableW*printScale) && shelfX>printMg){ shelfY+=shelfH+gapPx; shelfX=printMg; shelfH=0; }
     if (shelfY+d > printMg+(usableH*printScale)) break;
@@ -620,7 +620,7 @@ function renderPaperCanvas(){
       ctx.fillStyle = '#EEF6FF'; ctx.fill();
       ctx.fillStyle = '#AAA'; ctx.font = `bold ${Math.max(7,p.rad*0.25)}px sans-serif`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText((p.order.size||'')+'"', p.cx, p.cy);
+      ctx.fillText((p.order.size||'')+'mm', p.cx, p.cy);
     }
     ctx.restore();
     ctx.save();
@@ -637,7 +637,7 @@ function renderPaperCanvas(){
 
   const active = layoutPins.filter(p=>p.active);
   const counts = {}; active.forEach(p => { counts[p.order.size] = (counts[p.order.size]||0)+1; });
-  const bd = Object.entries(counts).map(([s,n])=>`${n}×${s}"`).join(' · ');
+  const bd = Object.entries(counts).map(([s,n])=>`${n}×${s}mm`).join(' · ');
   let info = `${active.length} pins on paper${bd?' · '+bd:''}`;
   if (requestedTotal > active.length) info += ` · ${requestedTotal-active.length} didn't fit — try a bigger paper or fewer copies`;
   document.getElementById('packInfo').textContent = info;
@@ -661,7 +661,7 @@ function renderPmiSidebar(){
     item.appendChild(mc);
 
     const info = document.createElement('div'); info.style.flex = '1';
-    info.innerHTML = `<div style="font-size:10px;color:white;font-weight:800">${escHtml(order.customerName||'')}</div><div style="font-size:8px;color:var(--ink-dim)">${order.size}" · ${onPaperCount}/${qty} on paper</div>`;
+    info.innerHTML = `<div style="font-size:10px;color:white;font-weight:800">${escHtml(order.customerName||'')}</div><div style="font-size:8px;color:var(--ink-dim)">${order.size}mm · ${onPaperCount}/${qty} on paper</div>`;
     item.appendChild(info);
 
     const qtyInput = document.createElement('input');
@@ -730,23 +730,23 @@ function initPaperDrag(){
   pc.addEventListener('touchend', endDrag);
 }
 
-// Builds the actual printable sheet at PRINT_DPI, completely separate from
+// Builds the actual printable sheet at PRINT_PPMM, completely separate from
 // the small #paperCanvas used for on-screen dragging/editing. That preview
-// canvas is only ~420px wide for the whole sheet (~49px/inch) and also has
+// canvas is only ~420px wide for the whole sheet (~2px/mm) and also has
 // the "included on paper" checkmark badge baked in — neither belongs in the
 // physical print, so this redraws just the clean pin images at full size.
 function buildPrintCanvas(){
   const paper = PAPER_SIZES[document.getElementById('paperSize').value];
   const off = document.createElement('canvas');
-  off.width = Math.round(paper.w * PRINT_DPI);
-  off.height = Math.round(paper.h * PRINT_DPI);
+  off.width = Math.round(paper.w * PRINT_PPMM);
+  off.height = Math.round(paper.h * PRINT_PPMM);
   const ctx = off.getContext('2d');
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, off.width, off.height);
 
   // Pin positions/radii are stored in on-screen preview pixels (printScale
-  // px/inch) — convert to print-resolution pixels (PRINT_DPI px/inch).
-  const ratio = PRINT_DPI / printScale;
+  // px/mm) — convert to print-resolution pixels (PRINT_PPMM px/mm).
+  const ratio = PRINT_PPMM / printScale;
   layoutPins.filter(p=>p.active && p.img).forEach(p => {
     const cx = p.cx*ratio, cy = p.cy*ratio, rad = p.rad*ratio;
     ctx.save();
@@ -764,8 +764,8 @@ function doPrint(){
   const img = printCanvas.toDataURL('image/png');
   win.document.write(`<!DOCTYPE html><html><head><title>Morphii Print</title>
     <style>*{margin:0;padding:0;}body{background:white;}
-    img{width:${paper.w}in;height:${paper.h}in;display:block;}
-    @media print{@page{size:${paper.w}in ${paper.h}in;margin:0;}img{width:100%;height:100%;}}
+    img{width:${paper.w}mm;height:${paper.h}mm;display:block;}
+    @media print{@page{size:${paper.w}mm ${paper.h}mm;margin:0;}img{width:100%;height:100%;}}
     </style></head><body>
     <img src="${img}" onload="setTimeout(()=>{window.print();window.close();},200)">
     </body></html>`);

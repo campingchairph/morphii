@@ -16,7 +16,7 @@
 }
 html,body{width:100%;min-height:100%;font-family:'Nunito',sans-serif;background:var(--cream);color:var(--ink);}
 button,input,textarea,select{font-family:inherit;color:inherit;}
-h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-btn,.cr-product-name,.cr-size-num,.cr-bleed-name{font-family:'Baloo 2',cursive;}
+h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-btn,.cr-product-name,.cr-size-num{font-family:'Baloo 2',cursive;}
 
 .cr-visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;}
 
@@ -321,16 +321,6 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 .cr-color-picker-btn input[type=color]{
   position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0;
 }
-
-.cr-bleed-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.cr-bleed-btn{
-  padding:10px 8px;border-radius:13px;border:2px solid var(--border);background:var(--card);color:var(--ink);
-  cursor:pointer;text-align:center;
-}
-.cr-bleed-btn.active{border-color:var(--sage);background:var(--sage-light);}
-.cr-bleed-name{font-size:13px;}
-.cr-bleed-sub{font-size:10px;color:var(--ink-dim);font-weight:700;margin-top:2px;}
-.cr-bleed-note{font-size:11px;color:var(--ink-dim);line-height:1.5;margin-top:10px;font-weight:600;}
 
 .cr-btn-primary{
   width:100%;padding:15px;border-radius:50px;border:none;background:var(--pill);color:white;
