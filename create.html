@@ -85,30 +85,44 @@
     <input type="file" id="shapeFileInput" accept="image/png" onchange="onPlacedFileChosen('shape', event)" class="cr-visually-hidden">
     <input type="file" id="wordartFileInput" accept="image/png" onchange="onPlacedFileChosen('wordart', event)" class="cr-visually-hidden">
 
-    <!-- UPLOAD INSTRUCTIONS MODAL (doubles as the preset picker, when one exists) -->
+    <!-- ADD/CHOOSE PICKER (preset grid + "Upload Your Own") — the FIRST thing
+         shown when adding a sticker/shape/word art/character. The PNG-upload
+         instructions modal only appears once they actually choose to upload. -->
+    <div class="cr-modal-overlay" id="pickerOverlay">
+      <div class="cr-modal">
+        <div class="cr-modal-title" id="pickerTitle">Add a Sticker</div>
+        <div class="cr-preset-grid" id="pickerGrid" style="display:none"></div>
+        <div class="cr-empty-hint" id="pickerEmptyHint" style="display:none;text-align:center;padding:20px 8px;font-size:13px;"></div>
+        <button type="button" class="cr-upload-btn" style="margin-top:14px" onclick="closePicker();promptUpload(pickerKind)">
+          <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M4 21h16"/></svg>
+          <span>Upload Your Own</span>
+        </button>
+        <button class="cr-link-back" style="display:block;margin:12px auto 0" onclick="closePicker()">Cancel</button>
+      </div>
+    </div>
+
+    <!-- UPLOAD INSTRUCTIONS MODAL — only reached via "Upload Your Own" above,
+         or the Upload/Replace tool icon on an element that already exists. -->
     <div class="cr-modal-overlay" id="uploadHintOverlay">
       <div class="cr-modal">
-        <div class="cr-modal-title" id="uploadHintTitle">Before you upload</div>
-        <div class="cr-preset-grid" id="uploadHintPresetGrid" style="display:none;margin-bottom:12px"></div>
+        <div class="cr-modal-title">Before you upload</div>
         <div class="cr-modal-body" id="uploadHintText"></div>
-        <div id="uploadHintPngSection">
-          <div class="cr-png-infographic">
-            <div class="cr-png-card bad">
-              <div class="cr-png-swatch solid"><span class="cr-png-shape"></span></div>
-              <div class="cr-png-label">✕ Has a background</div>
-            </div>
-            <div class="cr-png-arrow">→</div>
-            <div class="cr-png-card good">
-              <div class="cr-png-swatch checker"><span class="cr-png-shape"></span></div>
-              <div class="cr-png-label">✓ Transparent PNG</div>
-            </div>
+        <div class="cr-png-infographic">
+          <div class="cr-png-card bad">
+            <div class="cr-png-swatch solid"><span class="cr-png-shape"></span></div>
+            <div class="cr-png-label">✕ Has a background</div>
           </div>
-          <div class="cr-modal-body" style="margin-top:12px">
-            <b>PNG</b> is an image format that can save a see-through (transparent) background instead of a solid color — that's the checkerboard pattern above. Most photo apps export JPG by default, which always has a solid background, so you may need to use a "remove background" tool first.
+          <div class="cr-png-arrow">→</div>
+          <div class="cr-png-card good">
+            <div class="cr-png-swatch checker"><span class="cr-png-shape"></span></div>
+            <div class="cr-png-label">✓ Transparent PNG</div>
           </div>
         </div>
+        <div class="cr-modal-body" style="margin-top:12px">
+          <b>PNG</b> is an image format that can save a see-through (transparent) background instead of a solid color — that's the checkerboard pattern above. Most photo apps export JPG by default, which always has a solid background, so you may need to use a "remove background" tool first.
+        </div>
         <input type="hidden" id="uploadHintInputId">
-        <button class="cr-btn-primary" id="uploadHintConfirmBtn" onclick="confirmUploadHint()">Got it — Choose File</button>
+        <button class="cr-btn-primary" onclick="confirmUploadHint()">Got it — Choose File</button>
         <button class="cr-link-back" style="display:block;margin:12px auto 0" onclick="closeUploadHint()">Cancel</button>
       </div>
     </div>

@@ -337,12 +337,12 @@ function bgChipThumb(){
 function quickAddText(){ addTextLine(); }
 window.quickAddText = quickAddText;
 
-function quickAddSticker(){ promptUpload('sticker'); }
+function quickAddSticker(){ openPicker('sticker'); }
 window.quickAddSticker = quickAddSticker;
 
 function quickSelectCharacter(){
   if (state.character) selectLayer({ kind:'character' });
-  else promptUpload('character');
+  else openPicker('character');
 }
 window.quickSelectCharacter = quickSelectCharacter;
 
@@ -352,10 +352,10 @@ window.quickSelectBackground = quickSelectBackground;
 function quickSelectBorder(){ selectLayer({ kind:'border' }); }
 window.quickSelectBorder = quickSelectBorder;
 
-function quickAddShape(){ promptUpload('shape'); }
+function quickAddShape(){ openPicker('shape'); }
 window.quickAddShape = quickAddShape;
 
-function quickAddWordArt(){ promptUpload('wordart'); }
+function quickAddWordArt(){ openPicker('wordart'); }
 window.quickAddWordArt = quickAddWordArt;
 
 /* ── BOTTOM DOCK (GoDaddy-style icon bar) ──────────────────────────
@@ -415,15 +415,22 @@ function toolIconsForSelection(){
     const el = placedArray(kind).find(x=>x.id===state.selected.id);
     if (!el) return [];
     // Same pattern as border: pick from the library or upload your own.
-    return [
+    const icons = [
       { id:'presets', label:'Presets', icon:ICON_PALETTE, panel:true },
       { id:'replace', label:'Upload', icon:ICON_UPLOAD, instant:`promptUpload('${kind}')` },
       { id:'size', label:'Size', icon:ICON_SIZE, panel:true },
       { id:'rotate', label:'Rotate', icon:ICON_ROTATE, panel:true },
       { id:'duplicate', label:'Duplicate', icon:ICON_DUPLICATE, instant:`duplicatePlaced('${kind}',${el.id})` },
+    ];
+    // Add-another shortcut — stickers only for now, so you can add a second
+    // sticker without backing out to the main dock. (Say the word if you
+    // want this on Shape/Word Art too.)
+    if (kind==='sticker') icons.push({ id:'add', label:'Add', icon:ICON_PLUS, instant:"openPicker('sticker')" });
+    icons.push(
       { id:'lock', label: el.locked?'Locked':'Lock', icon: el.locked?ICON_LOCK:ICON_UNLOCK, instant:`toggleLock('${kind}',${el.id})`, on: el.locked },
       { id:'remove', label:'Remove', icon:ICON_TRASH, instant:`removePlaced('${kind}',${el.id})`, danger:true },
-    ];
+    );
+    return icons;
   }
   if (kind==='text'){
     const t = state.textLines.find(x=>x.id===state.selected.id);
@@ -729,16 +736,54 @@ function clampBgTransform(){
   state.bg.offsetYFrac = Math.max(-maxY, Math.min(maxY, state.bg.offsetYFrac));
 }
 
-/* ── UPLOAD INSTRUCTIONS MODAL (with PNG/transparency infographic) ──
-   Also doubles as the preset picker for sticker/shape/wordart/character/
-   border — every one of those supports both: pick from the library (shown
-   above the upload button whenever one exists) or upload your own. */
+/* ── ADD/CHOOSE PICKER — the first thing shown when adding a sticker,
+   shape, word art, or character: just the preset grid + an "Upload Your
+   Own" button. The PNG-transparency instructions only show up once they
+   actually choose to upload (see promptUpload below), not before. ── */
 function presetsForKind(kind){
   if (kind==='character') return CHARACTER_PRESETS;
   if (kind==='border') return BORDER_PRESETS;
   if (PLACED_META[kind]) return placedPresets(kind);
   return [];
 }
+
+let pickerKind = null;
+function openPicker(kind){
+  pickerKind = kind;
+  const label = PLACED_META[kind] ? PLACED_META[kind].label : capitalize(kind);
+  document.getElementById('pickerTitle').textContent = `Add a ${label}`;
+
+  const presets = presetsForKind(kind);
+  const grid = document.getElementById('pickerGrid');
+  const emptyHint = document.getElementById('pickerEmptyHint');
+  if (presets.length){
+    grid.style.display = '';
+    grid.innerHTML = presets.map((p,i)=>`<button class="cr-preset-thumb" onclick="pickAssetToAdd(${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`).join('');
+    emptyHint.style.display = 'none';
+  } else {
+    grid.style.display = 'none';
+    emptyHint.style.display = '';
+    emptyHint.textContent = `😢 No ${label.toLowerCase()}s here yet — check back soon, or upload your own below.`;
+  }
+  document.getElementById('pickerOverlay').classList.add('show');
+}
+window.openPicker = openPicker;
+
+function closePicker(){
+  document.getElementById('pickerOverlay').classList.remove('show');
+}
+window.closePicker = closePicker;
+
+function pickAssetToAdd(i){
+  closePicker();
+  if (pickerKind==='character') setCharacterFromPreset(i);
+  else addPlacedFromPreset(pickerKind, i);
+}
+window.pickAssetToAdd = pickAssetToAdd;
+
+/* ── UPLOAD INSTRUCTIONS MODAL (with PNG/transparency infographic) ──
+   Reached only via the picker's "Upload Your Own" button, or the
+   Upload/Replace tool icon on an element that already exists. */
 const UPLOAD_INPUT_IDS = {
   sticker:'stickerFileInput', character:'characterFileInput', border:'borderFileInput',
   shape:'shapeFileInput', wordart:'wordartFileInput',
@@ -746,32 +791,13 @@ const UPLOAD_INPUT_IDS = {
 
 function promptUpload(kind){
   const noun = PLACED_META[kind] ? PLACED_META[kind].uploadNoun : kind;
-  document.getElementById('uploadHintTitle').textContent = 'Before you upload';
   document.getElementById('uploadHintText').textContent =
     `Your ${noun} file should be a PNG with a transparent (no) background, so it blends cleanly into the design.`;
   document.getElementById('uploadHintInputId').value = UPLOAD_INPUT_IDS[kind] || 'bgFileInput';
-
-  const presets = presetsForKind(kind);
-  const grid = document.getElementById('uploadHintPresetGrid');
-  grid.style.display = presets.length ? '' : 'none';
-  grid.innerHTML = presets.length
-    ? presets.map((p,i)=>`<button class="cr-preset-thumb" onclick="choosePresetAndClose('${kind}',${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`).join('')
-    : '';
-
-  document.getElementById('uploadHintPngSection').style.display = '';
-  document.getElementById('uploadHintConfirmBtn').style.display = '';
-
   document.getElementById('uploadHintOverlay').classList.add('show');
 }
 window.promptUpload = promptUpload;
 
-function choosePresetAndClose(kind, i){
-  closeUploadHint();
-  if (kind==='character') setCharacterFromPreset(i);
-  else if (kind==='border') selectBorderPreset(i);
-  else addPlacedFromPreset(kind, i);
-}
-window.choosePresetAndClose = choosePresetAndClose;
 function closeUploadHint(){
   document.getElementById('uploadHintOverlay').classList.remove('show');
 }
