@@ -566,6 +566,7 @@ function selectBorderPreset(i){
   if (!preset) return;
   const prevRotation = state.border ? state.border.rotation : 0;
   const img = new Image();
+  img.crossOrigin = 'anonymous'; // raw.githubusercontent.com sends CORS headers — needed so the design canvas doesn't get tainted
   img.onload = () => {
     state.border = { img, src: preset.src, label: preset.label, rotation: prevRotation };
     renderDock(); renderToolPanelContent(); drawPreview();
@@ -945,6 +946,7 @@ function swapPlacedImage(kind, id, i){
   const el = placedArray(kind).find(x=>x.id===id);
   if (!preset || !el) return;
   const img = new Image();
+  img.crossOrigin = 'anonymous'; // raw.githubusercontent.com sends CORS headers — needed so the design canvas doesn't get tainted
   img.onload = () => { el.img = img; renderToolPanelContent(); drawPreview(); };
   img.src = preset.src;
 }
@@ -954,6 +956,7 @@ function addPlacedFromPreset(kind, i){
   const preset = placedPresets(kind)[i];
   if (!preset) return;
   const img = new Image();
+  img.crossOrigin = 'anonymous'; // raw.githubusercontent.com sends CORS headers — needed so the design canvas doesn't get tainted
   img.onload = () => {
     const el = { id: nextPlacedId(kind), img, xFrac:0.15, yFrac:-0.15, scale:1, rotation:0, locked:false };
     placedArray(kind).push(el);
@@ -1068,6 +1071,7 @@ function setCharacterFromPreset(i){
   const preset = CHARACTER_PRESETS[i];
   if (!preset) return;
   const img = new Image();
+  img.crossOrigin = 'anonymous'; // raw.githubusercontent.com sends CORS headers — needed so the design canvas doesn't get tainted
   img.onload = () => {
     const isNew = !state.character;
     state.character = { img, scale:1, rotation:0, xFrac:0, yFrac:0, locked:false };
