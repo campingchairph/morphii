@@ -292,6 +292,11 @@ const ICON_SIZE       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 const ICON_ROTATE     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 1 2.6 5.9"/><path d="M4 17v-5h5"/></svg>';
 const ICON_FONT       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19l5-14 5 14M6.5 14h7"/><path d="M15 19l3-7 3 7M16.3 16.5h3.4"/></svg>';
 const ICON_ARC        = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17a10 8 0 0 1 16 0"/></svg>';
+const ICON_CURVE_STRAIGHT = '<svg viewBox="0 0 40 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="4" y1="12" x2="36" y2="12"/></svg>';
+const ICON_CURVE_TOP     = '<svg viewBox="0 0 40 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 20 Q20 2 36 20"/></svg>';
+const ICON_CURVE_BOTTOM  = '<svg viewBox="0 0 40 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 4 Q20 22 36 4"/></svg>';
+const ICON_PICKER_WHEEL  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 019 9M12 3a4.5 4.5 0 000 9 4.5 4.5 0 010 9"/></svg>';
+const TEXT_COLOR_SWATCHES = ['#FFFFFF','#000000','#FF3B30','#FF9500','#FFCC00','#34C759','#007AFF','#5856D6','#FF2D92','#8B5A2B'];
 const ICON_SWATCH     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/></svg>';
 const ICON_SHADOW     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M9 9h12v12H9z" opacity="0.45"/></svg>';
 const ICON_EDIT       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>';
@@ -575,10 +580,11 @@ function selectBorderPreset(i){
   const preset = BORDER_PRESETS[i];
   if (!preset) return;
   const prevRotation = state.border ? state.border.rotation : 0;
+  const prevScale = state.border ? state.border.scale : 1;
   const img = new Image();
   img.crossOrigin = 'anonymous'; // raw.githubusercontent.com sends CORS headers — needed so the design canvas doesn't get tainted
   img.onload = () => {
-    state.border = { img, src: preset.src, label: preset.label, rotation: prevRotation };
+    state.border = { img, src: preset.src, label: preset.label, rotation: prevRotation, scale: prevScale };
     renderDock(); renderToolPanelContent(); drawPreview();
   };
   img.src = preset.src;
@@ -604,9 +610,10 @@ function onBorderFileChosen(e){
   const reader = new FileReader();
   reader.onload = ev => {
     const prevRotation = state.border ? state.border.rotation : 0;
+    const prevScale = state.border ? state.border.scale : 1;
     const img = new Image();
     img.onload = () => {
-      state.border = { img, src: ev.target.result, label: null, rotation: prevRotation };
+      state.border = { img, src: ev.target.result, label: null, rotation: prevRotation, scale: prevScale };
       renderDock(); renderToolPanelContent(); drawPreview();
     };
     img.src = ev.target.result;
@@ -1154,6 +1161,7 @@ function updateTextLine(id, field, value){
       if (slider) slider.value = line.size;
     }
   }
+  if (field==='font' || field==='placement' || field==='color') renderToolPanelContent();
   drawPreview();
 }
 window.updateTextLine = updateTextLine;
@@ -1177,24 +1185,34 @@ function textToolPanelHtml(tool, id){
       <div class="cr-hint">Drag the text directly on the pin to reposition it.</div>`;
   }
   if (tool==='font'){
-    return `<select class="cr-select" style="width:100%" onchange="updateTextLine(${t.id},'font',this.value)">
-      ${FONTS.map(f=>`<option value="${f}" ${t.font===f?'selected':''}>${f}</option>`).join('')}
-    </select>`;
+    return `<div class="cr-font-grid">${FONTS.map((f,i)=>
+      `<button class="cr-font-swatch ${t.font===f?'active':''}" style="font-family:'${escHtml(f)}'" onclick="updateTextLine(${t.id},'font',FONTS[${i}])">${escHtml(f)}</button>`
+    ).join('')}</div>`;
   }
   if (tool==='placement'){
-    return `<select class="cr-select" style="width:100%" onchange="updateTextLine(${t.id},'placement',this.value)">
-      <option value="straight" ${t.placement==='straight'?'selected':''}>Straight</option>
-      <option value="top-arc" ${t.placement==='top-arc'?'selected':''}>Top Arc</option>
-      <option value="bottom-arc" ${t.placement==='bottom-arc'?'selected':''}>Bottom Arc</option>
-    </select>`;
+    const options = [
+      { v:'straight',   label:'Straight',    icon:ICON_CURVE_STRAIGHT },
+      { v:'top-arc',     label:'Top Arc',     icon:ICON_CURVE_TOP },
+      { v:'bottom-arc',  label:'Bottom Arc',  icon:ICON_CURVE_BOTTOM },
+    ];
+    return `<div class="cr-curve-grid">${options.map(o=>
+      `<button class="cr-curve-swatch ${t.placement===o.v?'active':''}" onclick="updateTextLine(${t.id},'placement','${o.v}')">
+        <span class="cr-curve-icon">${o.icon}</span><span class="cr-curve-label">${o.label}</span>
+      </button>`
+    ).join('')}</div>`;
   }
   if (tool==='color'){
     const safeColor = /^#[0-9a-fA-F]{6}$/.test(t.color) ? t.color : '#000000';
-    return `<label class="cr-color-picker-btn" id="textColorBtn_${t.id}" style="background:${t.color}">
-      <input type="color" value="${safeColor}"
-        oninput="updateTextLine(${t.id},'color',this.value); document.getElementById('textColorBtn_${t.id}').style.background=this.value">
-      <span>Tap to pick any color</span>
-    </label>`;
+    const cur = (t.color||'').toLowerCase();
+    return `<div class="cr-color-swatch-grid">
+      ${TEXT_COLOR_SWATCHES.map(c=>
+        `<button class="cr-color-swatch ${cur===c.toLowerCase()?'active':''}" style="background:${c}" onclick="updateTextLine(${t.id},'color','${c}')" title="${c}"></button>`
+      ).join('')}
+      <label class="cr-color-swatch cr-color-swatch-picker" title="Custom color">
+        <input type="color" value="${safeColor}" oninput="updateTextLine(${t.id},'color',this.value)">
+        ${ICON_PICKER_WHEEL}
+      </label>
+    </div>`;
   }
   if (tool==='size'){
     const sizePct = Math.round(t.size*100);
@@ -1202,14 +1220,10 @@ function textToolPanelHtml(tool, id){
       <div class="cr-field-label">Size <span class="cr-slider-val" id="textSizeVal_${t.id}">${sizePct}%</span></div>
       <input type="range" class="cr-range cr-range-mid" min="1" max="199" value="${sizePct}"
         oninput="setTextSizePct(${t.id},this.value); document.getElementById('textSizeVal_${t.id}').textContent=this.value+'%'">
-      <div class="cr-hint" style="margin-top:-2px">Auto-shrinks so it always stays inside the safe area.</div>`;
+      <div class="cr-hint" style="margin-top:-2px">Or use the pink handle on the pin to resize freely past this slider's range.</div>`;
   }
   if (tool==='rotate'){
-    const rotDeg = Math.round((t.rotation||0)*180/Math.PI);
-    return `
-      <div class="cr-field-label">Rotation <span class="cr-slider-val" id="textRotVal_${t.id}">${rotDeg}°</span></div>
-      <input type="range" class="cr-range cr-range-mid" min="-180" max="180" value="${rotDeg}"
-        oninput="setTextRotation(${t.id},this.value); document.getElementById('textRotVal_${t.id}').textContent=this.value+'°'">`;
+    return `<div class="cr-hint" style="margin-top:2px">Use the blue handle that appears on the pin to rotate this text.</div>`;
   }
   return '';
 }
@@ -1304,16 +1318,16 @@ function bindCanvasInteractions(canvas){
     const HANDLE_R = 0.05;
 
     // 1. Handles of the currently selected element take priority (skipped if locked).
-    // Sticker/shape/wordart only — text/character resize+rotate via sliders
-    // instead, since their handles could end up off-canvas once enlarged.
+    // Character is the one exception — always centered, no handles at all.
+    // Border only gets the resize handle (it already has its own Rotate slider).
     {
       const { el, kind } = selectedElementAndKind();
-      if (el && !el.locked && (kind==='sticker' || kind==='shape' || kind==='wordart')){
+      if (el && !el.locked && (kind==='sticker' || kind==='shape' || kind==='wordart' || kind==='text' || kind==='border')){
         const hp = handlePositions(el, kind);
         if (dist2(p.x,p.y,hp.resize.x,hp.resize.y) <= HANDLE_R*HANDLE_R){
           startElementDrag(canvas, e, 'resize', el); return;
         }
-        if (dist2(p.x,p.y,hp.rotate.x,hp.rotate.y) <= HANDLE_R*HANDLE_R){
+        if (kind!=='border' && dist2(p.x,p.y,hp.rotate.x,hp.rotate.y) <= HANDLE_R*HANDLE_R){
           startElementDrag(canvas, e, 'rotate', el); return;
         }
       }
@@ -1358,9 +1372,19 @@ function bindCanvasInteractions(canvas){
       state.dragTarget.yFrac = state.dragStartOffY + dyFrac;
       if (state.dragIsText) clampTextPosition(state.dragTarget);
     } else if (state.dragTarget && state.dragMode==='resize'){
-      // Sticker-only now (text/character resize via sliders) — see pointerdown.
       const dist = Math.hypot(p.x-state.dragTarget.xFrac, p.y-state.dragTarget.yFrac);
-      state.dragTarget.scale = Math.max(0.3, Math.min(3, state.dragStartScale * (dist/state.dragStartDist)));
+      const ratio = dist/state.dragStartDist;
+      if (state.dragIsText){
+        state.dragTarget.size = Math.max(0.3, Math.min(5, state.dragStartScale * ratio));
+        clampTextSize(state.dragTarget);
+        clampTextPosition(state.dragTarget);
+      } else if (state.dragTarget === state.border){
+        // Small tweak range only — this compensates for asset borders that
+        // aren't perfectly circular, not a general resize.
+        state.dragTarget.scale = Math.max(0.7, Math.min(1.3, state.dragStartScale * ratio));
+      } else {
+        state.dragTarget.scale = Math.max(0.3, Math.min(3, state.dragStartScale * ratio));
+      }
     } else if (state.dragTarget && state.dragMode==='rotate'){
       const angle = Math.atan2(p.y-state.dragTarget.yFrac, p.x-state.dragTarget.xFrac);
       state.dragTarget.rotation = state.dragStartRotation + (angle - state.dragStartAngle);
@@ -1370,7 +1394,7 @@ function bindCanvasInteractions(canvas){
   canvas.addEventListener('pointerup', ()=>{ state.dragging=false; state.dragTarget=null; });
   canvas.addEventListener('pointercancel', ()=>{ state.dragging=false; state.dragTarget=null; });
 
-  const stickerOrCharSelected = () => state.selected && ['sticker','shape','wordart','character'].includes(state.selected.kind);
+  const stickerOrCharSelected = () => state.selected && ['sticker','shape','wordart','character','text','border'].includes(state.selected.kind);
 
   canvas.addEventListener('wheel', e=>{
     if (!state.bg.imageOn || !state.bg.img || state.bg.locked || stickerOrCharSelected()) return;
@@ -1477,7 +1501,7 @@ function drawOnePlaced(ctx, artboardPx, el){
 // inside the cut line and automatically rescales for whatever size is picked.
 function drawBorder(ctx, artboardPx){
   if (!state.border || !state.border.img) return;
-  const cutFrac = state.size / state.paperSize;
+  const cutFrac = (state.size / state.paperSize) * (state.border.scale||1);
   drawPlacedImage(ctx, artboardPx, state.border.img, 0, 0, cutFrac, state.border.rotation||0);
 }
 
@@ -1610,11 +1634,13 @@ function drawArcText(ctx, text, cx, cy, radius, bottom){
   });
 }
 
-/* ── SELECTION HANDLES (resize + rotate) — sticker/shape/wordart, character, text ── */
+/* ── SELECTION HANDLES (resize + rotate) — sticker/shape/wordart/text,
+   character (no handles, always centered), border (resize handle only) ── */
 function elementRadiusFrac(el, kind){
   if (kind==='character') return CHARACTER_BASE_R * el.scale;
   if (kind==='sticker' || kind==='shape' || kind==='wordart') return STICKER_BASE_R * el.scale;
   if (kind==='text')      return textFootprintFrac(el);
+  if (kind==='border')    return (state.size/state.paperSize/2) * (el.scale||1);
   return 0.14;
 }
 function handlePositions(el, kind){
@@ -1631,6 +1657,7 @@ function selectedElementAndKind(){
   if (!state.selected) return {};
   const kind = state.selected.kind;
   const el = kind==='character' ? state.character
+    : kind==='border' ? state.border
     : (kind==='sticker' || kind==='shape' || kind==='wordart') ? placedArray(kind).find(x=>x.id===state.selected.id)
     : kind==='text' ? state.textLines.find(t=>t.id===state.selected.id)
     : null;
@@ -1638,7 +1665,8 @@ function selectedElementAndKind(){
 }
 function drawSelectionHandles(ctx, artboardPx){
   const { el, kind } = selectedElementAndKind();
-  if (!el || (kind!=='sticker' && kind!=='shape' && kind!=='wordart')) return;
+  const handleKinds = ['sticker','shape','wordart','text','border'];
+  if (!el || !handleKinds.includes(kind)) return;
   const r = elementRadiusFrac(el, kind) * artboardPx;
   const cx = artboardPx/2 + el.xFrac*artboardPx, cy = artboardPx/2 + el.yFrac*artboardPx;
   const hp = handlePositions(el, kind);
@@ -1648,13 +1676,15 @@ function drawSelectionHandles(ctx, artboardPx){
   ctx.beginPath(); ctx.arc(cx, cy, r*1.15, 0, Math.PI*2); ctx.stroke();
   ctx.setLineDash([]);
 
-  const rx = artboardPx/2 + hp.rotate.x*artboardPx, ry = artboardPx/2 + hp.rotate.y*artboardPx;
   const sx = artboardPx/2 + hp.resize.x*artboardPx, sy = artboardPx/2 + hp.resize.y*artboardPx;
-
-  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(rx,ry); ctx.strokeStyle='rgba(143,174,124,0.6)'; ctx.lineWidth=1.5; ctx.stroke();
-
   drawHandleDot(ctx, sx, sy, '#FF6F91');
-  drawHandleDot(ctx, rx, ry, '#4D8FE0');
+
+  // Border only gets the resize handle — it already has its own Rotate slider.
+  if (kind!=='border'){
+    const rx = artboardPx/2 + hp.rotate.x*artboardPx, ry = artboardPx/2 + hp.rotate.y*artboardPx;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(rx,ry); ctx.strokeStyle='rgba(143,174,124,0.6)'; ctx.lineWidth=1.5; ctx.stroke();
+    drawHandleDot(ctx, rx, ry, '#4D8FE0');
+  }
   ctx.restore();
 }
 function drawHandleDot(ctx, x, y, color){
