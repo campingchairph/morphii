@@ -85,24 +85,8 @@
     <input type="file" id="shapeFileInput" accept="image/png" onchange="onPlacedFileChosen('shape', event)" class="cr-visually-hidden">
     <input type="file" id="wordartFileInput" accept="image/png" onchange="onPlacedFileChosen('wordart', event)" class="cr-visually-hidden">
 
-    <!-- ADD/CHOOSE PICKER (preset grid + "Upload Your Own") — the FIRST thing
-         shown when adding a sticker/shape/word art/character. The PNG-upload
-         instructions modal only appears once they actually choose to upload. -->
-    <div class="cr-modal-overlay" id="pickerOverlay">
-      <div class="cr-modal">
-        <div class="cr-modal-title" id="pickerTitle">Add a Sticker</div>
-        <div class="cr-preset-grid" id="pickerGrid" style="display:none"></div>
-        <div class="cr-empty-hint" id="pickerEmptyHint" style="display:none;text-align:center;padding:20px 8px;font-size:13px;"></div>
-        <button type="button" class="cr-upload-btn" style="margin-top:14px" onclick="closePicker();promptUpload(pickerKind)">
-          <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M4 21h16"/></svg>
-          <span>Upload Your Own</span>
-        </button>
-        <button class="cr-link-back" style="display:block;margin:12px auto 0" onclick="closePicker()">Cancel</button>
-      </div>
-    </div>
-
-    <!-- UPLOAD INSTRUCTIONS MODAL — only reached via "Upload Your Own" above,
-         or the Upload/Replace tool icon on an element that already exists. -->
+    <!-- UPLOAD INSTRUCTIONS MODAL — only reached via a tool row's Upload icon
+         (never shown before that, whether adding new or replacing existing). -->
     <div class="cr-modal-overlay" id="uploadHintOverlay">
       <div class="cr-modal">
         <div class="cr-modal-title">Before you upload</div>

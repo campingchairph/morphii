@@ -337,12 +337,12 @@ function bgChipThumb(){
 function quickAddText(){ addTextLine(); }
 window.quickAddText = quickAddText;
 
-function quickAddSticker(){ openPicker('sticker'); }
+function quickAddSticker(){ addNew('sticker'); }
 window.quickAddSticker = quickAddSticker;
 
 function quickSelectCharacter(){
   if (state.character) selectLayer({ kind:'character' });
-  else openPicker('character');
+  else addNew('character');
 }
 window.quickSelectCharacter = quickSelectCharacter;
 
@@ -352,10 +352,10 @@ window.quickSelectBackground = quickSelectBackground;
 function quickSelectBorder(){ selectLayer({ kind:'border' }); }
 window.quickSelectBorder = quickSelectBorder;
 
-function quickAddShape(){ openPicker('shape'); }
+function quickAddShape(){ addNew('shape'); }
 window.quickAddShape = quickAddShape;
 
-function quickAddWordArt(){ openPicker('wordart'); }
+function quickAddWordArt(){ addNew('wordart'); }
 window.quickAddWordArt = quickAddWordArt;
 
 /* ── BOTTOM DOCK (GoDaddy-style icon bar) ──────────────────────────
@@ -398,13 +398,19 @@ function toolIconsForSelection(){
     { id:'opacity', label:'Opacity', icon:ICON_OPACITY, panel:true },
     { id:'lock', label: state.bg.locked?'Locked':'Lock', icon: state.bg.locked?ICON_LOCK:ICON_UNLOCK, instant:"toggleLock('background')", on: state.bg.locked },
   ];
-  if (kind==='character') return state.character ? [
-    { id:'replace', label:'Replace', icon:ICON_UPLOAD, instant:"promptUpload('character')" },
-    { id:'size', label:'Size', icon:ICON_SIZE, panel:true },
-    { id:'rotate', label:'Rotate', icon:ICON_ROTATE, panel:true },
-    { id:'lock', label: state.character.locked?'Locked':'Lock', icon: state.character.locked?ICON_LOCK:ICON_UNLOCK, instant:"toggleLock('character')", on: state.character.locked },
-    { id:'remove', label:'Remove', icon:ICON_TRASH, instant:'removeCharacter()', danger:true },
-  ] : [];
+  if (kind==='character'){
+    if (!state.character) return [
+      { id:'presets', label:'Presets', icon:ICON_PALETTE, panel:true },
+      { id:'replace', label:'Upload', icon:ICON_UPLOAD, instant:"promptUpload('character')" },
+    ];
+    return [
+      { id:'replace', label:'Replace', icon:ICON_UPLOAD, instant:"promptUpload('character')" },
+      { id:'size', label:'Size', icon:ICON_SIZE, panel:true },
+      { id:'rotate', label:'Rotate', icon:ICON_ROTATE, panel:true },
+      { id:'lock', label: state.character.locked?'Locked':'Lock', icon: state.character.locked?ICON_LOCK:ICON_UNLOCK, instant:"toggleLock('character')", on: state.character.locked },
+      { id:'remove', label:'Remove', icon:ICON_TRASH, instant:'removeCharacter()', danger:true },
+    ];
+  }
   if (kind==='border') return [
     { id:'presets', label:'Presets', icon:ICON_PALETTE, panel:true },
     { id:'replace', label:'Upload', icon:ICON_UPLOAD, instant:"promptUpload('border')" },
@@ -412,9 +418,13 @@ function toolIconsForSelection(){
     { id:'remove', label:'Remove', icon:ICON_TRASH, instant:'removeBorder()', danger:true },
   ];
   if (kind==='sticker' || kind==='shape' || kind==='wordart'){
+    // Same pattern as border: pick from the library or upload your own.
+    if (state.selected.id == null) return [
+      { id:'presets', label:'Presets', icon:ICON_PALETTE, panel:true },
+      { id:'replace', label:'Upload', icon:ICON_UPLOAD, instant:`promptUpload('${kind}')` },
+    ];
     const el = placedArray(kind).find(x=>x.id===state.selected.id);
     if (!el) return [];
-    // Same pattern as border: pick from the library or upload your own.
     const icons = [
       { id:'presets', label:'Presets', icon:ICON_PALETTE, panel:true },
       { id:'replace', label:'Upload', icon:ICON_UPLOAD, instant:`promptUpload('${kind}')` },
@@ -425,7 +435,7 @@ function toolIconsForSelection(){
     // Add-another shortcut — stickers only for now, so you can add a second
     // sticker without backing out to the main dock. (Say the word if you
     // want this on Shape/Word Art too.)
-    if (kind==='sticker') icons.push({ id:'add', label:'Add', icon:ICON_PLUS, instant:"openPicker('sticker')" });
+    if (kind==='sticker') icons.push({ id:'add', label:'Add', icon:ICON_PLUS, instant:"addNew('sticker')" });
     icons.push(
       { id:'lock', label: el.locked?'Locked':'Lock', icon: el.locked?ICON_LOCK:ICON_UNLOCK, instant:`toggleLock('${kind}',${el.id})`, on: el.locked },
       { id:'remove', label:'Remove', icon:ICON_TRASH, instant:`removePlaced('${kind}',${el.id})`, danger:true },
@@ -489,7 +499,7 @@ function renderToolPanelContent(){
   let html = '';
   if (kind==='background') html = bgToolPanelHtml(_activeTool);
   else if (kind==='border') html = borderToolPanelHtml(_activeTool);
-  else if (kind==='character' && state.character) html = characterToolPanelHtml(_activeTool);
+  else if (kind==='character') html = characterToolPanelHtml(_activeTool);
   else if (kind==='sticker' || kind==='shape' || kind==='wordart') html = placedToolPanelHtml(kind, _activeTool, state.selected.id);
   else if (kind==='text') html = textToolPanelHtml(_activeTool, state.selected.id);
   if (!html){ wrap.classList.remove('show'); body.innerHTML=''; return; }
@@ -737,10 +747,6 @@ function clampBgTransform(){
   state.bg.offsetYFrac = Math.max(-maxY, Math.min(maxY, state.bg.offsetYFrac));
 }
 
-/* ── ADD/CHOOSE PICKER — the first thing shown when adding a sticker,
-   shape, word art, or character: just the preset grid + an "Upload Your
-   Own" button. The PNG-transparency instructions only show up once they
-   actually choose to upload (see promptUpload below), not before. ── */
 function presetsForKind(kind){
   if (kind==='character') return CHARACTER_PRESETS;
   if (kind==='border') return BORDER_PRESETS;
@@ -748,43 +754,20 @@ function presetsForKind(kind){
   return [];
 }
 
-let pickerKind = null;
-function openPicker(kind){
-  pickerKind = kind;
-  const label = PLACED_META[kind] ? PLACED_META[kind].label : capitalize(kind);
-  document.getElementById('pickerTitle').textContent = `Add a ${label}`;
-
-  const presets = presetsForKind(kind);
-  const grid = document.getElementById('pickerGrid');
-  const emptyHint = document.getElementById('pickerEmptyHint');
-  if (presets.length){
-    grid.style.display = '';
-    grid.innerHTML = presets.map((p,i)=>`<button class="cr-preset-thumb" onclick="pickAssetToAdd(${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`).join('');
-    emptyHint.style.display = 'none';
-  } else {
-    grid.style.display = 'none';
-    emptyHint.style.display = '';
-    emptyHint.textContent = `😢 No ${label.toLowerCase()}s here yet — check back soon, or upload your own below.`;
-  }
-  document.getElementById('pickerOverlay').classList.add('show');
+// Adding a sticker/shape/word art/character works exactly like Border:
+// select the category (id:null = "nothing created yet"), which shows a
+// [Presets, Upload] tool row; the Presets rising panel shows the grid
+// inline, tapping a preset creates the element. No modal anywhere in this
+// flow — the PNG-upload instructions modal only appears via the Upload icon.
+function addNew(kind){
+  if (kind==='character') selectLayer({ kind:'character' });
+  else selectLayer({ kind, id:null });
+  openToolPanel('presets');
 }
-window.openPicker = openPicker;
-
-function closePicker(){
-  document.getElementById('pickerOverlay').classList.remove('show');
-}
-window.closePicker = closePicker;
-
-function pickAssetToAdd(i){
-  closePicker();
-  if (pickerKind==='character') setCharacterFromPreset(i);
-  else addPlacedFromPreset(pickerKind, i);
-}
-window.pickAssetToAdd = pickAssetToAdd;
+window.addNew = addNew;
 
 /* ── UPLOAD INSTRUCTIONS MODAL (with PNG/transparency infographic) ──
-   Reached only via the picker's "Upload Your Own" button, or the
-   Upload/Replace tool icon on an element that already exists. */
+   Reached only via a tool row's Upload icon. */
 const UPLOAD_INPUT_IDS = {
   sticker:'stickerFileInput', character:'characterFileInput', border:'borderFileInput',
   shape:'shapeFileInput', wordart:'wordartFileInput',
@@ -916,12 +899,24 @@ function endLayerDrag(){
 
 /* ── STICKER / SHAPE / WORD ART TOOL PANELS (shared) ──────────────── */
 function placedToolPanelHtml(kind, tool, id){
+  const noun = PLACED_META[kind].label.toLowerCase();
+
+  // Pending — nothing created yet. Presets grid creates a new element when
+  // tapped; there's nothing to show for any other tool in this state.
+  if (id == null){
+    if (tool!=='presets') return '';
+    const presets = placedPresets(kind);
+    if (!presets.length) return `<div class="cr-empty-hint">😢 No ${noun}s here yet — check back soon, or use Upload above.</div>`;
+    return `<div class="cr-preset-grid">${presets.map((p,i)=>
+      `<button class="cr-preset-thumb" onclick="addPlacedFromPreset('${kind}',${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`
+    ).join('')}</div>`;
+  }
+
   const el = placedArray(kind).find(x=>x.id===id);
   if (!el) return '';
-  const noun = PLACED_META[kind].label.toLowerCase();
   if (tool==='presets'){
     const presets = placedPresets(kind);
-    if (!presets.length) return `<div class="cr-empty-hint">No ${noun}s available yet — check back soon!</div>`;
+    if (!presets.length) return `<div class="cr-empty-hint">😢 No ${noun}s here yet — check back soon!</div>`;
     return `<div class="cr-preset-grid">${presets.map((p,i)=>
       `<button class="cr-preset-thumb ${el.img && el.img.src===p.src ? 'active' : ''}" onclick="swapPlacedImage('${kind}',${el.id},${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`
     ).join('')}</div>`;
@@ -1036,7 +1031,13 @@ window.setStickerScale = setStickerScale;
 /* ── CENTER CHARACTER TOOL PANELS (single, big, always centered) ── */
 function characterToolPanelHtml(tool){
   const c = state.character;
-  if (!c) return '';
+  if (!c){
+    if (tool!=='presets') return '';
+    if (!CHARACTER_PRESETS.length) return `<div class="cr-empty-hint">😢 No characters here yet — check back soon, or use Upload above.</div>`;
+    return `<div class="cr-preset-grid">${CHARACTER_PRESETS.map((p,i)=>
+      `<button class="cr-preset-thumb" onclick="setCharacterFromPreset(${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`
+    ).join('')}</div>`;
+  }
   if (tool==='size'){
     const sizePct = Math.round(c.scale*100);
     return `
