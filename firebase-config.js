@@ -89,24 +89,24 @@ async function saveCustomFonts(list) {
   return DB.collection('morphii_config').doc('fonts').set({ list });
 }
 
-/* ── ASSET LIBRARY (morphii_config/assets doc) ──
-   { stickers:[{label,url}], shapes:[...], holders:[...], texts:[...],
-     borders:[...], background:[...], characters:[...] }
-   Raw image files live in the repo (assets/pins/<category>/ — only repo
-   collaborators can push there); this doc is just the curated "which files
-   are in the library, with what label" list, edited from the admin's Asset
-   Library screen (no GitHub write needed). Public read, admin-only write —
-   same as fonts above. Used by both the admin page and the pin designer. */
-async function getAssetLibrary() {
+/* ── ASSET LABEL OVERRIDES (morphii_config/assetLabels doc) ──
+   { "<raw github url>": "Custom Label", ... }
+   Any image file pushed to assets/pins/<category>/ on GitHub is
+   automatically live in the pin designer — that push is the only access
+   control (only repo collaborators can do it). The default label is the
+   filename, cleaned up; this doc just lets the admin override specific
+   labels without touching GitHub. Public read, admin-only write. Used by
+   both the admin's Assets monitor page and the pin designer. */
+async function getAssetLabelOverrides() {
   if (!DB) return {};
   try {
-    const doc = await DB.collection('morphii_config').doc('assets').get();
+    const doc = await DB.collection('morphii_config').doc('assetLabels').get();
     return (doc.exists && doc.data()) || {};
   } catch (e) { return {}; }
 }
-async function saveAssetLibrary(data) {
+async function saveAssetLabelOverrides(map) {
   if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
-  return DB.collection('morphii_config').doc('assets').set(data);
+  return DB.collection('morphii_config').doc('assetLabels').set(map);
 }
 
 /* ── Firestore Security Rules ──────────────────

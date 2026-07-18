@@ -275,7 +275,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
     </div>
     <div class="pmi-body" style="flex-direction:column;flex-wrap:nowrap">
       <div style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-bottom:12px;line-height:1.5;">
-        Push image files to <code>assets/pins/&lt;category&gt;/</code> on GitHub first — they'll show up here to label. Labeling adds them to the pin designer's library; nothing shows up in the designer until it's labeled here.
+        This is just a monitor. Any file pushed to <code>assets/pins/&lt;category&gt;/</code> on GitHub is already live in the pin designer — using its filename as the label. Edit a label here if you want a nicer name; it saves immediately, no need to re-upload anything.
       </div>
       <div class="adm-tabs" id="assetCatTabs" style="margin-bottom:14px"></div>
       <div id="assetFilesList" style="display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto"></div>
@@ -553,12 +553,13 @@ async function removeCustomFont(i){
 }
 window.removeCustomFont = removeCustomFont;
 
-/* ── ASSET LIBRARY ────────────────────────────────────────────────
-   Two-step workflow: (1) push image files to assets/pins/<category>/ on
-   GitHub — only repo collaborators can do that, so that step is the access
-   control; (2) label them here, which just writes {label,url} pairs into
-   Firestore (morphii_config/assets) — no GitHub write/token needed. The
-   pin designer only shows files that have been labeled here. ── */
+/* ── ASSETS MONITOR ───────────────────────────────────────────────
+   Any image pushed to assets/pins/<category>/ on GitHub is automatically
+   live in the pin designer — that push is the only access control (only
+   repo collaborators can do it). This screen doesn't gate anything; it
+   just shows what's actually in each folder (read live from GitHub) and
+   lets you override the auto-generated (from-filename) label, saved as a
+   simple url->label map in Firestore (morphii_config/assetLabels). ── */
 const ASSET_CATEGORIES = [
   { id:'stickers', label:'Stickers' },
   { id:'shapes', label:'Shapes' },
@@ -571,12 +572,16 @@ const ASSET_CATEGORIES = [
 const ASSET_REPO_CONTENTS_BASE = 'https://api.github.com/repos/campingchairph/morphii/contents/assets/pins/';
 const ASSET_RAW_BASE = 'https://raw.githubusercontent.com/campingchairph/morphii/main/assets/pins/';
 
-let assetLibrary = {};
+function assetLabelFromFilename(name){
+  return name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase());
+}
+
+let assetLabelOverrides = {};
 let currentAssetCat = 'stickers';
 let currentAssetFiles = [];
 
 async function openAssetsModal(){
-  assetLibrary = await getAssetLibrary();
+  assetLabelOverrides = await getAssetLabelOverrides();
   renderAssetCatTabs();
   await loadAssetCatFiles();
   document.getElementById('assetsModal').classList.add('open');
@@ -627,46 +632,34 @@ function renderAssetFilesList(){
     list.innerHTML = `<div style="color:var(--ink-dim);font-size:12px;">No files in assets/pins/${escHtml(currentAssetCat)}/ yet — push some images there first.</div>`;
     return;
   }
-  const labeled = assetLibrary[currentAssetCat] || [];
   list.innerHTML = currentAssetFiles.map((f,i) => {
-    const existing = labeled.find(e=>e.url===f.url);
+    const label = assetLabelOverrides[f.url] || assetLabelFromFilename(f.name);
     return `
     <div class="asset-row">
       <img src="${f.url}" alt="">
       <div style="flex:1;min-width:0;">
         <div class="asset-row-name">${escHtml(f.name)}</div>
-        <input type="text" class="asset-label-input" placeholder="Label…" value="${escHtml(existing ? existing.label : '')}" id="assetLabelInput_${i}">
+        <input type="text" class="asset-label-input" value="${escHtml(label)}" id="assetLabelInput_${i}">
       </div>
-      <button class="asset-row-btn ${existing?'saved':''}" onclick="saveAssetLabel(${i})">${existing?'✓ Saved':'Add'}</button>
-      ${existing ? `<button class="asset-row-remove" onclick="removeAssetFromLibrary(${i})">Remove</button>` : ''}
+      <button class="asset-row-btn" id="assetSaveBtn_${i}" onclick="saveAssetLabelOverride(${i})">Save Label</button>
     </div>`;
   }).join('');
 }
 
-async function saveAssetLabel(i){
+async function saveAssetLabelOverride(i){
   const f = currentAssetFiles[i];
   const label = document.getElementById('assetLabelInput_'+i).value.trim();
   if (!label){ alert('Enter a label first.'); return; }
-  if (!assetLibrary[currentAssetCat]) assetLibrary[currentAssetCat] = [];
-  const idx = assetLibrary[currentAssetCat].findIndex(e=>e.url===f.url);
-  if (idx>=0) assetLibrary[currentAssetCat][idx].label = label;
-  else assetLibrary[currentAssetCat].push({ label, url:f.url });
+  assetLabelOverrides[f.url] = label;
+  const btn = document.getElementById('assetSaveBtn_'+i);
   try {
-    await saveAssetLibrary(assetLibrary);
-    renderAssetFilesList();
+    await saveAssetLabelOverrides(assetLabelOverrides);
+    btn.textContent = '✓ Saved';
+    btn.classList.add('saved');
+    setTimeout(() => { btn.textContent = 'Save Label'; btn.classList.remove('saved'); }, 1500);
   } catch(e){ alert('Error saving: '+e.message); }
 }
-window.saveAssetLabel = saveAssetLabel;
-
-async function removeAssetFromLibrary(i){
-  const f = currentAssetFiles[i];
-  assetLibrary[currentAssetCat] = (assetLibrary[currentAssetCat]||[]).filter(e=>e.url!==f.url);
-  try {
-    await saveAssetLibrary(assetLibrary);
-    renderAssetFilesList();
-  } catch(e){ alert('Error removing: '+e.message); }
-}
-window.removeAssetFromLibrary = removeAssetFromLibrary;
+window.saveAssetLabelOverride = saveAssetLabelOverride;
 
 /* ── PRINT LAYOUT (ported from the kiosk's morphii.js) ──────────────
    Same shelf-packing approach: place circles left-to-right on a shelf,

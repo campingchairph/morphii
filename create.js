@@ -408,21 +408,22 @@ function toolIconsForSelection(){
   if (kind==='border') return [
     { id:'presets', label:'Presets', icon:ICON_PALETTE, panel:true },
     { id:'replace', label:'Upload', icon:ICON_UPLOAD, instant:"promptUpload('border')" },
+    { id:'rotate', label:'Rotate', icon:ICON_ROTATE, panel:true },
     { id:'remove', label:'Remove', icon:ICON_TRASH, instant:'removeBorder()', danger:true },
   ];
   if (kind==='sticker' || kind==='shape' || kind==='wordart'){
     const el = placedArray(kind).find(x=>x.id===state.selected.id);
     if (!el) return [];
-    // Only stickers can be uploaded — shapes and word art are library-only.
-    const icons = kind==='sticker' ? [{ id:'replace', label:'Replace', icon:ICON_UPLOAD, instant:"promptUpload('sticker')" }] : [];
-    icons.push(
+    // Same pattern as border: pick from the library or upload your own.
+    return [
+      { id:'presets', label:'Presets', icon:ICON_PALETTE, panel:true },
+      { id:'replace', label:'Upload', icon:ICON_UPLOAD, instant:`promptUpload('${kind}')` },
       { id:'size', label:'Size', icon:ICON_SIZE, panel:true },
       { id:'rotate', label:'Rotate', icon:ICON_ROTATE, panel:true },
       { id:'duplicate', label:'Duplicate', icon:ICON_DUPLICATE, instant:`duplicatePlaced('${kind}',${el.id})` },
       { id:'lock', label: el.locked?'Locked':'Lock', icon: el.locked?ICON_LOCK:ICON_UNLOCK, instant:`toggleLock('${kind}',${el.id})`, on: el.locked },
       { id:'remove', label:'Remove', icon:ICON_TRASH, instant:`removePlaced('${kind}',${el.id})`, danger:true },
-    );
-    return icons;
+    ];
   }
   if (kind==='text'){
     const t = state.textLines.find(x=>x.id===state.selected.id);
@@ -537,19 +538,29 @@ window.selectGradient = selectGradient;
 
 /* ── BORDER TOOL PANEL (single preset, fixed above the background) ── */
 function borderToolPanelHtml(tool){
-  if (tool!=='presets') return '';
-  if (!BORDER_PRESETS.length) return `<div class="cr-empty-hint">No border designs yet — check back soon!</div>`;
-  return `<div class="cr-preset-grid">${BORDER_PRESETS.map((p,i)=>
-    `<button class="cr-preset-thumb ${state.border && state.border.src===p.src ? 'active' : ''}" onclick="selectBorderPreset(${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`
-  ).join('')}</div>`;
+  if (tool==='presets'){
+    if (!BORDER_PRESETS.length) return `<div class="cr-empty-hint">No border designs yet — check back soon!</div>`;
+    return `<div class="cr-preset-grid">${BORDER_PRESETS.map((p,i)=>
+      `<button class="cr-preset-thumb ${state.border && state.border.src===p.src ? 'active' : ''}" onclick="selectBorderPreset(${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`
+    ).join('')}</div>`;
+  }
+  if (tool==='rotate'){
+    const rotDeg = Math.round(((state.border && state.border.rotation)||0)*180/Math.PI);
+    return `
+      <div class="cr-field-label">Rotation <span class="cr-slider-val" id="borderRotVal">${rotDeg}°</span></div>
+      <input type="range" class="cr-range cr-range-mid" min="-180" max="180" value="${rotDeg}"
+        oninput="setBorderRotation(this.value); document.getElementById('borderRotVal').textContent=this.value+'°'">`;
+  }
+  return '';
 }
 
 function selectBorderPreset(i){
   const preset = BORDER_PRESETS[i];
   if (!preset) return;
+  const prevRotation = state.border ? state.border.rotation : 0;
   const img = new Image();
   img.onload = () => {
-    state.border = { img, src: preset.src, label: preset.label };
+    state.border = { img, src: preset.src, label: preset.label, rotation: prevRotation };
     renderDock(); renderToolPanelContent(); drawPreview();
   };
   img.src = preset.src;
@@ -562,14 +573,22 @@ function removeBorder(){
 }
 window.removeBorder = removeBorder;
 
+function setBorderRotation(deg){
+  if (!state.border) return;
+  state.border.rotation = (+deg) * Math.PI/180;
+  drawPreview();
+}
+window.setBorderRotation = setBorderRotation;
+
 function onBorderFileChosen(e){
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = ev => {
+    const prevRotation = state.border ? state.border.rotation : 0;
     const img = new Image();
     img.onload = () => {
-      state.border = { img, src: ev.target.result, label: null };
+      state.border = { img, src: ev.target.result, label: null, rotation: prevRotation };
       renderDock(); renderToolPanelContent(); drawPreview();
     };
     img.src = ev.target.result;
@@ -712,40 +731,35 @@ function clampBgTransform(){
 
 /* ── UPLOAD INSTRUCTIONS MODAL (with PNG/transparency infographic) ──
    Also doubles as the preset picker for sticker/shape/wordart/character/
-   border — if a curated gallery exists for the kind, it's shown above the
-   upload button so "add one" always offers presets first, upload as a
-   fallback. Shapes and Word Art are library-only (no customer upload), so
-   the upload button/instructions are hidden for those two. */
+   border — every one of those supports both: pick from the library (shown
+   above the upload button whenever one exists) or upload your own. */
 function presetsForKind(kind){
   if (kind==='character') return CHARACTER_PRESETS;
   if (kind==='border') return BORDER_PRESETS;
   if (PLACED_META[kind]) return placedPresets(kind);
   return [];
 }
-const UPLOAD_INPUT_IDS = { sticker:'stickerFileInput', character:'characterFileInput', border:'borderFileInput' };
-const LIBRARY_ONLY_KINDS = ['shape','wordart'];
+const UPLOAD_INPUT_IDS = {
+  sticker:'stickerFileInput', character:'characterFileInput', border:'borderFileInput',
+  shape:'shapeFileInput', wordart:'wordartFileInput',
+};
 
 function promptUpload(kind){
-  const isLibraryOnly = LIBRARY_ONLY_KINDS.includes(kind);
-  const label = PLACED_META[kind] ? PLACED_META[kind].label : capitalize(kind);
   const noun = PLACED_META[kind] ? PLACED_META[kind].uploadNoun : kind;
-
-  document.getElementById('uploadHintTitle').textContent = isLibraryOnly ? `Choose a ${label}` : 'Before you upload';
-  document.getElementById('uploadHintText').textContent = isLibraryOnly
-    ? `Pick one from our library below.`
-    : `Your ${noun} file should be a PNG with a transparent (no) background, so it blends cleanly into the design.`;
+  document.getElementById('uploadHintTitle').textContent = 'Before you upload';
+  document.getElementById('uploadHintText').textContent =
+    `Your ${noun} file should be a PNG with a transparent (no) background, so it blends cleanly into the design.`;
   document.getElementById('uploadHintInputId').value = UPLOAD_INPUT_IDS[kind] || 'bgFileInput';
 
   const presets = presetsForKind(kind);
   const grid = document.getElementById('uploadHintPresetGrid');
-  const showGrid = presets.length>0 || isLibraryOnly;
-  grid.style.display = showGrid ? '' : 'none';
-  grid.innerHTML = !showGrid ? '' : presets.length
+  grid.style.display = presets.length ? '' : 'none';
+  grid.innerHTML = presets.length
     ? presets.map((p,i)=>`<button class="cr-preset-thumb" onclick="choosePresetAndClose('${kind}',${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`).join('')
-    : `<div class="cr-empty-hint">No ${label.toLowerCase()}s available yet — check back soon!</div>`;
+    : '';
 
-  document.getElementById('uploadHintPngSection').style.display = isLibraryOnly ? 'none' : '';
-  document.getElementById('uploadHintConfirmBtn').style.display = isLibraryOnly ? 'none' : '';
+  document.getElementById('uploadHintPngSection').style.display = '';
+  document.getElementById('uploadHintConfirmBtn').style.display = '';
 
   document.getElementById('uploadHintOverlay').classList.add('show');
 }
@@ -878,6 +892,13 @@ function placedToolPanelHtml(kind, tool, id){
   const el = placedArray(kind).find(x=>x.id===id);
   if (!el) return '';
   const noun = PLACED_META[kind].label.toLowerCase();
+  if (tool==='presets'){
+    const presets = placedPresets(kind);
+    if (!presets.length) return `<div class="cr-empty-hint">No ${noun}s available yet — check back soon!</div>`;
+    return `<div class="cr-preset-grid">${presets.map((p,i)=>
+      `<button class="cr-preset-thumb ${el.img && el.img.src===p.src ? 'active' : ''}" onclick="swapPlacedImage('${kind}',${el.id},${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`
+    ).join('')}</div>`;
+  }
   if (tool==='size'){
     return `
       <div class="cr-field-label">Size</div>
@@ -889,6 +910,19 @@ function placedToolPanelHtml(kind, tool, id){
   }
   return '';
 }
+
+// Swaps the currently-selected element's image in place (keeps its
+// position/size/rotation) — same "pick a different one" idea as Border's
+// Presets tool, just for the multi-instance sticker/shape/wordart kinds.
+function swapPlacedImage(kind, id, i){
+  const preset = placedPresets(kind)[i];
+  const el = placedArray(kind).find(x=>x.id===id);
+  if (!preset || !el) return;
+  const img = new Image();
+  img.onload = () => { el.img = img; renderToolPanelContent(); drawPreview(); };
+  img.src = preset.src;
+}
+window.swapPlacedImage = swapPlacedImage;
 
 function addPlacedFromPreset(kind, i){
   const preset = placedPresets(kind)[i];
@@ -1407,10 +1441,13 @@ function drawOnePlaced(ctx, artboardPx, el){
 
 // Single full-circle decorative frame, fixed above the background — the
 // asset should be authored as a square PNG with a transparent center so it
-// overlays the whole artboard edge-to-edge like a picture frame.
+// overlays the pin edge-to-edge like a picture frame. Sized to the finished
+// CUT diameter (not the paper/bleed diameter), so it always sits fully
+// inside the cut line and automatically rescales for whatever size is picked.
 function drawBorder(ctx, artboardPx){
   if (!state.border || !state.border.img) return;
-  drawPlacedImage(ctx, artboardPx, state.border.img, 0, 0, 1, 0);
+  const cutFrac = state.size / state.paperSize;
+  drawPlacedImage(ctx, artboardPx, state.border.img, 0, 0, cutFrac, state.border.rotation||0);
 }
 
 function drawOneCharacter(ctx, artboardPx){
@@ -1777,25 +1814,49 @@ function showDoneScreen(code, emailResult){
 }
 
 /* ── ASSET LIBRARY (stickers/shapes/word-art/borders/background/character
-   presets) — raw image files live in assets/pins/<category>/ (only repo
-   collaborators can push there); which ones are "in the library" and what
-   they're labeled is stored in Firestore (morphii_config/assets, see
-   firebase-config.js) so the admin can curate it from a page instead of
-   editing a file. See assets/pins/README.md for the full workflow. ── */
+   presets) — any image file pushed to assets/pins/<category>/ on GitHub is
+   automatically live here (that push is the only access control — only
+   repo collaborators can do it). Default label is the filename, cleaned
+   up; the admin's Assets page can override specific labels (stored in
+   Firestore, morphii_config/assetLabels) without touching GitHub. The
+   admin page never gates which files show up — it's monitoring/labeling
+   only. See assets/pins/README.md. ── */
+const PINS_REPO_CONTENTS_BASE = 'https://api.github.com/repos/campingchairph/morphii/contents/assets/pins/';
+const PINS_RAW_BASE = 'https://raw.githubusercontent.com/campingchairph/morphii/main/assets/pins/';
+// category folder -> preset array it feeds (holders shares Shapes' gallery)
+const ASSET_CATEGORY_TARGETS = {
+  stickers: () => STICKER_PRESETS,
+  shapes: () => SHAPE_PRESETS,
+  holders: () => SHAPE_PRESETS,
+  texts: () => WORDART_PRESETS,
+  borders: () => BORDER_PRESETS,
+  background: () => BACKGROUND_PRESETS,
+  characters: () => CHARACTER_PRESETS,
+};
+
+function assetLabelFromFilename(name){
+  return name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase());
+}
+
 async function loadPinAssetManifest(){
-  try {
-    const manifest = await getAssetLibrary();
-    const fill = (arr, items) => { (items||[]).forEach(it => { if (it && it.url) arr.push({ label: it.label, src: it.url }); }); };
-    fill(STICKER_PRESETS, manifest.stickers);
-    fill(SHAPE_PRESETS, manifest.shapes);
-    fill(SHAPE_PRESETS, manifest.holders); // holders share the Shapes gallery
-    fill(WORDART_PRESETS, manifest.texts);
-    fill(BORDER_PRESETS, manifest.borders);
-    fill(BACKGROUND_PRESETS, manifest.background);
-    fill(CHARACTER_PRESETS, manifest.characters);
-  } catch(e){
-    // not configured / offline — non-fatal, presets just stay empty
-  }
+  let overrides = {};
+  try { overrides = await getAssetLabelOverrides(); } catch(e){}
+  await Promise.all(Object.keys(ASSET_CATEGORY_TARGETS).map(async cat => {
+    try {
+      const res = await fetch(PINS_REPO_CONTENTS_BASE + cat);
+      if (!res.ok) return; // folder missing/empty — that category just stays empty
+      const items = await res.json();
+      const target = ASSET_CATEGORY_TARGETS[cat]();
+      items
+        .filter(it => it.type==='file' && /\.(png|jpe?g|webp|gif)$/i.test(it.name))
+        .forEach(it => {
+          const url = PINS_RAW_BASE + cat + '/' + it.name;
+          target.push({ label: overrides[url] || assetLabelFromFilename(it.name), src: url });
+        });
+    } catch(e){
+      // offline or GitHub unreachable — that category's presets just stay empty
+    }
+  }));
 }
 
 // Admin-added fonts (orders-admin.html → Fonts) — stored in Firestore
