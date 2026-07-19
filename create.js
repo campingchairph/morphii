@@ -303,6 +303,8 @@ const ICON_EDIT       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 const ICON_TRASH      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6"/></svg>';
 const ICON_LAYERS     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>';
 const ICON_GRIP       = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
+const ICON_CHEVRON_L  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>';
+const ICON_CHEVRON_R  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
 
 /* ── LAYER SELECTION (tap on the pin OR tap a chip — same result) ── */
 function layerKey(l){ return l ? l.kind + (l.id!=null ? ':'+l.id : '') : ''; }
@@ -374,7 +376,42 @@ let _activeTool = null;
 function renderDock(){
   const dock = document.getElementById('dockArea');
   if (!dock) return;
-  dock.innerHTML = state.selected ? toolRowHtml() : addRowHtml();
+  const isToolRow = !!state.selected;
+  dock.innerHTML = isToolRow ? toolRowHtml() : addRowHtml();
+  const prefix = isToolRow ? 'toolRow' : 'addRow';
+  const scrollId = isToolRow ? 'toolRowScroll' : 'addRowScroll';
+  requestAnimationFrame(()=>initDockScroll(prefix, scrollId));
+}
+
+// Left/right fade+arrow indicators for the horizontally-swipeable dock rows,
+// plus a shared "slide to see more" hint — only shown when the row actually
+// overflows, so short rows (e.g. Background's icon set) stay uncluttered.
+function scrollDockRow(scrollId, dir){
+  const row = document.getElementById(scrollId);
+  if (!row) return;
+  row.scrollBy({ left: dir * row.clientWidth * 0.7, behavior:'smooth' });
+}
+window.scrollDockRow = scrollDockRow;
+
+function updateDockScrollIndicators(prefix, scrollId){
+  const row = document.getElementById(scrollId);
+  const left = document.getElementById(prefix+'ArrowLeft');
+  const right = document.getElementById(prefix+'ArrowRight');
+  const hint = document.getElementById('dockScrollHint');
+  if (!row || !left || !right) return;
+  const overflow = row.scrollWidth > row.clientWidth + 2;
+  left.classList.toggle('cr-visible', overflow);
+  right.classList.toggle('cr-visible', overflow);
+  if (hint) hint.classList.toggle('cr-visible', overflow);
+  left.classList.toggle('active', overflow && row.scrollLeft > 4);
+  right.classList.toggle('active', overflow && row.scrollLeft < row.scrollWidth - row.clientWidth - 4);
+}
+
+function initDockScroll(prefix, scrollId){
+  const row = document.getElementById(scrollId);
+  if (!row) return;
+  row.addEventListener('scroll', ()=>updateDockScrollIndicators(prefix, scrollId));
+  updateDockScrollIndicators(prefix, scrollId);
 }
 
 function addRowHtml(){
@@ -386,13 +423,17 @@ function addRowHtml(){
     { onclick:'quickAddShape()', icon: ICON_SHAPE, label:'Shapes' },
     { onclick:'quickAddWordArt()', icon: ICON_WORDART, label:'Word Art' },
     { onclick:'quickAddText()', icon: ICON_TEXT, label:'Text' },
-    { onclick:'openLayersModal()', icon: ICON_LAYERS, label:'Layers' },
   ];
-  return `<div class="cr-add-row">${items.map(it=>`
+  const btns = items.map(it=>`
     <button class="cr-dock-btn" onclick="${it.onclick}">
       <span class="cr-dock-icon ${it.thumb?'cr-dock-icon-thumb':''}">${it.icon}</span>
       <span class="cr-dock-label">${it.label}</span>
-    </button>`).join('')}</div>`;
+    </button>`).join('');
+  return `<div class="cr-dock-scroll-wrap">
+    <button class="cr-dock-scroll-arrow" id="addRowArrowLeft" onclick="scrollDockRow('addRowScroll',-1)" aria-label="Scroll left">${ICON_CHEVRON_L}</button>
+    <div class="cr-add-row" id="addRowScroll">${btns}</div>
+    <button class="cr-dock-scroll-arrow" id="addRowArrowRight" onclick="scrollDockRow('addRowScroll',1)" aria-label="Scroll right">${ICON_CHEVRON_R}</button>
+  </div>`;
 }
 
 function toolIconsForSelection(){
@@ -477,7 +518,11 @@ function toolRowHtml(){
   }).join('');
   return `
     <button class="cr-tool-row-close" onclick="deselectLayer()" title="Done">${ICON_CLOSE}</button>
-    <div class="cr-tool-row-scroll">${btns}</div>`;
+    <div class="cr-dock-scroll-wrap">
+      <button class="cr-dock-scroll-arrow" id="toolRowArrowLeft" onclick="scrollDockRow('toolRowScroll',-1)" aria-label="Scroll left">${ICON_CHEVRON_L}</button>
+      <div class="cr-tool-row-scroll" id="toolRowScroll">${btns}</div>
+      <button class="cr-dock-scroll-arrow" id="toolRowArrowRight" onclick="scrollDockRow('toolRowScroll',1)" aria-label="Scroll right">${ICON_CHEVRON_R}</button>
+    </div>`;
 }
 
 /* ── RISING TOOL PANEL (compact bottom sheet, one control at a time) ── */
@@ -869,39 +914,67 @@ window.selectLayerFromModal = function(d){
   selectLayer(d.kind==='character' ? { kind:'character' } : { kind:d.kind, id:d.id });
 };
 
+// Drag reordering: the grabbed row follows the pointer 1:1 (its own
+// transform, no transition), while every row it passes over slides smoothly
+// into its displaced slot (CSS transition on the default .cr-layer-row
+// rule) — a real "picking it up and shuffling the stack" feel rather than
+// jumping straight to the final order on every step.
 let _layerDrag = null;
 function startLayerDrag(e, visualIndex){
   e.preventDefault();
-  const rows = document.querySelectorAll('#layersDragList .cr-layer-row.draggable');
+  const rows = [...document.querySelectorAll('#layersDragList .cr-layer-row.draggable')];
   if (rows.length < 1) return;
-  const r0 = rows[0].getBoundingClientRect();
-  const rowH = rows.length > 1 ? (rows[1].getBoundingClientRect().top - r0.top) : r0.height;
-  _layerDrag = { index: visualIndex, startY: e.clientY, rowH: Math.max(30, rowH), list: layersVisualList() };
+  const dragEl = rows[visualIndex];
+  const step = rows.length > 1
+    ? (rows[1].getBoundingClientRect().top - rows[0].getBoundingClientRect().top)
+    : dragEl.getBoundingClientRect().height + 6;
+
+  _layerDrag = {
+    order: layersVisualList(),
+    originalIndex: visualIndex,
+    currentTarget: visualIndex,
+    startY: e.clientY,
+    step: Math.max(30, step),
+    rows,
+    dragEl,
+  };
+  dragEl.classList.add('dragging');
+  dragEl.style.transform = 'translateY(0px)';
   document.addEventListener('pointermove', onLayerDragMove);
   document.addEventListener('pointerup', endLayerDrag, { once:true });
 }
 window.startLayerDrag = startLayerDrag;
 
 function onLayerDragMove(e){
-  if (!_layerDrag) return;
-  const dy = e.clientY - _layerDrag.startY;
-  const steps = Math.round(dy / _layerDrag.rowH);
-  const from = _layerDrag.index;
-  const to = Math.max(0, Math.min(_layerDrag.list.length - 1, from + steps));
-  if (to !== from){
-    const list = _layerDrag.list;
-    const [item] = list.splice(from, 1);
-    list.splice(to, 0, item);
-    _layerDrag.index = to;
-    _layerDrag.startY = e.clientY;
-    setLayersFromVisual(list);
-    renderLayersModal();
-    drawPreview();
-  }
+  const d = _layerDrag;
+  if (!d) return;
+  const dy = e.clientY - d.startY;
+  d.dragEl.style.transform = `translateY(${dy}px)`;
+
+  const target = Math.max(0, Math.min(d.rows.length - 1, d.originalIndex + Math.round(dy / d.step)));
+  d.currentTarget = target;
+
+  d.rows.forEach((row, i) => {
+    if (row === d.dragEl) return;
+    let shift = 0;
+    if (d.originalIndex < target && i > d.originalIndex && i <= target) shift = -d.step;
+    else if (d.originalIndex > target && i >= target && i < d.originalIndex) shift = d.step;
+    row.style.transform = shift ? `translateY(${shift}px)` : '';
+  });
 }
 function endLayerDrag(){
-  _layerDrag = null;
+  const d = _layerDrag;
   document.removeEventListener('pointermove', onLayerDragMove);
+  if (!d) return;
+  if (d.currentTarget !== d.originalIndex){
+    const list = d.order;
+    const [item] = list.splice(d.originalIndex, 1);
+    list.splice(d.currentTarget, 0, item);
+    setLayersFromVisual(list);
+    drawPreview();
+  }
+  _layerDrag = null;
+  renderLayersModal();
 }
 
 /* ── STICKER / SHAPE / WORD ART TOOL PANELS (shared) ──────────────── */
@@ -1215,6 +1288,14 @@ function textToolPanelHtml(tool, id){
     </div>`;
   }
   if (tool==='size'){
+    if (t.placement !== 'straight'){
+      const sizePctArc = Math.round(t.size*100);
+      return `
+        <div class="cr-field-label">Font Size</div>
+        <input type="number" class="cr-text-input" style="margin-bottom:0" min="1" step="1" inputmode="numeric"
+          value="${sizePctArc}" oninput="setTextSizeRaw(${t.id},this.value)">
+        <div class="cr-hint">Curved text has no size limit — type any value.</div>`;
+    }
     const sizePct = Math.round(t.size*100);
     return `
       <div class="cr-field-label">Size <span class="cr-slider-val" id="textSizeVal_${t.id}">${sizePct}%</span></div>
@@ -1237,6 +1318,19 @@ function setTextSizePct(id, pct){
   drawPreview();
 }
 window.setTextSizePct = setTextSizePct;
+
+// Curved text's font-size field — deliberately uncapped (no clampTextSize
+// call), since clampTextSize already no-ops for non-straight placements.
+function setTextSizeRaw(id, pct){
+  const t = state.textLines.find(x=>x.id===id);
+  if (!t) return;
+  const v = (+pct)/100;
+  if (!isFinite(v) || v <= 0) return;
+  t.size = v;
+  clampTextPosition(t);
+  drawPreview();
+}
+window.setTextSizeRaw = setTextSizeRaw;
 
 function setTextRotation(id, deg){
   const t = state.textLines.find(x=>x.id===id);
@@ -1320,11 +1414,14 @@ function bindCanvasInteractions(canvas){
     // 1. Handles of the currently selected element take priority (skipped if locked).
     // Character is the one exception — always centered, no handles at all.
     // Border only gets the resize handle (it already has its own Rotate slider).
+    // Curved text (top-arc/bottom-arc) has no resize handle at all — its Size
+    // tool is a plain uncapped number field instead (see textToolPanelHtml).
     {
       const { el, kind } = selectedElementAndKind();
+      const isCurvedText = kind==='text' && el && el.placement!=='straight';
       if (el && !el.locked && (kind==='sticker' || kind==='shape' || kind==='wordart' || kind==='text' || kind==='border')){
         const hp = handlePositions(el, kind);
-        if (dist2(p.x,p.y,hp.resize.x,hp.resize.y) <= HANDLE_R*HANDLE_R){
+        if (!isCurvedText && dist2(p.x,p.y,hp.resize.x,hp.resize.y) <= HANDLE_R*HANDLE_R){
           startElementDrag(canvas, e, 'resize', el); return;
         }
         if (kind!=='border' && dist2(p.x,p.y,hp.rotate.x,hp.rotate.y) <= HANDLE_R*HANDLE_R){
@@ -1538,8 +1635,12 @@ function textFootprintFrac(t){
 }
 
 // Auto-shrinks a text line's size so it never renders past the safe-area
-// circle — called whenever text/size/font/placement changes.
+// circle — called whenever text/size/font/placement changes. Curved text
+// (top-arc/bottom-arc) is exempt: those assets are often meant to run right
+// up to (or past) the safe area on purpose, so the customer gets full manual
+// control over size instead of an automatic shrink.
 function clampTextSize(t){
+  if (t.placement !== 'straight') return;
   const ctx = document.getElementById('designCanvas').getContext('2d');
   const scalePxPerMM = CANVAS_PX / artboardDiameter();
   const cutRadiusPx = (state.size/2) * scalePxPerMM;
@@ -1670,14 +1771,19 @@ function drawSelectionHandles(ctx, artboardPx){
   const r = elementRadiusFrac(el, kind) * artboardPx;
   const cx = artboardPx/2 + el.xFrac*artboardPx, cy = artboardPx/2 + el.yFrac*artboardPx;
   const hp = handlePositions(el, kind);
+  const isCurvedText = kind==='text' && el.placement!=='straight';
 
   ctx.save();
   ctx.strokeStyle = '#8FAE7C'; ctx.lineWidth = 2; ctx.setLineDash([5,4]);
   ctx.beginPath(); ctx.arc(cx, cy, r*1.15, 0, Math.PI*2); ctx.stroke();
   ctx.setLineDash([]);
 
-  const sx = artboardPx/2 + hp.resize.x*artboardPx, sy = artboardPx/2 + hp.resize.y*artboardPx;
-  drawHandleDot(ctx, sx, sy, '#FF6F91');
+  // Curved text has no resize handle — its Size tool is an uncapped number
+  // field instead, so there's nothing to drag-scale on the canvas.
+  if (!isCurvedText){
+    const sx = artboardPx/2 + hp.resize.x*artboardPx, sy = artboardPx/2 + hp.resize.y*artboardPx;
+    drawHandleDot(ctx, sx, sy, '#FF6F91');
+  }
 
   // Border only gets the resize handle — it already has its own Rotate slider.
   if (kind!=='border'){
@@ -1691,6 +1797,26 @@ function drawHandleDot(ctx, x, y, color){
   ctx.beginPath(); ctx.arc(x, y, 11, 0, Math.PI*2);
   ctx.fillStyle = '#ffffff'; ctx.fill();
   ctx.lineWidth = 2.5; ctx.strokeStyle = color; ctx.stroke();
+}
+
+// Dims the bleed ring (between the cut line and the paper/artboard edge) so
+// it's visually obvious that area gets trimmed off and isn't part of the
+// finished, visible pin — live-editing chrome only, not in exports.
+function drawOutsideCutDim(ctx, sizePx){
+  const scalePxPerMM = sizePx / artboardDiameter();
+  const cutR = (state.size/2) * scalePxPerMM;
+  const paperR = sizePx/2;
+  const cx = sizePx/2, cy = sizePx/2;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, paperR, 0, Math.PI*2);
+  ctx.moveTo(cx+cutR, cy);
+  ctx.arc(cx, cy, cutR, 0, Math.PI*2, true);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,255,255,0.65)';
+  ctx.fill('evenodd');
+  ctx.restore();
 }
 
 function drawGuides(ctx, sizePx){
@@ -1730,6 +1856,7 @@ function drawPreview(){
   const canvas = document.getElementById('designCanvas');
   const ctx = canvas.getContext('2d');
   drawDesignLayer(ctx, CANVAS_PX);
+  drawOutsideCutDim(ctx, CANVAS_PX);
   drawGuides(ctx, CANVAS_PX);
   drawSelectionHandles(ctx, CANVAS_PX);
   drawWatermark(ctx, CANVAS_PX);
