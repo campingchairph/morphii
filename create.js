@@ -20,12 +20,12 @@ const PRODUCTS = [
 // chart. Paper size is a fixed property of each size now, not a customer
 // choice (see the removed Print Settings step).
 const SIZES = [
-  { mm:25, paperMM:35.2, tag:'Smallest' },
-  { mm:32, paperMM:44,   tag:'Compact' },
-  { mm:37, paperMM:48.8, tag:'Popular' },
-  { mm:44, paperMM:56.4, tag:'Standard' }, // ⚠ estimated (not legible on the chart) — confirm and update
-  { mm:58, paperMM:70,   tag:'Large' },
-  { mm:75, paperMM:86.3, tag:'XL' },
+  { mm:25, paperMM:35.2, tag:'Smallest', enabled:true },
+  { mm:32, paperMM:44,   tag:'Compact',  enabled:true },
+  { mm:37, paperMM:48.8, tag:'Popular',  enabled:true },
+  { mm:44, paperMM:56.4, tag:'Standard', enabled:true }, // ⚠ estimated (not legible on the chart) — confirm and update
+  { mm:58, paperMM:70,   tag:'Large',    enabled:true },
+  { mm:75, paperMM:86.3, tag:'XL',       enabled:true },
 ];
 
 const STEP_ORDER = ['product','size','design','submit','done'];
@@ -152,7 +152,7 @@ function goStep(name){
     el.classList.toggle('done', i<idx && i>=0);
   });
   window.scrollTo({top:0,behavior:'smooth'});
-  if (name==='design'){ setupCanvas(); drawPreview(); }
+  if (name==='design'){ setupCanvas(); drawPreview(); renderCanvasBgDecor(); }
   if (name==='submit'){ renderSubmitSummary(); }
 }
 window.goStep = goStep;
@@ -168,7 +168,9 @@ function renderProductGrid(){
     </div>`).join('');
 }
 function selectProduct(id){
-  state.product = PRODUCTS.find(p=>p.id===id);
+  const p = PRODUCTS.find(p=>p.id===id);
+  if (!p || !p.enabled) return;
+  state.product = p;
   renderSizeGrid();
   goStep('size');
 }
@@ -178,7 +180,8 @@ window.selectProduct = selectProduct;
 function renderSizeGrid(){
   const grid = document.getElementById('sizeGrid');
   grid.innerHTML = SIZES.map(s=>`
-    <div class="cr-size-card" onclick="selectSize(${s.mm})">
+    <div class="cr-size-card ${s.enabled?'':'disabled'}" onclick="${s.enabled?`selectSize(${s.mm})`:''}">
+      ${s.enabled?'':'<div class="cr-product-badge">Unavailable</div>'}
       <div class="cr-size-ring" style="width:${24+s.mm*0.85}px;height:${24+s.mm*0.85}px"></div>
       <div class="cr-size-num">${s.mm}mm Circle</div>
       <div class="cr-size-tag">${s.tag}</div>
@@ -188,7 +191,7 @@ function renderSizeGrid(){
 // — customers don't control it, so picking a size goes straight to Design.
 function selectSize(mm){
   const s = SIZES.find(x=>x.mm===mm);
-  if (!s) return;
+  if (!s || !s.enabled) return;
   state.size = s.mm;
   state.paperSize = s.paperMM;
   goStep('design');
@@ -1228,7 +1231,7 @@ function updateTextLine(id, field, value){
   line[field] = value;
   if (field==='size' || field==='text' || field==='placement' || field==='font'){
     clampTextSize(line);
-    clampTextPosition(line);
+    clampElementToCutLine(line);
     if (field==='size'){
       const slider = document.getElementById('textSizeSlider_'+id);
       if (slider) slider.value = line.size;
@@ -1314,7 +1317,7 @@ function setTextSizePct(id, pct){
   if (!t) return;
   t.size = (+pct)/100;
   clampTextSize(t);
-  clampTextPosition(t);
+  clampElementToCutLine(t);
   drawPreview();
 }
 window.setTextSizePct = setTextSizePct;
@@ -1327,7 +1330,7 @@ function setTextSizeRaw(id, pct){
   const v = (+pct)/100;
   if (!isFinite(v) || v <= 0) return;
   t.size = v;
-  clampTextPosition(t);
+  clampElementToCutLine(t);
   drawPreview();
 }
 window.setTextSizeRaw = setTextSizeRaw;
@@ -1469,7 +1472,10 @@ function bindCanvasInteractions(canvas){
       const dyFrac = (e.clientY - state.dragStartY) / rect.height;
       state.dragTarget.xFrac = state.dragStartOffX + dxFrac;
       state.dragTarget.yFrac = state.dragStartOffY + dyFrac;
-      if (state.dragIsText) clampTextPosition(state.dragTarget);
+      // Character never gets a 'move' drag (always centered) — this only
+      // ever runs for sticker/shape/wordart/text, all of which should be
+      // held back from leaving the cut line entirely.
+      clampElementToCutLine(state.dragTarget);
     } else if (state.dragTarget && state.dragMode==='resize'){
       const dist = Math.hypot(p.x-state.dragTarget.xFrac, p.y-state.dragTarget.yFrac);
       const ratio = dist/state.dragStartDist;
@@ -1480,7 +1486,7 @@ function bindCanvasInteractions(canvas){
       } else if (state.dragIsText){
         state.dragTarget.size = Math.max(0.3, Math.min(5, state.dragStartScale * ratio));
         clampTextSize(state.dragTarget);
-        clampTextPosition(state.dragTarget);
+        clampElementToCutLine(state.dragTarget);
       } else if (state.dragTarget === state.border){
         // Small tweak range only — this compensates for asset borders that
         // aren't perfectly circular, not a general resize.
@@ -1684,18 +1690,17 @@ function clampTextSize(t){
   }
 }
 
-// Text can be dragged fully freely anywhere within the safe area — only its
-// center point is constrained to the safe radius (not center-minus-footprint,
-// which used to shrink the movable range to almost nothing for larger text).
-function clampTextPosition(t){
-  const scalePxPerMM = CANVAS_PX / artboardDiameter();
-  const cutRadiusPx = (state.size/2) * scalePxPerMM;
-  const safeRadiusPx = cutRadiusPx - safeInset()*scalePxPerMM;
-  const maxOffsetFrac = safeRadiusPx / CANVAS_PX;
-  const dist = Math.hypot(t.xFrac, t.yFrac);
-  if (dist > maxOffsetFrac && dist > 0){
-    const ratio = maxOffsetFrac / dist;
-    t.xFrac *= ratio; t.yFrac *= ratio;
+// Character/sticker/shape/wordart/text can be dragged freely, but their
+// center point is clamped to the cut-line radius — that lets roughly half
+// of the element spill past the cut line (some customers design that way
+// on purpose) without letting it be dragged fully outside, where it'd be
+// pointless (none of it would print) and easy to lose track of.
+function clampElementToCutLine(el){
+  const cutFrac = state.size / state.paperSize / 2;
+  const dist = Math.hypot(el.xFrac, el.yFrac);
+  if (dist > cutFrac && dist > 0){
+    const ratio = cutFrac / dist;
+    el.xFrac *= ratio; el.yFrac *= ratio;
   }
 }
 
@@ -1830,7 +1835,7 @@ function drawOutsideCutDim(ctx, sizePx){
   ctx.moveTo(cx+cutR, cy);
   ctx.arc(cx, cy, cutR, 0, Math.PI*2, true);
   ctx.closePath();
-  ctx.fillStyle = 'rgba(255,255,255,0.65)';
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
   ctx.fill('evenodd');
   ctx.restore();
 }
@@ -1876,6 +1881,32 @@ function drawPreview(){
   drawGuides(ctx, CANVAS_PX);
   drawSelectionHandles(ctx, CANVAS_PX);
   drawWatermark(ctx, CANVAS_PX);
+  updateCutlineWarning();
+}
+
+// True if any character/sticker/shape/wordart/text currently extends past
+// the cut line — center position is clamped (see clampElementToCutLine),
+// but resizing after the fact can still push the edge past it.
+function anyElementOverlapsCutLine(){
+  if (!state.paperSize) return false;
+  const cutFrac = state.size / state.paperSize / 2;
+  const overlaps = (el, kind) => {
+    if (!el) return false;
+    const dist = Math.hypot(el.xFrac||0, el.yFrac||0);
+    return dist + elementRadiusFrac(el, kind) > cutFrac;
+  };
+  if (overlaps(state.character, 'character')) return true;
+  if (state.textLines.some(t => overlaps(t, 'text'))) return true;
+  for (const kind of ['sticker','shape','wordart']){
+    if (placedArray(kind).some(el => overlaps(el, kind))) return true;
+  }
+  return false;
+}
+
+function updateCutlineWarning(){
+  const el = document.getElementById('cutlineWarning');
+  if (!el) return;
+  el.style.display = anyElementOverlapsCutLine() ? 'block' : 'none';
 }
 
 // Watermarked but WITHOUT guides/handles — those are live-editing chrome and
@@ -2061,6 +2092,27 @@ async function loadPinAssetManifest(){
       // offline or GitHub unreachable — that category's presets just stay empty
     }
   }));
+  renderCanvasBgDecor(); // in case the design step is already open when presets finish loading
+}
+
+// Purely decorative — 15 random stickers from the library, floating/
+// spinning behind the pin so the design screen doesn't feel static.
+// Re-randomized every time the design step is entered (see goStep).
+function renderCanvasBgDecor(){
+  const wrap = document.getElementById('canvasBgDecor');
+  if (!wrap || !STICKER_PRESETS.length) return;
+  const picks = [];
+  for (let i=0; i<15; i++) picks.push(STICKER_PRESETS[Math.floor(Math.random()*STICKER_PRESETS.length)]);
+  wrap.innerHTML = picks.map(p=>{
+    const size = 28 + Math.random()*38;      // 28-66px
+    const top = Math.random()*100, left = Math.random()*100;
+    const dx = (16 + Math.random()*34) * (Math.random()<0.5?-1:1);
+    const dy = (16 + Math.random()*34) * (Math.random()<0.5?-1:1);
+    const rot = (25 + Math.random()*65) * (Math.random()<0.5?-1:1);
+    const dur = (7 + Math.random()*9).toFixed(1);
+    const delay = (-Math.random()*dur).toFixed(1); // negative so they're already mid-cycle, not all synced
+    return `<img class="cr-bg-sticker" src="${p.src}" alt="" style="width:${size}px;top:${top}%;left:${left}%;--dx:${dx}px;--dy:${dy}px;--rot:${rot}deg;animation-duration:${dur}s;animation-delay:${delay}s;">`;
+  }).join('');
 }
 
 // Admin-added fonts (orders-admin.html → Fonts) — stored in Firestore
@@ -2089,4 +2141,24 @@ document.addEventListener('DOMContentLoaded', ()=>{
   renderProductGrid();
   loadPinAssetManifest();
   loadCustomFonts();
+  loadCatalogConfig();
 });
+
+// Lets the admin toggle product types and sizes on/off (e.g. temporarily
+// out of stock) from orders-admin.html without a code deploy. Any id not
+// present in the Firestore doc just keeps its hardcoded default `enabled`
+// value above, so this is purely additive/overriding.
+async function loadCatalogConfig(){
+  if (typeof getCatalogConfig !== 'function') return; // firebase-config.js not loaded/configured
+  const cfg = await getCatalogConfig();
+  Object.entries(cfg.products||{}).forEach(([id, enabled]) => {
+    const p = PRODUCTS.find(x=>x.id===id);
+    if (p) p.enabled = !!enabled;
+  });
+  Object.entries(cfg.sizes||{}).forEach(([mm, enabled]) => {
+    const s = SIZES.find(x=>x.mm===Number(mm));
+    if (s) s.enabled = !!enabled;
+  });
+  renderProductGrid();
+  if (state.product) renderSizeGrid();
+}

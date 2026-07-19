@@ -109,6 +109,25 @@ async function saveAssetLabelOverrides(map) {
   return DB.collection('morphii_config').doc('assetLabels').set(map);
 }
 
+/* ── CATALOG CONFIG (morphii_config/catalog doc) ──
+   { products: { "lapel-pin": true, ... }, sizes: { "37": true, ... } }
+   Lets the admin turn product types and pin sizes on/off (e.g. when out of
+   stock) without a code deploy — create.js's hardcoded PRODUCTS/SIZES lists
+   are just the defaults; any id present here overrides that default's
+   `enabled` flag. Public read, admin-only write. */
+async function getCatalogConfig() {
+  if (!DB) return { products:{}, sizes:{} };
+  try {
+    const doc = await DB.collection('morphii_config').doc('catalog').get();
+    const data = (doc.exists && doc.data()) || {};
+    return { products: data.products || {}, sizes: data.sizes || {} };
+  } catch (e) { return { products:{}, sizes:{} }; }
+}
+async function saveCatalogConfig(cfg) {
+  if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
+  return DB.collection('morphii_config').doc('catalog').set(cfg);
+}
+
 /* ── Firestore Security Rules ──────────────────
    Publish these in Firebase Console → Firestore → Rules:
 
