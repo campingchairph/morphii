@@ -152,7 +152,7 @@ function goStep(name){
     el.classList.toggle('done', i<idx && i>=0);
   });
   window.scrollTo({top:0,behavior:'smooth'});
-  if (name==='design'){ setupCanvas(); drawPreview(); renderCanvasBgDecor(); }
+  if (name==='design'){ setupCanvas(); drawPreview(); renderCanvasBgDecor(); updateCanvasBorderRing(); }
   if (name==='submit'){ renderSubmitSummary(); }
 }
 window.goStep = goStep;
@@ -633,7 +633,7 @@ function selectBorderPreset(i){
   img.crossOrigin = 'anonymous'; // raw.githubusercontent.com sends CORS headers — needed so the design canvas doesn't get tainted
   img.onload = () => {
     state.border = { img, src: preset.src, label: preset.label, rotation: prevRotation, scale: prevScale, xFrac: 0, yFrac: 0 };
-    renderDock(); renderToolPanelContent(); drawPreview();
+    renderDock(); renderToolPanelContent(); drawPreview(); updateCanvasBorderRing();
   };
   img.src = preset.src;
 }
@@ -641,7 +641,7 @@ window.selectBorderPreset = selectBorderPreset;
 
 function removeBorder(){
   state.border = null;
-  renderDock(); renderToolPanelContent(); drawPreview();
+  renderDock(); renderToolPanelContent(); drawPreview(); updateCanvasBorderRing();
 }
 window.removeBorder = removeBorder;
 
@@ -662,7 +662,7 @@ function onBorderFileChosen(e){
     const img = new Image();
     img.onload = () => {
       state.border = { img, src: ev.target.result, label: null, rotation: prevRotation, scale: prevScale, xFrac: 0, yFrac: 0 };
-      renderDock(); renderToolPanelContent(); drawPreview();
+      renderDock(); renderToolPanelContent(); drawPreview(); updateCanvasBorderRing();
     };
     img.src = ev.target.result;
   };
@@ -1040,6 +1040,7 @@ function addPlacedFromPreset(kind, i){
     placedArray(kind).push(el);
     pushLayer({ kind, id: el.id });
     selectLayer({ kind, id: el.id });
+    renderCanvasBgDecor();
   };
   img.src = preset.src;
 }
@@ -1056,6 +1057,7 @@ function onPlacedFileChosen(kind, e){
       placedArray(kind).push(el);
       pushLayer({ kind, id: el.id });
       selectLayer({ kind, id: el.id });
+      renderCanvasBgDecor();
     };
     img.src = ev.target.result;
   };
@@ -1161,6 +1163,7 @@ function setCharacterFromPreset(i){
     state.character = { img, scale:1, rotation:0, xFrac:0, yFrac:0, locked:false };
     if (isNew) pushLayer({ kind:'character' });
     selectLayer({kind:'character'});
+    if (isNew) renderCanvasBgDecor();
   };
   img.src = preset.src;
 }
@@ -1177,6 +1180,7 @@ function onCharacterFileChosen(e){
       state.character = { img, scale:1, rotation:0, xFrac:0, yFrac:0, locked:false };
       if (isNew) pushLayer({ kind:'character' });
       selectLayer({kind:'character'});
+      if (isNew) renderCanvasBgDecor();
     };
     img.src = ev.target.result;
   };
@@ -2098,22 +2102,77 @@ async function loadPinAssetManifest(){
 // Purely decorative — 15 random stickers from the library, floating/
 // spinning behind the pin so the design screen doesn't feel static.
 // Re-randomized every time the design step is entered (see goStep).
+// The floating background pool is whatever the customer has actually added
+// to their pin (stickers/shapes/word art/character) — falls back to random
+// library presets before they've added anything, so the backdrop isn't empty.
+function decorAssetPool(){
+  const srcs = [];
+  ['sticker','shape','wordart'].forEach(kind => {
+    placedArray(kind).forEach(el => { if (el.img && el.img.src) srcs.push(el.img.src); });
+  });
+  if (state.character && state.character.img && state.character.img.src) srcs.push(state.character.img.src);
+  if (srcs.length) return srcs;
+  return STICKER_PRESETS.map(p=>p.src);
+}
+
 function renderCanvasBgDecor(){
   const wrap = document.getElementById('canvasBgDecor');
-  if (!wrap || !STICKER_PRESETS.length) return;
-  const picks = [];
-  for (let i=0; i<15; i++) picks.push(STICKER_PRESETS[Math.floor(Math.random()*STICKER_PRESETS.length)]);
-  wrap.innerHTML = picks.map(p=>{
-    const size = 28 + Math.random()*38;      // 28-66px
-    const top = Math.random()*100, left = Math.random()*100;
-    const dx = (16 + Math.random()*34) * (Math.random()<0.5?-1:1);
-    const dy = (16 + Math.random()*34) * (Math.random()<0.5?-1:1);
+  const stage = document.getElementById('canvasStage');
+  if (!wrap || !stage) return;
+  const pool = decorAssetPool();
+  if (!pool.length){ wrap.innerHTML = ''; return; }
+
+  const wrapRect = wrap.getBoundingClientRect();
+  const stageRect = stage.getBoundingClientRect();
+  if (!wrapRect.width || !wrapRect.height || !stageRect.width) return; // not laid out yet
+
+  // Keep every sticker outside the pin's circle (plus its spinning border
+  // ring) — previously these were positioned by raw %, so most of them
+  // landed underneath the opaque pin and were invisible.
+  const pinCx = stageRect.left - wrapRect.left + stageRect.width/2;
+  const pinCy = stageRect.top  - wrapRect.top  + stageRect.height/2;
+  const exclR = Math.max(stageRect.width, stageRect.height)/2 * 1.12;
+
+  const items = [];
+  for (let i=0; i<15; i++){
+    const src = pool[Math.floor(Math.random()*pool.length)];
+    const size = 26 + Math.random()*34; // 26-60px
+    let x, y, tries = 0;
+    do {
+      x = Math.random()*wrapRect.width;
+      y = Math.random()*wrapRect.height;
+      tries++;
+    } while (Math.hypot(x-pinCx, y-pinCy) < exclR + size/2 && tries < 50);
+    const dx = (8 + Math.random()*14) * (Math.random()<0.5?-1:1);
+    const dy = (8 + Math.random()*14) * (Math.random()<0.5?-1:1);
     const rot = (25 + Math.random()*65) * (Math.random()<0.5?-1:1);
     const dur = (7 + Math.random()*9).toFixed(1);
     const delay = (-Math.random()*dur).toFixed(1); // negative so they're already mid-cycle, not all synced
-    return `<img class="cr-bg-sticker" src="${p.src}" alt="" style="width:${size}px;top:${top}%;left:${left}%;--dx:${dx}px;--dy:${dy}px;--rot:${rot}deg;animation-duration:${dur}s;animation-delay:${delay}s;">`;
-  }).join('');
+    items.push(`<img class="cr-bg-sticker" src="${src}" alt="" style="width:${size}px;left:${(x-size/2).toFixed(1)}px;top:${(y-size/2).toFixed(1)}px;--dx:${dx}px;--dy:${dy}px;--rot:${rot}deg;animation-duration:${dur}s;animation-delay:${delay}s;">`);
+  }
+  wrap.innerHTML = items.join('');
 }
+
+// Whatever border the customer picked, echoed bigger as a slow-spinning
+// ring just outside the pin. Sized from the pin's real rendered size so it
+// stays correct across viewports.
+function updateCanvasBorderRing(){
+  const ring = document.getElementById('canvasBorderRing');
+  const stage = document.getElementById('canvasStage');
+  if (!ring || !stage) return;
+  if (!state.border || !state.border.src){
+    ring.style.display = 'none';
+    return;
+  }
+  const rect = stage.getBoundingClientRect();
+  if (!rect.width){ ring.style.display = 'none'; return; }
+  const size = Math.round(rect.width * 1.16);
+  if (ring.src !== state.border.src) ring.src = state.border.src;
+  ring.style.width = size + 'px';
+  ring.style.height = size + 'px';
+  ring.style.display = 'block';
+}
+window.updateCanvasBorderRing = updateCanvasBorderRing;
 
 // Admin-added fonts (orders-admin.html → Fonts) — stored in Firestore
 // (morphii_config/fonts), loaded into the FONTS list the text tool offers.
@@ -2143,6 +2202,10 @@ document.addEventListener('DOMContentLoaded', ()=>{
   loadCustomFonts();
   loadCatalogConfig();
 });
+
+// Keeps the spinning border ring's size correct if the viewport (and so
+// the pin's rendered size) changes — e.g. rotating a phone.
+window.addEventListener('resize', ()=>{ updateCanvasBorderRing(); });
 
 // Lets the admin toggle product types and sizes on/off (e.g. temporarily
 // out of stock) from orders-admin.html without a code deploy. Any id not

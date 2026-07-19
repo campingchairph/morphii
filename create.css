@@ -115,8 +115,12 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 .cr-canvas-wrap{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;}
 
 /* Decorative sticker backdrop, purely visual — sits behind the canvas
-   (z-index:0 vs the canvas's z-index:1), re-randomized each time the
-   design step is entered (see renderCanvasBgDecor). */
+   (z-index:0 vs the canvas's z-index:1). Positions are computed in JS
+   (renderCanvasBgDecor) from real element rects so every sticker lands
+   outside the pin's circle instead of hiding underneath it. Re-randomized
+   whenever the design step is entered or a new element is added — the pool
+   is the customer's own added stickers/shapes/word art/character, falling
+   back to random library presets before they've added anything. */
 .cr-canvas-bg-decor{position:absolute;inset:0;overflow:hidden;z-index:0;pointer-events:none;}
 .cr-bg-sticker{
   position:absolute;opacity:0.3;filter:blur(1.2px);pointer-events:none;
@@ -130,6 +134,22 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
   100% { transform:translate(0,0) rotate(0deg) scale(1); }
 }
 .cr-design-app.isolate .cr-canvas-bg-decor{display:none;}
+
+/* Whatever border the customer picked, echoed as a slow-spinning ring just
+   outside the pin — same asset, just bigger. Sized in JS (updateCanvasBorderRing)
+   to track the pin's actual rendered size. Sits behind the canvas (negative
+   z-index within the stage's own stacking context) since border assets are
+   authored with a transparent center anyway. */
+.cr-canvas-border-ring{
+  position:absolute;top:50%;left:50%;z-index:-1;
+  pointer-events:none;opacity:0.9;
+  animation:crBorderSpin 50s linear infinite;
+}
+@keyframes crBorderSpin{
+  from{ transform:translate(-50%,-50%) rotate(0deg); }
+  to{ transform:translate(-50%,-50%) rotate(360deg); }
+}
+.cr-design-app.isolate .cr-canvas-border-ring{display:none;}
 
 /* Row of floating action buttons underneath the pin — isolate (full-screen)
    on the left, layers on the right. */
