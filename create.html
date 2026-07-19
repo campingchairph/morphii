@@ -56,15 +56,18 @@
       </div>
 
       <div class="cr-canvas-wrap">
+        <div class="cr-canvas-stage" id="canvasStage">
+          <canvas id="designCanvas"></canvas>
+        </div>
+      </div>
+
+      <div class="cr-canvas-fab-row">
         <button class="cr-isolate-btn" id="isolateBtn" onclick="toggleIsolateMode()" title="Full-screen view">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/></svg>
         </button>
         <button class="cr-layers-fab" id="layersFab" onclick="openLayersModal()" title="Layers">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>
         </button>
-        <div class="cr-canvas-stage" id="canvasStage">
-          <canvas id="designCanvas"></canvas>
-        </div>
       </div>
 
       <div class="cr-legend">
@@ -181,6 +184,6 @@
 <!-- EmailJS (sends the confirmation email client-side, no backend needed) -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="email-config.js"></script>
-<script src="create.js?v=4"></script>
+<script src="create.js?v=5"></script>
 </body>
 </html>

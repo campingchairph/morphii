@@ -1206,7 +1206,7 @@ window.setCharacterRotation = setCharacterRotation;
 
 /* ── TEXT PANEL ───────────────────────────────── */
 function addTextLine(){
-  const line = { id: state.nextTextId++, text:'Your Text', font:FONTS[0], color:'#FFFFFF', placement:'straight', size:1, shadow:false, xFrac:0, yFrac:0, rotation:0, locked:false };
+  const line = { id: state.nextTextId++, text:'Your Text', font:FONTS[0], color:'#FFFFFF', placement:'straight', size:1, arcRadiusMult:0.78, shadow:false, xFrac:0, yFrac:0, rotation:0, locked:false };
   state.textLines.push(line);
   pushLayer({ kind:'text', id: line.id });
   selectLayer({ kind:'text', id: line.id });
@@ -1294,7 +1294,7 @@ function textToolPanelHtml(tool, id){
         <div class="cr-field-label">Font Size</div>
         <input type="number" class="cr-text-input" style="margin-bottom:0" min="1" step="1" inputmode="numeric"
           value="${sizePctArc}" oninput="setTextSizeRaw(${t.id},this.value)">
-        <div class="cr-hint">Curved text has no size limit — type any value.</div>`;
+        <div class="cr-hint">No size limit — type any value. Use the pink handle on the pin to adjust how far out the curve sits, separately from font size.</div>`;
     }
     const sizePct = Math.round(t.size*100);
     return `
@@ -1356,7 +1356,7 @@ function hitTestOneText(t, xFrac, yFrac){
   ctx.font = `bold ${28*t.size}px "${t.font}", 'Nunito', sans-serif`;
   const width = ctx.measureText(t.text || 'Text').width;
   const height = 28*t.size*1.15;
-  const rPx = t.placement==='straight' ? Math.hypot(width/2, height/2) : (cutRadiusPx*0.78) + height/2;
+  const rPx = t.placement==='straight' ? Math.hypot(width/2, height/2) : (cutRadiusPx*(t.arcRadiusMult||0.78)) + height/2;
   const rFrac = rPx / CANVAS_PX;
   return dist2(xFrac,yFrac,t.xFrac||0,t.yFrac||0) <= rFrac*rFrac;
 }
@@ -1393,10 +1393,12 @@ function startElementDrag(canvas, e, mode, el){
   state.dragging = true;
   state.dragTarget = el;
   state.dragMode = mode;
-  state.dragIsText = state.textLines.includes(el); // text uses .size, stickers/character use .scale
+  state.dragIsText = state.textLines.includes(el); // text uses .size (or .arcRadiusMult if curved), stickers/character use .scale
   state.dragStartX = e.clientX; state.dragStartY = e.clientY;
   state.dragStartOffX = el.xFrac; state.dragStartOffY = el.yFrac;
-  state.dragStartScale = state.dragIsText ? el.size : el.scale;
+  state.dragStartScale = state.dragIsText
+    ? (el.placement && el.placement!=='straight' ? (el.arcRadiusMult||0.78) : el.size)
+    : el.scale;
   state.dragStartRotation = el.rotation || 0;
   state.dragStartDist = Math.max(0.01, Math.hypot(p.x-el.xFrac, p.y-el.yFrac));
   state.dragStartAngle = Math.atan2(p.y-el.yFrac, p.x-el.xFrac);
@@ -1414,14 +1416,14 @@ function bindCanvasInteractions(canvas){
     // 1. Handles of the currently selected element take priority (skipped if locked).
     // Character is the one exception — always centered, no handles at all.
     // Border only gets the resize handle (it already has its own Rotate slider).
-    // Curved text (top-arc/bottom-arc) has no resize handle at all — its Size
-    // tool is a plain uncapped number field instead (see textToolPanelHtml).
+    // Curved text (top-arc/bottom-arc) keeps its resize handle too, but it
+    // drives the curve's radius instead of font size — font size is its own
+    // uncapped number field (see textToolPanelHtml), kept independent of it.
     {
       const { el, kind } = selectedElementAndKind();
-      const isCurvedText = kind==='text' && el && el.placement!=='straight';
       if (el && !el.locked && (kind==='sticker' || kind==='shape' || kind==='wordart' || kind==='text' || kind==='border')){
         const hp = handlePositions(el, kind);
-        if (!isCurvedText && dist2(p.x,p.y,hp.resize.x,hp.resize.y) <= HANDLE_R*HANDLE_R){
+        if (dist2(p.x,p.y,hp.resize.x,hp.resize.y) <= HANDLE_R*HANDLE_R){
           startElementDrag(canvas, e, 'resize', el); return;
         }
         if (kind!=='border' && dist2(p.x,p.y,hp.rotate.x,hp.rotate.y) <= HANDLE_R*HANDLE_R){
@@ -1471,7 +1473,11 @@ function bindCanvasInteractions(canvas){
     } else if (state.dragTarget && state.dragMode==='resize'){
       const dist = Math.hypot(p.x-state.dragTarget.xFrac, p.y-state.dragTarget.yFrac);
       const ratio = dist/state.dragStartDist;
-      if (state.dragIsText){
+      if (state.dragIsText && state.dragTarget.placement !== 'straight'){
+        // Curved text: the handle adjusts how far the curve sits from
+        // center, independent of the font-size number field.
+        state.dragTarget.arcRadiusMult = Math.max(0.2, Math.min(2.5, state.dragStartScale * ratio));
+      } else if (state.dragIsText){
         state.dragTarget.size = Math.max(0.3, Math.min(5, state.dragStartScale * ratio));
         clampTextSize(state.dragTarget);
         clampTextPosition(state.dragTarget);
@@ -1527,12 +1533,20 @@ function touchDist(touches){
 }
 
 /* ── DRAWING ──────────────────────────────────── */
-function drawDesignLayer(ctx, sizePx){
+// clipElements=false (live editor only — see drawPreview) skips the circular
+// clip for the foreground pass so a sticker/text/etc dragged out toward the
+// canvas edge stays visible instead of silently vanishing, making it easy to
+// grab and pull back. Background/border stay clipped either way. Exports and
+// the submit-step review thumbnail always keep the default (clipped) so the
+// finished-look preview is accurate.
+function drawDesignLayer(ctx, sizePx, opts){
+  const clipElements = !opts || opts.clipElements !== false;
   const artboardPx = sizePx; // canvas itself represents the full artboard (incl bleed)
   ctx.clearRect(0,0,sizePx,sizePx);
 
-  // Everything printable is physically round — clip the whole design layer
-  // (background, stickers, character, text) to the pin's circular shape.
+  // Everything printable is physically round — clip the design layer
+  // (background, border, and — when clipElements — everything else too)
+  // to the pin's circular shape.
   ctx.save();
   ctx.beginPath();
   ctx.arc(artboardPx/2, artboardPx/2, artboardPx/2, 0, Math.PI*2);
@@ -1540,15 +1554,20 @@ function drawDesignLayer(ctx, sizePx){
 
   drawBackground(ctx, artboardPx);  // back-most (color, then image)
   drawBorder(ctx, artboardPx);      // fixed just above background, below everything else
-  // Everything else draws in the user-defined stacking order (state.layerOrder,
-  // back-to-front), managed via the Layers tab.
+  if (clipElements) drawForegroundElements(ctx, artboardPx);
+
+  ctx.restore();
+  if (!clipElements) drawForegroundElements(ctx, artboardPx);
+}
+
+// Everything else draws in the user-defined stacking order (state.layerOrder,
+// back-to-front), managed via the Layers tab.
+function drawForegroundElements(ctx, artboardPx){
   state.layerOrder.forEach(d => {
     if (d.kind==='character') drawOneCharacter(ctx, artboardPx);
     else if (d.kind==='sticker' || d.kind==='shape' || d.kind==='wordart') drawOnePlaced(ctx, artboardPx, placedArray(d.kind).find(x=>x.id===d.id));
     else if (d.kind==='text') drawOneTextLine(ctx, artboardPx, state.textLines.find(t=>t.id===d.id));
   });
-
-  ctx.restore();
 }
 
 function drawBackground(ctx, artboardPx){
@@ -1630,7 +1649,7 @@ function textFootprintFrac(t){
   ctx.font = `bold ${28*t.size}px "${t.font}", 'Nunito', sans-serif`;
   const width = ctx.measureText(t.text || 'Text').width;
   const height = 28*t.size*1.15;
-  const rPx = t.placement==='straight' ? Math.hypot(width/2, height/2) : (cutRadiusPx*0.78) + height/2;
+  const rPx = t.placement==='straight' ? Math.hypot(width/2, height/2) : (cutRadiusPx*(t.arcRadiusMult||0.78)) + height/2;
   return rPx / CANVAS_PX;
 }
 
@@ -1706,7 +1725,7 @@ function drawOneTextLine(ctx, artboardPx, t){
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(t.text, cx, cy);
   } else {
-    drawArcText(ctx, t.text, cx, cy, cutRadiusPx*0.78, t.placement==='bottom-arc');
+    drawArcText(ctx, t.text, cx, cy, cutRadiusPx*(t.arcRadiusMult||0.78), t.placement==='bottom-arc');
   }
   ctx.restore();
 }
@@ -1771,19 +1790,16 @@ function drawSelectionHandles(ctx, artboardPx){
   const r = elementRadiusFrac(el, kind) * artboardPx;
   const cx = artboardPx/2 + el.xFrac*artboardPx, cy = artboardPx/2 + el.yFrac*artboardPx;
   const hp = handlePositions(el, kind);
-  const isCurvedText = kind==='text' && el.placement!=='straight';
 
   ctx.save();
   ctx.strokeStyle = '#8FAE7C'; ctx.lineWidth = 2; ctx.setLineDash([5,4]);
   ctx.beginPath(); ctx.arc(cx, cy, r*1.15, 0, Math.PI*2); ctx.stroke();
   ctx.setLineDash([]);
 
-  // Curved text has no resize handle — its Size tool is an uncapped number
-  // field instead, so there's nothing to drag-scale on the canvas.
-  if (!isCurvedText){
-    const sx = artboardPx/2 + hp.resize.x*artboardPx, sy = artboardPx/2 + hp.resize.y*artboardPx;
-    drawHandleDot(ctx, sx, sy, '#FF6F91');
-  }
+  // For curved text this handle adjusts curve radius, not font size — see
+  // the resize branch in bindCanvasInteractions.
+  const sx = artboardPx/2 + hp.resize.x*artboardPx, sy = artboardPx/2 + hp.resize.y*artboardPx;
+  drawHandleDot(ctx, sx, sy, '#FF6F91');
 
   // Border only gets the resize handle — it already has its own Rotate slider.
   if (kind!=='border'){
@@ -1855,7 +1871,7 @@ function drawWatermark(ctx, sizePx){
 function drawPreview(){
   const canvas = document.getElementById('designCanvas');
   const ctx = canvas.getContext('2d');
-  drawDesignLayer(ctx, CANVAS_PX);
+  drawDesignLayer(ctx, CANVAS_PX, { clipElements:false });
   drawOutsideCutDim(ctx, CANVAS_PX);
   drawGuides(ctx, CANVAS_PX);
   drawSelectionHandles(ctx, CANVAS_PX);
