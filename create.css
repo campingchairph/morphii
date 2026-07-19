@@ -322,6 +322,38 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
   position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0;
 }
 
+/* ── FONT / CURVE / COLOR GRID PICKERS (text tool) ── */
+.cr-font-grid{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;}
+.cr-font-swatch{
+  width:100%;padding:12px 14px;border-radius:11px;border:1.5px solid var(--border);background:var(--card);
+  color:var(--ink);font-size:17px;text-align:left;cursor:pointer;
+}
+.cr-font-swatch.active{border-color:var(--coral);border-width:2px;}
+
+.cr-curve-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.cr-curve-swatch{
+  aspect-ratio:1/0.85;border-radius:11px;border:1.5px solid var(--border);background:var(--card);
+  cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:6px;
+}
+.cr-curve-swatch.active{border-color:var(--coral);border-width:2px;}
+.cr-curve-icon{width:32px;height:20px;color:var(--ink);}
+.cr-curve-icon svg{width:100%;height:100%;}
+.cr-curve-label{font-size:9.5px;font-weight:800;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.02em;}
+
+.cr-color-swatch-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;}
+.cr-color-swatch{
+  aspect-ratio:1/1;border-radius:50%;border:2px solid rgba(0,0,0,0.12);cursor:pointer;padding:0;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,0.4);position:relative;
+}
+.cr-color-swatch.active{border-color:var(--coral);border-width:3px;}
+.cr-color-swatch-picker{
+  display:flex;align-items:center;justify-content:center;background:var(--card);color:var(--ink-dim);overflow:hidden;
+}
+.cr-color-swatch-picker svg{width:60%;height:60%;pointer-events:none;}
+.cr-color-swatch-picker input[type=color]{
+  position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0;
+}
+
 .cr-btn-primary{
   width:100%;padding:15px;border-radius:50px;border:none;background:var(--pill);color:white;
   font-size:16px;cursor:pointer;box-shadow:var(--shadow);transition:transform 0.1s;

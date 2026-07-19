@@ -584,7 +584,7 @@ function selectBorderPreset(i){
   const img = new Image();
   img.crossOrigin = 'anonymous'; // raw.githubusercontent.com sends CORS headers — needed so the design canvas doesn't get tainted
   img.onload = () => {
-    state.border = { img, src: preset.src, label: preset.label, rotation: prevRotation, scale: prevScale };
+    state.border = { img, src: preset.src, label: preset.label, rotation: prevRotation, scale: prevScale, xFrac: 0, yFrac: 0 };
     renderDock(); renderToolPanelContent(); drawPreview();
   };
   img.src = preset.src;
@@ -613,7 +613,7 @@ function onBorderFileChosen(e){
     const prevScale = state.border ? state.border.scale : 1;
     const img = new Image();
     img.onload = () => {
-      state.border = { img, src: ev.target.result, label: null, rotation: prevRotation, scale: prevScale };
+      state.border = { img, src: ev.target.result, label: null, rotation: prevRotation, scale: prevScale, xFrac: 0, yFrac: 0 };
       renderDock(); renderToolPanelContent(); drawPreview();
     };
     img.src = ev.target.result;
