@@ -128,6 +128,65 @@ async function saveCatalogConfig(cfg) {
   return DB.collection('morphii_config').doc('catalog').set(cfg);
 }
 
+/* ── FINANCE: COSTS (morphii_costs collection) ──
+   One doc per manually-logged business expense — button press blanks,
+   outsourced printing, packaging, Shopee fees, equipment, etc.
+   { label, category, amount, date, notes, createdAt }
+   Admin-only read/write (unlike morphii_config, this is never read by the
+   public-facing pin designer, so it doesn't need public read). */
+async function getCosts() {
+  if (!DB) return [];
+  try {
+    const snap = await DB.collection('morphii_costs').orderBy('date', 'desc').get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) { return []; }
+}
+async function addCost(cost) {
+  if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
+  return DB.collection('morphii_costs').add({ ...cost, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+}
+async function updateCost(id, cost) {
+  if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
+  return DB.collection('morphii_costs').doc(id).update(cost);
+}
+async function deleteCost(id) {
+  if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
+  return DB.collection('morphii_costs').doc(id).delete();
+}
+
+/* ── FINANCE: PRICING (morphii_finance/pricing doc) ──
+   { entries: [ { product, productLabel, size, price, costPerPrint, printsPerPin }, ... ] }
+   Selling price + production cost per product/size combo, used only for
+   the admin's own ROI math — never read by the pin designer (customers
+   pay through Shopee, not through this tool). Admin-only read/write. */
+async function getPricingConfig() {
+  if (!DB) return [];
+  try {
+    const doc = await DB.collection('morphii_finance').doc('pricing').get();
+    return (doc.exists && doc.data().entries) || [];
+  } catch (e) { return []; }
+}
+async function savePricingConfig(entries) {
+  if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
+  return DB.collection('morphii_finance').doc('pricing').set({ entries });
+}
+
+/* ── FINANCE: GOALS (morphii_finance/goals doc) ──
+   { list: [ { id, label, targetAmount, createdAt }, ... ] }
+   Savings targets (new printer, new heat press, etc.) tracked against net
+   profit on the ROI tab. Admin-only read/write. */
+async function getGoalsConfig() {
+  if (!DB) return [];
+  try {
+    const doc = await DB.collection('morphii_finance').doc('goals').get();
+    return (doc.exists && doc.data().list) || [];
+  } catch (e) { return []; }
+}
+async function saveGoalsConfig(list) {
+  if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
+  return DB.collection('morphii_finance').doc('goals').set({ list });
+}
+
 /* ── Firestore Security Rules ──────────────────
    Publish these in Firebase Console → Firestore → Rules:
 
@@ -142,6 +201,14 @@ async function saveCatalogConfig(cfg) {
        match /morphii_config/{docId} {
          allow read: if true;
          allow write: if request.auth != null
+           && request.auth.token.email in ['buboyseph@gmail.com'];
+       }
+       match /morphii_costs/{costId} {
+         allow read, write: if request.auth != null
+           && request.auth.token.email in ['buboyseph@gmail.com'];
+       }
+       match /morphii_finance/{docId} {
+         allow read, write: if request.auth != null
            && request.auth.token.email in ['buboyseph@gmail.com'];
        }
      }

@@ -108,12 +108,51 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 .adm-layout-fab.show{display:block;}
 
 /* ── PRINT LAYOUT MODAL (ported from the kiosk) ── */
-#printModal, #fontsModal, #assetsModal, #catalogModal{
+#printModal, #fontsModal, #assetsModal, #catalogModal, #financeModal{
   display:none;position:fixed;inset:0;z-index:200;
   background:rgba(7,25,41,0.92);backdrop-filter:blur(8px);
   flex-direction:column;align-items:center;overflow-y:auto;padding:24px;
 }
-#printModal.open, #fontsModal.open, #assetsModal.open, #catalogModal.open{display:flex;}
+#printModal.open, #fontsModal.open, #assetsModal.open, #catalogModal.open, #financeModal.open{display:flex;}
+
+/* ── FINANCE MODAL ── */
+.fin-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.fin-tab{padding:8px 16px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:white;font-size:12px;font-weight:800;cursor:pointer;}
+.fin-tab.active{background:var(--sky);border-color:var(--sky);}
+.fin-panel{display:none;}
+.fin-panel.active{display:block;}
+.fin-summary-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.fin-summary-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 16px;flex:1;min-width:110px;text-align:center;}
+.fin-summary-card b{display:block;font-family:'Fredoka One',cursive;font-size:17px;word-break:break-word;}
+.fin-summary-card span{font-size:9px;color:var(--ink-dim);font-weight:800;text-transform:uppercase;letter-spacing:0.4px;}
+.fin-summary-card.positive b{color:#55EFC4;}
+.fin-summary-card.negative b{color:#ff9b98;}
+.fin-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px;align-items:end;}
+.fin-input, .fin-select{
+  width:100%;padding:9px 11px;border-radius:8px;border:1.5px solid var(--border);
+  background:rgba(255,255,255,0.06);color:white;font-size:12px;font-weight:700;outline:none;
+}
+.fin-input:focus, .fin-select:focus{border-color:var(--sky);}
+.fin-select option{color:#000;}
+.fin-field-label{font-size:9px;font-weight:800;color:var(--ink-dim);margin-bottom:3px;display:block;text-transform:uppercase;letter-spacing:0.3px;}
+.fin-add-btn{padding:9px 18px;border-radius:8px;border:none;background:var(--sky);color:#0B2E4E;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap;}
+.fin-row{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:9px 12px;margin-bottom:6px;}
+.fin-row-main{flex:1;min-width:0;}
+.fin-row-title{font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fin-row-meta{font-size:9.5px;color:var(--ink-dim);font-weight:700;margin-top:2px;}
+.fin-row-amount{font-family:'Fredoka One',cursive;font-size:14px;flex-shrink:0;}
+.fin-row-del{background:none;border:none;color:#ff9b98;font-size:16px;font-weight:900;cursor:pointer;flex-shrink:0;padding:2px 6px;}
+.fin-badge{display:inline-block;font-size:8px;font-weight:900;padding:2px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:0.3px;background:rgba(255,255,255,0.1);color:var(--ink-dim);margin-right:6px;}
+.fin-empty{text-align:center;padding:30px;color:var(--ink-dim);font-weight:700;font-size:12px;}
+.fin-table-wrap{overflow-x:auto;margin-bottom:14px;}
+.fin-table{width:100%;border-collapse:collapse;font-size:11.5px;}
+.fin-table th{text-align:left;padding:8px 10px;color:var(--ink-dim);font-size:9px;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1.5px solid var(--border);white-space:nowrap;}
+.fin-table td{padding:8px 10px;border-bottom:1px solid var(--border);font-weight:700;white-space:nowrap;}
+.fin-table tr:last-child td{border-bottom:none;}
+.fin-progress-outer{background:rgba(255,255,255,0.08);border-radius:20px;height:10px;overflow:hidden;margin:8px 0 4px;}
+.fin-progress-inner{background:linear-gradient(90deg,var(--sky),#55EFC4);height:100%;border-radius:20px;transition:width 0.3s ease;}
+.fin-section-title{font-size:11px;font-weight:800;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.5px;margin:14px 0 8px;}
+.fin-section-title:first-child{margin-top:0;}
 .catalog-section-title{font-size:11px;font-weight:800;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.5px;margin:14px 0 8px;}
 .catalog-section-title:first-child{margin-top:0;}
 .catalog-row{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-bottom:8px;}
@@ -187,6 +226,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
   <div class="adm-header">
     <div class="logo">morphii<span>.</span> Order Admin</div>
     <div style="display:flex;align-items:center;gap:12px">
+      <button class="adm-signout" onclick="openFinanceModal()">💰 Finance</button>
       <button class="adm-signout" onclick="openCatalogModal()">📦 Catalog</button>
       <button class="adm-signout" onclick="openAssetsModal()">🖼 Assets</button>
       <button class="adm-signout" onclick="openFontsModal()">🔤 Fonts</button>
@@ -309,6 +349,134 @@ h1,.logo{font-family:'Fredoka One',cursive;}
       <div id="catalogProductsList"></div>
       <div class="catalog-section-title">Sizes</div>
       <div id="catalogSizesList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ FINANCE MODAL — costs, pricing, ROI, savings goals ══ -->
+<div id="financeModal">
+  <div class="print-modal-inner" style="max-width:760px">
+    <div class="pmi-header">
+      <div class="pmi-title">💰 Finance</div>
+      <button class="pmi-close" onclick="closeFinanceModal()">✕</button>
+    </div>
+    <div class="pmi-body" style="flex-direction:column;flex-wrap:nowrap">
+      <div class="fin-tabs" id="finTabs"></div>
+
+      <!-- COSTS -->
+      <div class="fin-panel" id="finPanel-costs">
+        <div class="fin-summary-row">
+          <div class="fin-summary-card"><b id="finTotalCosts">₱0</b><span>Total Logged Costs</span></div>
+        </div>
+        <div class="fin-section-title">Log an Expense</div>
+        <div class="fin-form-grid">
+          <div>
+            <label class="fin-field-label">Item</label>
+            <input type="text" id="costLabelInput" class="fin-input" placeholder="e.g. Button press blanks">
+          </div>
+          <div>
+            <label class="fin-field-label">Category</label>
+            <select id="costCategoryInput" class="fin-select">
+              <option>Equipment</option>
+              <option>Printing</option>
+              <option>Packaging</option>
+              <option>Platform Fees</option>
+              <option>Materials</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="fin-field-label">Amount (₱)</label>
+            <input type="number" id="costAmountInput" class="fin-input" min="0" step="0.01" placeholder="0.00">
+          </div>
+          <div>
+            <label class="fin-field-label">Date</label>
+            <input type="date" id="costDateInput" class="fin-input">
+          </div>
+          <div style="grid-column:1/-1">
+            <label class="fin-field-label">Notes <span style="text-transform:none;font-weight:600">(optional)</span></label>
+            <input type="text" id="costNotesInput" class="fin-input" placeholder="Any extra detail">
+          </div>
+        </div>
+        <button class="fin-add-btn" onclick="addCostEntry()">+ Add Cost</button>
+        <div class="fin-section-title" style="margin-top:18px">Logged Costs</div>
+        <div id="costsList"></div>
+      </div>
+
+      <!-- PRICING -->
+      <div class="fin-panel" id="finPanel-pricing">
+        <div style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-bottom:12px;line-height:1.5;">
+          Set a selling price per product + size, plus what it costs you to produce one — cost per print × how many prints that pin needs (e.g. front and back) gives the cost per pin.
+        </div>
+        <div class="fin-form-grid" style="grid-template-columns:repeat(5,1fr)">
+          <div>
+            <label class="fin-field-label">Product</label>
+            <select id="pricingProductInput" class="fin-select"></select>
+          </div>
+          <div>
+            <label class="fin-field-label">Size</label>
+            <select id="pricingSizeInput" class="fin-select"></select>
+          </div>
+          <div>
+            <label class="fin-field-label">Sell Price (₱)</label>
+            <input type="number" id="pricingPriceInput" class="fin-input" min="0" step="0.01" placeholder="0.00">
+          </div>
+          <div>
+            <label class="fin-field-label">Cost / Print (₱)</label>
+            <input type="number" id="pricingCostPerPrintInput" class="fin-input" min="0" step="0.01" placeholder="0.00">
+          </div>
+          <div>
+            <label class="fin-field-label">Prints / Pin</label>
+            <input type="number" id="pricingPrintsPerPinInput" class="fin-input" min="1" step="1" value="1">
+          </div>
+        </div>
+        <button class="fin-add-btn" onclick="savePricingEntry()">+ Save Price</button>
+        <div class="fin-section-title" style="margin-top:18px">Configured Prices</div>
+        <div class="fin-table-wrap">
+          <table class="fin-table" id="pricingTable"></table>
+        </div>
+      </div>
+
+      <!-- ROI -->
+      <div class="fin-panel" id="finPanel-roi">
+        <div class="fin-summary-row">
+          <div class="fin-summary-card"><b id="roiRevenue">₱0</b><span>Revenue (Approved)</span></div>
+          <div class="fin-summary-card"><b id="roiVarCost">₱0</b><span>Production Cost</span></div>
+          <div class="fin-summary-card"><b id="roiFixedCost">₱0</b><span>Logged Costs</span></div>
+          <div class="fin-summary-card" id="roiNetCard"><b id="roiNetProfit">₱0</b><span>Net Profit</span></div>
+          <div class="fin-summary-card" id="roiPctCard"><b id="roiPct">0%</b><span>ROI</span></div>
+        </div>
+        <div style="font-size:10.5px;font-weight:700;color:var(--ink-dim);margin-bottom:12px;line-height:1.5;">
+          Revenue and production cost are counted from orders with <b>Approved</b> status only (confirmed sales), matched against the prices you set on the Pricing tab. Net Profit = Revenue − Production Cost − Logged Costs.
+        </div>
+        <div class="fin-section-title">Per Product / Size</div>
+        <div class="fin-table-wrap">
+          <table class="fin-table" id="roiTable"></table>
+        </div>
+      </div>
+
+      <!-- GOALS -->
+      <div class="fin-panel" id="finPanel-goals">
+        <div style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-bottom:12px;line-height:1.5;">
+          Set a savings target (new printer, new heat press, etc.) — progress is tracked against your current Net Profit from the ROI tab.
+        </div>
+        <div class="fin-form-grid" style="grid-template-columns:2fr 1fr auto">
+          <div>
+            <label class="fin-field-label">Goal</label>
+            <input type="text" id="goalLabelInput" class="fin-input" placeholder="e.g. New heat press machine">
+          </div>
+          <div>
+            <label class="fin-field-label">Target (₱)</label>
+            <input type="number" id="goalTargetInput" class="fin-input" min="0" step="0.01" placeholder="0.00">
+          </div>
+          <div>
+            <label class="fin-field-label">&nbsp;</label>
+            <button class="fin-add-btn" onclick="addGoalEntry()">+ Add Goal</button>
+          </div>
+        </div>
+        <div class="fin-section-title" style="margin-top:18px">Goals</div>
+        <div id="goalsList"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -770,6 +938,268 @@ async function toggleCatalogSize(mm){
   try { await saveCatalogConfig(catalogConfig); } catch(e){ alert('Error saving: '+e.message); }
 }
 window.toggleCatalogSize = toggleCatalogSize;
+
+/* ── FINANCE ──────────────────────────────────────────────────────
+   Four tabs sharing one modal: manually-logged costs, per-product/size
+   pricing (sell price + production cost), a computed ROI dashboard built
+   from real order data (status==='approved' counts as a confirmed sale),
+   and savings goals tracked against current net profit. */
+let financeCosts = [];
+let financePricing = [];
+let financeGoals = [];
+let currentFinTab = 'costs';
+
+const FIN_TABS = [
+  { id:'costs', label:'Costs' },
+  { id:'pricing', label:'Pricing' },
+  { id:'roi', label:'ROI' },
+  { id:'goals', label:'Goals' },
+];
+
+function fmtPeso(n){
+  const v = Number(n)||0;
+  return '₱' + v.toLocaleString('en-PH', { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+
+async function openFinanceModal(){
+  document.getElementById('financeModal').classList.add('open');
+  if (!document.getElementById('costDateInput').value){
+    document.getElementById('costDateInput').value = new Date().toISOString().slice(0,10);
+  }
+  populatePricingDropdowns();
+  renderFinTabs();
+  const [costs, pricing, goals] = await Promise.all([getCosts(), getPricingConfig(), getGoalsConfig()]);
+  financeCosts = costs; financePricing = pricing; financeGoals = goals;
+  renderCostsTab();
+  renderPricingTab();
+  renderRoiTab();
+  renderGoalsTab();
+  setFinTab(currentFinTab);
+}
+window.openFinanceModal = openFinanceModal;
+function closeFinanceModal(){
+  document.getElementById('financeModal').classList.remove('open');
+}
+window.closeFinanceModal = closeFinanceModal;
+
+function renderFinTabs(){
+  document.getElementById('finTabs').innerHTML = FIN_TABS.map(t =>
+    `<button class="fin-tab ${currentFinTab===t.id?'active':''}" onclick="setFinTab('${t.id}')">${t.label}</button>`
+  ).join('');
+}
+function setFinTab(id){
+  currentFinTab = id;
+  renderFinTabs();
+  document.querySelectorAll('.fin-panel').forEach(p => p.classList.toggle('active', p.id==='finPanel-'+id));
+  if (id==='roi') renderRoiTab(); // recompute in case costs/pricing changed on another tab
+  if (id==='goals') renderGoalsTab();
+}
+window.setFinTab = setFinTab;
+
+/* ── COSTS TAB ── */
+function renderCostsTab(){
+  const total = financeCosts.reduce((s,c)=>s+(Number(c.amount)||0), 0);
+  document.getElementById('finTotalCosts').textContent = fmtPeso(total);
+
+  const list = document.getElementById('costsList');
+  if (!financeCosts.length){
+    list.innerHTML = '<div class="fin-empty">No costs logged yet.</div>';
+    return;
+  }
+  list.innerHTML = financeCosts.map(c => `
+    <div class="fin-row">
+      <div class="fin-row-main">
+        <div class="fin-row-title"><span class="fin-badge">${escHtml(c.category||'Other')}</span>${escHtml(c.label||'')}</div>
+        <div class="fin-row-meta">${escHtml(c.date||'')}${c.notes ? ' · '+escHtml(c.notes) : ''}</div>
+      </div>
+      <div class="fin-row-amount">${fmtPeso(c.amount)}</div>
+      <button class="fin-row-del" onclick="removeCostEntry('${c.id}')" title="Delete">✕</button>
+    </div>`).join('');
+}
+
+async function addCostEntry(){
+  const label = document.getElementById('costLabelInput').value.trim();
+  const category = document.getElementById('costCategoryInput').value;
+  const amount = parseFloat(document.getElementById('costAmountInput').value);
+  const date = document.getElementById('costDateInput').value || new Date().toISOString().slice(0,10);
+  const notes = document.getElementById('costNotesInput').value.trim();
+  if (!label || !isFinite(amount) || amount <= 0){ alert('Enter an item name and a valid amount.'); return; }
+  try {
+    const ref = await addCost({ label, category, amount, date, notes });
+    financeCosts.unshift({ id: ref.id, label, category, amount, date, notes });
+    financeCosts.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+    document.getElementById('costLabelInput').value = '';
+    document.getElementById('costAmountInput').value = '';
+    document.getElementById('costNotesInput').value = '';
+    renderCostsTab();
+  } catch(e){ alert('Error saving: '+e.message); }
+}
+window.addCostEntry = addCostEntry;
+
+async function removeCostEntry(id){
+  if (!confirm('Delete this cost entry?')) return;
+  try {
+    await deleteCost(id);
+    financeCosts = financeCosts.filter(c=>c.id!==id);
+    renderCostsTab();
+  } catch(e){ alert('Error deleting: '+e.message); }
+}
+window.removeCostEntry = removeCostEntry;
+
+/* ── PRICING TAB ── */
+function populatePricingDropdowns(){
+  const prodSel = document.getElementById('pricingProductInput');
+  const sizeSel = document.getElementById('pricingSizeInput');
+  if (!prodSel.options.length) prodSel.innerHTML = CATALOG_PRODUCTS.map(p=>`<option value="${p.id}">${escHtml(p.label)}</option>`).join('');
+  if (!sizeSel.options.length) sizeSel.innerHTML = CATALOG_SIZES.map(s=>`<option value="${s.mm}">${s.mm}mm — ${escHtml(s.tag)}</option>`).join('');
+}
+
+function renderPricingTab(){
+  const table = document.getElementById('pricingTable');
+  if (!financePricing.length){
+    table.innerHTML = '<tr><td class="fin-empty" style="white-space:normal">No prices set yet — add one above.</td></tr>';
+    return;
+  }
+  const rows = financePricing.map((e,i) => {
+    const costPerPin = (Number(e.costPerPrint)||0) * (Number(e.printsPerPin)||1);
+    const margin = (Number(e.price)||0) - costPerPin;
+    return `<tr>
+      <td>${escHtml(e.productLabel||e.product)}</td>
+      <td>${e.size}mm</td>
+      <td>${fmtPeso(e.price)}</td>
+      <td>${fmtPeso(e.costPerPrint)} × ${e.printsPerPin}</td>
+      <td>${fmtPeso(costPerPin)}</td>
+      <td style="color:${margin>=0?'#55EFC4':'#ff9b98'}">${fmtPeso(margin)}</td>
+      <td><button class="fin-row-del" onclick="removePricingEntry(${i})" title="Delete">✕</button></td>
+    </tr>`;
+  }).join('');
+  table.innerHTML = `<tr><th>Product</th><th>Size</th><th>Sell Price</th><th>Cost/Print × Prints</th><th>Cost/Pin</th><th>Margin/Pin</th><th></th></tr>${rows}`;
+}
+
+async function savePricingEntry(){
+  const product = document.getElementById('pricingProductInput').value;
+  const productLabel = (CATALOG_PRODUCTS.find(p=>p.id===product)||{}).label || product;
+  const size = Number(document.getElementById('pricingSizeInput').value);
+  const price = parseFloat(document.getElementById('pricingPriceInput').value);
+  const costPerPrint = parseFloat(document.getElementById('pricingCostPerPrintInput').value) || 0;
+  const printsPerPin = Math.max(1, parseInt(document.getElementById('pricingPrintsPerPinInput').value,10) || 1);
+  if (!isFinite(price) || price < 0){ alert('Enter a valid selling price.'); return; }
+  const idx = financePricing.findIndex(e => e.product===product && e.size===size);
+  const entry = { product, productLabel, size, price, costPerPrint, printsPerPin };
+  const prevPricing = financePricing.slice();
+  if (idx >= 0) financePricing[idx] = entry; else financePricing.push(entry);
+  try {
+    await savePricingConfig(financePricing);
+    document.getElementById('pricingPriceInput').value = '';
+    document.getElementById('pricingCostPerPrintInput').value = '';
+    document.getElementById('pricingPrintsPerPinInput').value = '1';
+    renderPricingTab();
+  } catch(e){ financePricing = prevPricing; alert('Error saving: '+e.message); }
+}
+window.savePricingEntry = savePricingEntry;
+
+async function removePricingEntry(i){
+  const [removed] = financePricing.splice(i,1);
+  try { await savePricingConfig(financePricing); renderPricingTab(); }
+  catch(e){ financePricing.splice(i,0,removed); alert('Error: '+e.message); }
+}
+window.removePricingEntry = removePricingEntry;
+
+/* ── ROI TAB ── */
+function computeRoi(){
+  const approved = allOrders.filter(o => o.status==='approved');
+  const byCombo = {};
+  approved.forEach(o => { const key = o.product+'_'+o.size; byCombo[key] = (byCombo[key]||0) + 1; });
+
+  let revenue = 0, varCost = 0;
+  const rows = financePricing.map(e => {
+    const count = byCombo[e.product+'_'+e.size] || 0;
+    const costPerPin = (Number(e.costPerPrint)||0) * (Number(e.printsPerPin)||1);
+    const rowRevenue = count * (Number(e.price)||0);
+    const rowCost = count * costPerPin;
+    revenue += rowRevenue; varCost += rowCost;
+    return { ...e, count, rowRevenue, rowCost, rowProfit: rowRevenue-rowCost };
+  });
+
+  const fixedCosts = financeCosts.reduce((s,c)=>s+(Number(c.amount)||0), 0);
+  const grossProfit = revenue - varCost;
+  const netProfit = grossProfit - fixedCosts;
+  const roiPct = fixedCosts > 0 ? (netProfit / fixedCosts * 100) : null;
+  return { rows, revenue, varCost, fixedCosts, grossProfit, netProfit, roiPct };
+}
+
+function renderRoiTab(){
+  const r = computeRoi();
+  document.getElementById('roiRevenue').textContent = fmtPeso(r.revenue);
+  document.getElementById('roiVarCost').textContent = fmtPeso(r.varCost);
+  document.getElementById('roiFixedCost').textContent = fmtPeso(r.fixedCosts);
+  document.getElementById('roiNetProfit').textContent = fmtPeso(r.netProfit);
+  document.getElementById('roiPct').textContent = r.roiPct===null ? '—' : (r.roiPct.toFixed(1)+'%');
+  document.getElementById('roiNetCard').className = 'fin-summary-card ' + (r.netProfit>=0?'positive':'negative');
+  document.getElementById('roiPctCard').className = 'fin-summary-card ' + (r.roiPct===null ? '' : (r.roiPct>=0?'positive':'negative'));
+
+  const table = document.getElementById('roiTable');
+  if (!r.rows.length){
+    table.innerHTML = '<tr><td class="fin-empty" style="white-space:normal">Set prices on the Pricing tab to see a breakdown here.</td></tr>';
+    return;
+  }
+  const body = r.rows.map(row => `<tr>
+    <td>${escHtml(row.productLabel||row.product)}</td>
+    <td>${row.size}mm</td>
+    <td>${row.count}</td>
+    <td>${fmtPeso(row.rowRevenue)}</td>
+    <td>${fmtPeso(row.rowCost)}</td>
+    <td style="color:${row.rowProfit>=0?'#55EFC4':'#ff9b98'}">${fmtPeso(row.rowProfit)}</td>
+  </tr>`).join('');
+  table.innerHTML = `<tr><th>Product</th><th>Size</th><th>Sold</th><th>Revenue</th><th>Cost</th><th>Profit</th></tr>${body}`;
+}
+
+/* ── GOALS TAB ── */
+function renderGoalsTab(){
+  const list = document.getElementById('goalsList');
+  if (!financeGoals.length){
+    list.innerHTML = '<div class="fin-empty">No goals yet — add one above.</div>';
+    return;
+  }
+  const netProfit = computeRoi().netProfit;
+  list.innerHTML = financeGoals.map(g => {
+    const pct = g.targetAmount > 0 ? Math.max(0, Math.min(100, netProfit/g.targetAmount*100)) : 0;
+    return `<div class="fin-row" style="flex-direction:column;align-items:stretch">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="fin-row-main">
+          <div class="fin-row-title">${escHtml(g.label)}</div>
+          <div class="fin-row-meta">${fmtPeso(Math.max(0,netProfit))} / ${fmtPeso(g.targetAmount)} (${pct.toFixed(0)}%)</div>
+        </div>
+        <button class="fin-row-del" onclick="removeGoalEntry('${g.id}')" title="Delete">✕</button>
+      </div>
+      <div class="fin-progress-outer"><div class="fin-progress-inner" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+async function addGoalEntry(){
+  const label = document.getElementById('goalLabelInput').value.trim();
+  const targetAmount = parseFloat(document.getElementById('goalTargetInput').value);
+  if (!label || !isFinite(targetAmount) || targetAmount <= 0){ alert('Enter a goal name and a valid target amount.'); return; }
+  const goal = { id: 'g'+Date.now(), label, targetAmount, createdAt: Date.now() };
+  financeGoals.push(goal);
+  try {
+    await saveGoalsConfig(financeGoals);
+    document.getElementById('goalLabelInput').value = '';
+    document.getElementById('goalTargetInput').value = '';
+    renderGoalsTab();
+  } catch(e){ financeGoals.pop(); alert('Error saving: '+e.message); }
+}
+window.addGoalEntry = addGoalEntry;
+
+async function removeGoalEntry(id){
+  const idx = financeGoals.findIndex(g=>g.id===id);
+  if (idx<0) return;
+  const [removed] = financeGoals.splice(idx,1);
+  try { await saveGoalsConfig(financeGoals); renderGoalsTab(); }
+  catch(e){ financeGoals.splice(idx,0,removed); alert('Error: '+e.message); }
+}
+window.removeGoalEntry = removeGoalEntry;
 
 /* ── PRINT LAYOUT (ported from the kiosk's morphii.js) ──────────────
    Same shelf-packing approach: place circles left-to-right on a shelf,
