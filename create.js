@@ -2119,10 +2119,23 @@ function decorAssetPool(){
   return STICKER_PRESETS.map(p=>p.src);
 }
 
+// "Bubbles" physics for the decorative background stickers — each one has
+// its own position/velocity and bounces elastically off the wrap edges,
+// the pin, and every other sticker (real circle-circle collision), so they
+// drift around without ever sitting inside one another.
+let _bgPhysics = { items: [], raf: null, w: 0, h: 0, pinCx: 0, pinCy: 0, pinR: 0, lastT: 0 };
+
+function stopBgPhysics(){
+  if (_bgPhysics.raf) cancelAnimationFrame(_bgPhysics.raf);
+  _bgPhysics.raf = null;
+  _bgPhysics.items = [];
+}
+
 function renderCanvasBgDecor(){
   const wrap = document.getElementById('canvasBgDecor');
   const stage = document.getElementById('canvasStage');
   if (!wrap || !stage) return;
+  stopBgPhysics();
   const pool = decorAssetPool();
   if (!pool.length){ wrap.innerHTML = ''; return; }
 
@@ -2135,26 +2148,108 @@ function renderCanvasBgDecor(){
   // landed underneath the opaque pin and were invisible.
   const pinCx = stageRect.left - wrapRect.left + stageRect.width/2;
   const pinCy = stageRect.top  - wrapRect.top  + stageRect.height/2;
-  const exclR = Math.max(stageRect.width, stageRect.height)/2 * 1.15;
+  const pinR  = Math.max(stageRect.width, stageRect.height)/2 * 1.15;
 
+  wrap.innerHTML = '';
   const items = [];
   for (let i=0; i<15; i++){
     const src = pool[Math.floor(Math.random()*pool.length)];
     const size = 26 + Math.random()*34; // 26-60px
+    const r = size/2;
     let x, y, tries = 0;
     do {
-      x = Math.random()*wrapRect.width;
-      y = Math.random()*wrapRect.height;
+      x = r + Math.random()*Math.max(1, wrapRect.width - size);
+      y = r + Math.random()*Math.max(1, wrapRect.height - size);
       tries++;
-    } while (Math.hypot(x-pinCx, y-pinCy) < exclR + size/2 && tries < 50);
-    const dx = (8 + Math.random()*14) * (Math.random()<0.5?-1:1);
-    const dy = (8 + Math.random()*14) * (Math.random()<0.5?-1:1);
-    const rot = (25 + Math.random()*65) * (Math.random()<0.5?-1:1);
-    const dur = (7 + Math.random()*9).toFixed(1);
-    const delay = (-Math.random()*dur).toFixed(1); // negative so they're already mid-cycle, not all synced
-    items.push(`<img class="cr-bg-sticker" src="${src}" alt="" style="width:${size}px;left:${(x-size/2).toFixed(1)}px;top:${(y-size/2).toFixed(1)}px;--dx:${dx}px;--dy:${dy}px;--rot:${rot}deg;animation-duration:${dur}s;animation-delay:${delay}s;">`);
+    } while (
+      (Math.hypot(x-pinCx, y-pinCy) < pinR + r || items.some(o => Math.hypot(x-o.x, y-o.y) < r+o.r))
+      && tries < 80
+    );
+
+    const el = document.createElement('img');
+    el.className = 'cr-bg-sticker';
+    el.src = src;
+    el.alt = '';
+    el.style.width = size + 'px';
+    el.style.height = size + 'px';
+    wrap.appendChild(el);
+
+    const angle = Math.random()*Math.PI*2;
+    const speed = 10 + Math.random()*16; // px/sec — gentle drift, not frantic
+    items.push({
+      el, x, y, r,
+      vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed,
+      rot: Math.random()*360, rotSpeed: (Math.random()<0.5?-1:1) * (4+Math.random()*6),
+    });
   }
-  wrap.innerHTML = items.join('');
+
+  _bgPhysics.items = items;
+  _bgPhysics.w = wrapRect.width; _bgPhysics.h = wrapRect.height;
+  _bgPhysics.pinCx = pinCx; _bgPhysics.pinCy = pinCy; _bgPhysics.pinR = pinR;
+  _bgPhysics.lastT = performance.now();
+  _bgPhysics.raf = requestAnimationFrame(tickBgPhysics);
+}
+
+function tickBgPhysics(t){
+  const p = _bgPhysics;
+  if (!p.items.length) return;
+  const dt = Math.min(0.05, (t - p.lastT)/1000); // cap so a backgrounded tab doesn't cause a big jump on return
+  p.lastT = t;
+
+  p.items.forEach(it => {
+    it.x += it.vx*dt;
+    it.y += it.vy*dt;
+    it.rot += it.rotSpeed*dt;
+  });
+
+  // walls
+  p.items.forEach(it => {
+    if (it.x - it.r < 0){ it.x = it.r; it.vx = Math.abs(it.vx); }
+    else if (it.x + it.r > p.w){ it.x = p.w - it.r; it.vx = -Math.abs(it.vx); }
+    if (it.y - it.r < 0){ it.y = it.r; it.vy = Math.abs(it.vy); }
+    else if (it.y + it.r > p.h){ it.y = p.h - it.r; it.vy = -Math.abs(it.vy); }
+  });
+
+  // bounce off the pin — treated as a static, immovable circle
+  p.items.forEach(it => {
+    const dx = it.x - p.pinCx, dy = it.y - p.pinCy;
+    const dist = Math.hypot(dx, dy);
+    const minDist = p.pinR + it.r;
+    if (dist > 0 && dist < minDist){
+      const nx = dx/dist, ny = dy/dist;
+      it.x = p.pinCx + nx*minDist;
+      it.y = p.pinCy + ny*minDist;
+      const vDotN = it.vx*nx + it.vy*ny;
+      if (vDotN < 0){ it.vx -= 2*vDotN*nx; it.vy -= 2*vDotN*ny; }
+    }
+  });
+
+  // sticker-vs-sticker collisions — equal-mass elastic bounce, so they
+  // behave like bubbles that physically can't overlap.
+  for (let i=0; i<p.items.length; i++){
+    for (let j=i+1; j<p.items.length; j++){
+      const a = p.items[i], b = p.items[j];
+      const dx = b.x-a.x, dy = b.y-a.y;
+      const dist = Math.hypot(dx, dy);
+      const minDist = a.r+b.r;
+      if (dist > 0 && dist < minDist){
+        const nx = dx/dist, ny = dy/dist;
+        const overlap = (minDist-dist)/2;
+        a.x -= nx*overlap; a.y -= ny*overlap;
+        b.x += nx*overlap; b.y += ny*overlap;
+        const avn = a.vx*nx + a.vy*ny;
+        const bvn = b.vx*nx + b.vy*ny;
+        a.vx += (bvn-avn)*nx; a.vy += (bvn-avn)*ny;
+        b.vx += (avn-bvn)*nx; b.vy += (avn-bvn)*ny;
+      }
+    }
+  }
+
+  p.items.forEach(it => {
+    it.el.style.transform = `translate(${(it.x-it.r).toFixed(1)}px,${(it.y-it.r).toFixed(1)}px) rotate(${it.rot.toFixed(1)}deg)`;
+  });
+
+  p.raf = requestAnimationFrame(tickBgPhysics);
 }
 
 // Whatever border the customer picked, echoed bigger as a slow-spinning
@@ -2198,6 +2293,7 @@ async function loadCustomFonts(){
 
 /* ── INIT ─────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', ()=>{
+  applyCachedCatalogConfig(); // last-known admin settings, before the first paint — no flash
   renderProductGrid();
   loadPinAssetManifest();
   loadCustomFonts();
@@ -2212,9 +2308,9 @@ window.addEventListener('resize', ()=>{ updateCanvasBorderRing(); });
 // out of stock) from orders-admin.html without a code deploy. Any id not
 // present in the Firestore doc just keeps its hardcoded default `enabled`
 // value above, so this is purely additive/overriding.
-async function loadCatalogConfig(){
-  if (typeof getCatalogConfig !== 'function') return; // firebase-config.js not loaded/configured
-  const cfg = await getCatalogConfig();
+const CATALOG_CACHE_KEY = 'morphii_catalog_cache_v1';
+
+function applyCatalogOverrides(cfg){
   Object.entries(cfg.products||{}).forEach(([id, enabled]) => {
     const p = PRODUCTS.find(x=>x.id===id);
     if (p) p.enabled = !!enabled;
@@ -2223,6 +2319,23 @@ async function loadCatalogConfig(){
     const s = SIZES.find(x=>x.mm===Number(mm));
     if (s) s.enabled = !!enabled;
   });
+}
+
+// Synchronous — applied before the very first render so returning
+// customers see the correct product/size availability immediately instead
+// of the hardcoded defaults flashing briefly while Firestore responds.
+function applyCachedCatalogConfig(){
+  try {
+    const raw = localStorage.getItem(CATALOG_CACHE_KEY);
+    if (raw) applyCatalogOverrides(JSON.parse(raw));
+  } catch(e){ /* corrupt cache or storage unavailable — just skip it */ }
+}
+
+async function loadCatalogConfig(){
+  if (typeof getCatalogConfig !== 'function') return; // firebase-config.js not loaded/configured
+  const cfg = await getCatalogConfig();
+  applyCatalogOverrides(cfg);
+  try { localStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify(cfg)); } catch(e){ /* storage full/unavailable — not critical */ }
   renderProductGrid();
   if (state.product) renderSizeGrid();
 }
