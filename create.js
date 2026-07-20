@@ -241,12 +241,6 @@ function sizeCanvasStage(){
   const side = Math.max(120, Math.min(wrap.clientWidth, wrap.clientHeight) * PIN_FILL_RATIO);
   stage.style.width = side + 'px';
   stage.style.height = side + 'px';
-  // The border ring's own size is computed from the stage's size at the
-  // moment it's set — without re-syncing it here too, it goes stale
-  // whenever the stage resizes (e.g. the tool panel opening/closing shrinks
-  // the wrap), so the ring stays small after the pin grows back and ends up
-  // hidden behind it once the panel closes.
-  updateCanvasBorderRing();
 }
 window.addEventListener('resize', ()=>{
   if (document.getElementById('step-design').classList.contains('active')) sizeCanvasStage();
@@ -2167,20 +2161,17 @@ function renderCanvasBgDecor(){
 // Whatever border the customer picked, echoed bigger as a slow-spinning
 // ring just outside the pin. Sized from the pin's real rendered size so it
 // stays correct across viewports.
+// Only toggles visibility and the image src — actual sizing is a CSS %
+// of .cr-canvas-stage (see .cr-canvas-border-ring), so it's always exactly
+// in sync with the pin's current size with no JS bookkeeping needed.
 function updateCanvasBorderRing(){
   const ring = document.getElementById('canvasBorderRing');
-  const stage = document.getElementById('canvasStage');
-  if (!ring || !stage) return;
+  if (!ring) return;
   if (!state.border || !state.border.src){
     ring.style.display = 'none';
     return;
   }
-  const rect = stage.getBoundingClientRect();
-  if (!rect.width){ ring.style.display = 'none'; return; }
-  const size = Math.round(rect.width * 1.28);
   if (ring.src !== state.border.src) ring.src = state.border.src;
-  ring.style.width = size + 'px';
-  ring.style.height = size + 'px';
   ring.style.display = 'block';
 }
 window.updateCanvasBorderRing = updateCanvasBorderRing;

@@ -141,7 +141,13 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
    z-index within the stage's own stacking context) since border assets are
    authored with a transparent center anyway. */
 .cr-canvas-border-ring{
+  /* Sized as a % of the pin's own box (.cr-canvas-stage, position:relative)
+     instead of a JS-computed px value — so it's mathematically part of the
+     pin's box and can never drift out of sync with it, at any size, for
+     any reason (tool panel opening/closing, window resize, orientation
+     change, ...). JS only toggles visibility and sets the image src. */
   position:absolute;top:50%;left:50%;z-index:-1;
+  width:128%;height:128%;
   pointer-events:none;opacity:0.9;
   animation:crBorderSpin 50s linear infinite;
 }
