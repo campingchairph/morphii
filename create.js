@@ -313,6 +313,28 @@ const ICON_LAYERS     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 const ICON_GRIP       = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
 const ICON_CHEVRON_L  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>';
 const ICON_CHEVRON_R  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
+const ICON_SUN        = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8l1.8-1.8M18 6l1.8-1.8"/></svg>';
+const ICON_MOON       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1110 3.2a6.8 6.8 0 0010 11.3z"/></svg>';
+
+/* ── LIGHT / DARK THEME ──────────────────────────
+   Only app chrome switches; the pin canvas always draws with the colors
+   the customer picked. A tiny inline script in <head> sets data-theme
+   before first paint so there's no flash of the wrong theme. */
+const THEME_KEY = 'morphii_theme';
+function currentTheme(){ return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
+function updateThemeToggleIcon(){
+  const btn = document.getElementById('themeToggleBtn');
+  if (!btn) return;
+  btn.innerHTML = currentTheme()==='dark' ? ICON_SUN : ICON_MOON;
+}
+function toggleTheme(){
+  const next = currentTheme()==='dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem(THEME_KEY, next);
+  updateThemeToggleIcon();
+  if (typeof drawPreview === 'function') drawPreview();
+}
+window.toggleTheme = toggleTheme;
 
 /* ── LAYER SELECTION (tap on the pin OR tap a chip — same result) ── */
 function layerKey(l){ return l ? l.kind + (l.id!=null ? ':'+l.id : '') : ''; }
@@ -896,6 +918,7 @@ function renderLayersModal(){
       <span class="cr-layer-row-thumb" onclick='selectLayerFromModal(${JSON.stringify(d)})'>${layerThumbFor(d)}</span>
       <span class="cr-layer-row-label" onclick='selectLayerFromModal(${JSON.stringify(d)})'>${escHtml(layerLabelFor(d))}</span>
       <button class="cr-layer-row-lock ${layerLockedFor(d)?'locked':''}" onclick='toggleLock("${d.kind}"${d.id!=null?','+d.id:''});renderLayersModal()'>${layerLockedFor(d)?ICON_LOCK:ICON_UNLOCK}</button>
+      <button class="cr-layer-row-delete" title="Delete layer" onclick='removeLayerFromModal(${JSON.stringify(d)})'>${ICON_TRASH}</button>
     </div>`).join('') : `<div class="cr-empty-hint">No layers yet — add text, a sticker, or a character to see them here.</div>`;
 
   const fixedRows = [];
@@ -920,6 +943,14 @@ window.selectLayerFromModal = function(d){
   closeLayersModal();
   selectLayer(d.kind==='character' ? { kind:'character' } : { kind:d.kind, id:d.id });
 };
+
+function removeLayerFromModal(d){
+  if (d.kind==='character') removeCharacter();
+  else if (d.kind==='text') removeTextLine(d.id);
+  else if (PLACED_META[d.kind]) removePlaced(d.kind, d.id);
+  renderLayersModal();
+}
+window.removeLayerFromModal = removeLayerFromModal;
 
 // Drag reordering: the grabbed row follows the pointer 1:1 (its own
 // transform, no transition), while every row it passes over slides smoothly
@@ -1882,7 +1913,7 @@ function drawOutsideCutDim(ctx, sizePx){
   ctx.moveTo(cx+cutR, cy);
   ctx.arc(cx, cy, cutR, 0, Math.PI*2, true);
   ctx.closePath();
-  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  ctx.fillStyle = currentTheme()==='dark' ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.8)';
   ctx.fill('evenodd');
   ctx.restore();
 }
@@ -2333,6 +2364,7 @@ async function loadCustomFonts(){
 /* ── INIT ─────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', ()=>{
   applyCachedCatalogConfig(); // last-known admin settings, before the first paint — no flash
+  updateThemeToggleIcon();
   renderProductGrid();
   loadPinAssetManifest();
   loadCustomFonts();

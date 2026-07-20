@@ -10,11 +10,30 @@
   --coral:#FF6F91;
   --coral-light:#FFE3EA;
   --pill:#1E2A20;
+  --pill-text:#FFFFFF;
   --border:rgba(34,48,31,0.10);
   --shadow:0 10px 28px rgba(60,70,40,0.14);
   --shadow-sm:0 4px 14px rgba(60,70,40,0.10);
 }
-html,body{width:100%;min-height:100%;font-family:'Nunito',sans-serif;background:var(--cream);color:var(--ink);}
+/* Dark mode — only the app chrome (panels, text, buttons) switches; the
+   pin canvas itself always draws with the colors the customer picked. */
+:root[data-theme="dark"]{
+  --cream:#191919;
+  --cream-deep:#232323;
+  --card:#242424;
+  --ink:#EEEDE8;
+  --ink-dim:#9C9C96;
+  --sage:#8FAE7C;
+  --sage-light:#25301F;
+  --coral:#FF6F91;
+  --coral-light:#3A222A;
+  --pill:#F5F1DE;
+  --pill-text:#1E2A20;
+  --border:rgba(255,255,255,0.10);
+  --shadow:0 10px 28px rgba(0,0,0,0.5);
+  --shadow-sm:0 4px 14px rgba(0,0,0,0.35);
+}
+html,body{width:100%;min-height:100%;font-family:'Nunito',sans-serif;background:var(--cream);color:var(--ink);transition:background-color 0.2s ease,color 0.2s ease;}
 button,input,textarea,select{font-family:inherit;color:inherit;}
 h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-btn,.cr-product-name,.cr-size-num{font-family:'Baloo 2',cursive;}
 
@@ -29,6 +48,13 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 .cr-logo{font-size:21px;color:var(--ink);font-weight:700;}
 .cr-logo .dot{color:var(--coral);}
 .cr-logo small{font-family:'Nunito',sans-serif;font-size:10.5px;font-weight:800;color:var(--ink-dim);letter-spacing:1px;margin-left:6px;text-transform:uppercase;vertical-align:middle;}
+
+.cr-theme-toggle{
+  flex-shrink:0;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--border);background:var(--cream-deep);color:var(--ink-dim);cursor:pointer;padding:0;
+}
+.cr-theme-toggle svg{width:17px;height:17px;}
+.cr-theme-toggle:hover{color:var(--ink);}
 
 .cr-steps{display:flex;gap:20px;}
 .cr-step{display:flex;align-items:center;gap:7px;opacity:0.4;transition:opacity 0.2s;}
@@ -104,7 +130,7 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
   border-radius:20px;padding:9px 14px;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap;
   box-shadow:var(--shadow-sm);
 }
-.cr-next-btn{background:var(--pill);border-color:var(--pill);color:white;}
+.cr-next-btn{background:var(--pill);border-color:var(--pill);color:var(--pill-text);}
 .cr-next-btn:disabled{opacity:0.4;cursor:not-allowed;}
 .cr-design-title{
   font-size:10px;font-weight:800;color:var(--ink-dim);text-align:center;flex:1;
@@ -192,7 +218,7 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
   display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow-sm);
 }
 .cr-isolate-btn svg{width:17px;height:17px;}
-.cr-isolate-btn.active{background:var(--pill);border-color:var(--pill);color:#fff;}
+.cr-isolate-btn.active{background:var(--pill);border-color:var(--pill);color:var(--pill-text);}
 
 .cr-fab-group{display:flex;align-items:center;gap:8px;}
 
@@ -334,7 +360,13 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
   border:1px solid var(--border);background:var(--card);color:var(--ink-dim);cursor:pointer;padding:0;
 }
 .cr-layer-row-lock svg{width:12px;height:12px;}
-.cr-layer-row-lock.locked{background:var(--pill);border-color:var(--pill);color:#fff;}
+.cr-layer-row-lock.locked{background:var(--pill);border-color:var(--pill);color:var(--pill-text);}
+.cr-layer-row-delete{
+  flex-shrink:0;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--border);background:var(--card);color:var(--ink-dim);cursor:pointer;padding:0;
+}
+.cr-layer-row-delete svg{width:12px;height:12px;}
+.cr-layer-row-delete:hover{background:var(--coral-light);border-color:var(--coral);color:var(--coral);}
 .cr-layer-row-tag{flex-shrink:0;font-size:9px;font-weight:800;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.4px;}
 .cr-layers-fixed-label{font-size:9.5px;font-weight:800;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.4px;margin:10px 0 6px;}
 
@@ -470,7 +502,7 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 }
 
 .cr-btn-primary{
-  width:100%;padding:15px;border-radius:50px;border:none;background:var(--pill);color:white;
+  width:100%;padding:15px;border-radius:50px;border:none;background:var(--pill);color:var(--pill-text);
   font-size:16px;cursor:pointer;box-shadow:var(--shadow);transition:transform 0.1s;
 }
 .cr-btn-primary:active{transform:scale(0.98);}
