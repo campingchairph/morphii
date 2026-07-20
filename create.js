@@ -1050,9 +1050,11 @@ function addPlacedFromPreset(kind, i){
 }
 window.addPlacedFromPreset = addPlacedFromPreset;
 
-function onPlacedFileChosen(kind, e){
-  const file = e.target.files[0];
-  if (!file) return;
+// Shared by the file-input flow and the clipboard-paste flow — both end up
+// with a Blob (a File is just a Blob with a name), so FileReader handles
+// either the same way.
+function addPlacedFromBlob(kind, blob){
+  if (!blob) return;
   const reader = new FileReader();
   reader.onload = ev => {
     const img = new Image();
@@ -1065,10 +1067,47 @@ function onPlacedFileChosen(kind, e){
     };
     img.src = ev.target.result;
   };
-  reader.readAsDataURL(file);
+  reader.readAsDataURL(blob);
+}
+
+function onPlacedFileChosen(kind, e){
+  const file = e.target.files[0];
+  addPlacedFromBlob(kind, file);
   e.target.value = '';
 }
 window.onPlacedFileChosen = onPlacedFileChosen;
+
+// Paste-as-sticker — reads whatever image the customer copied elsewhere
+// (e.g. iOS's long-press "Copy" on a photo) straight off the system
+// clipboard. Must run directly from a user gesture (the button tap itself)
+// for browsers to allow clipboard access at all. Not universally supported
+// (older/some mobile browsers lack navigator.clipboard.read for images),
+// so every failure path gets a plain-language explanation instead of a
+// silent no-op.
+async function pasteStickerFromClipboard(){
+  if (!navigator.clipboard || !navigator.clipboard.read){
+    alert("Paste isn't supported in this browser yet — use Upload instead.");
+    return;
+  }
+  let items;
+  try {
+    items = await navigator.clipboard.read();
+  } catch(e){
+    alert("Couldn't access your clipboard. Copy a photo first (press and hold it, then Copy), then tap Paste again — your browser may also ask permission first.");
+    return;
+  }
+  const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+  for (const item of items){
+    const type = item.types.find(t => IMAGE_TYPES.includes(t));
+    if (type){
+      const blob = await item.getType(type);
+      addPlacedFromBlob('sticker', blob);
+      return;
+    }
+  }
+  alert('No photo found on your clipboard — copy one first, then tap Paste.');
+}
+window.pasteStickerFromClipboard = pasteStickerFromClipboard;
 
 function duplicatePlaced(kind, id){
   const arr = placedArray(kind);
