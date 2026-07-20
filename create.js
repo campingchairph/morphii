@@ -241,6 +241,12 @@ function sizeCanvasStage(){
   const side = Math.max(120, Math.min(wrap.clientWidth, wrap.clientHeight) * PIN_FILL_RATIO);
   stage.style.width = side + 'px';
   stage.style.height = side + 'px';
+  // The border ring's own size is computed from the stage's size at the
+  // moment it's set — without re-syncing it here too, it goes stale
+  // whenever the stage resizes (e.g. the tool panel opening/closing shrinks
+  // the wrap), so the ring stays small after the pin grows back and ends up
+  // hidden behind it once the panel closes.
+  updateCanvasBorderRing();
 }
 window.addEventListener('resize', ()=>{
   if (document.getElementById('step-design').classList.contains('active')) sizeCanvasStage();
