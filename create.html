@@ -51,6 +51,24 @@
           <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
         </button>
       </div>
+      <!-- Static info, in normal flow above the pin (not floating) — legend
+           and warnings stay put regardless of what's happening with the
+           tools below, and the pin only ever resizes if one of these rare
+           warnings actually toggles, not on every tool interaction. -->
+      <div class="cr-floating-notes">
+        <div class="cr-legend">
+          <span><i class="cr-legend-swatch cr-legend-cut"></i>Cut line</span>
+          <span><i class="cr-legend-swatch cr-legend-safe"></i>Safe area</span>
+        </div>
+        <div class="cr-privacy-note">This preview is watermarked for privacy — your printed pin will be clean.</div>
+      </div>
+      <div class="cr-cutline-warning" id="cutlineWarning" style="display:none">
+        ⚠️ Something's hanging past the cut line and won't fully print — drag it back inside the red circle.
+      </div>
+      <div class="cr-next-disabled-note" id="nextDisabledNote" style="display:none">
+        Next is off because your background photo came from a link that blocks printing — upload it as a file instead, or remove it.
+      </div>
+
       <div class="cr-canvas-wrap">
         <div class="cr-canvas-bg-decor" id="canvasBgDecor"></div>
         <div class="cr-canvas-stage" id="canvasStage">
@@ -58,10 +76,10 @@
           <canvas id="designCanvas"></canvas>
         </div>
 
-        <!-- Everything below floats on top of the pin instead of pushing it —
-             none of this is in normal flow, so opening/closing a tool panel
-             can never resize .cr-canvas-wrap (which is what used to make the
-             pin visibly jump/resize on every tool interaction). -->
+        <!-- Floating layer buttons + nav menu — on top of the pin instead of
+             pushing it. None of this is in normal flow, so opening/closing a
+             tool panel can never resize .cr-canvas-wrap (which is what used
+             to make the pin visibly jump/resize on every tool interaction). -->
         <div class="cr-floating-tools" id="floatingTools">
           <div class="cr-canvas-fab-row">
             <button class="cr-isolate-btn" id="isolateBtn" onclick="toggleIsolateMode()" title="Full-screen view">
@@ -71,25 +89,11 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>
             </button>
           </div>
-          <div class="cr-next-disabled-note" id="nextDisabledNote" style="display:none">
-            Next is off because your background photo came from a link that blocks printing — upload it as a file instead, or remove it.
-          </div>
-          <div class="cr-cutline-warning" id="cutlineWarning" style="display:none">
-            ⚠️ Something's hanging past the cut line and won't fully print — drag it back inside the red circle.
-          </div>
-          <div class="cr-floating-notes">
-            <div class="cr-legend">
-              <span><i class="cr-legend-swatch cr-legend-cut"></i>Cut line</span>
-              <span><i class="cr-legend-swatch cr-legend-safe"></i>Safe area</span>
-            </div>
-            <div class="cr-privacy-note">This preview is watermarked for privacy — your printed pin will be clean.</div>
-          </div>
           <div class="cr-tool-rise-panel" id="toolRisePanel">
             <div class="cr-rise-handle"></div>
             <div class="cr-rise-body" id="toolRiseBody"></div>
           </div>
           <div class="cr-dock" id="dockArea"></div>
-          <div class="cr-dock-scroll-hint" id="dockScrollHint">Slide left or right to see more tools</div>
         </div>
       </div>
     </div>
@@ -194,6 +198,6 @@
 <!-- EmailJS (sends the confirmation email client-side, no backend needed) -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="email-config.js"></script>
-<script src="create.js?v=12"></script>
+<script src="create.js?v=13"></script>
 </body>
 </html>

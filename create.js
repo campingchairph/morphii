@@ -311,8 +311,8 @@ const ICON_EDIT       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 const ICON_TRASH      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6"/></svg>';
 const ICON_LAYERS     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>';
 const ICON_GRIP       = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
-const ICON_CHEVRON_L  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>';
-const ICON_CHEVRON_R  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
+const ICON_CHEVRON_L  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>';
+const ICON_CHEVRON_R  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
 
 /* ── LAYER SELECTION (tap on the pin OR tap a chip — same result) ── */
 function layerKey(l){ return l ? l.kind + (l.id!=null ? ':'+l.id : '') : ''; }
@@ -391,9 +391,10 @@ function renderDock(){
   requestAnimationFrame(()=>initDockScroll(prefix, scrollId));
 }
 
-// Left/right fade+arrow indicators for the horizontally-swipeable dock rows,
-// plus a shared "slide to see more" hint — only shown when the row actually
-// overflows, so short rows (e.g. Background's icon set) stay uncluttered.
+// Left/right fade+arrow indicators for the horizontally-swipeable dock rows
+// — only lit up when the row actually overflows, so short rows (e.g.
+// Background's icon set) stay uncluttered. The arrows themselves (thick,
+// high-contrast when active) are the only "there's more" signal now.
 function scrollDockRow(scrollId, dir){
   const row = document.getElementById(scrollId);
   if (!row) return;
@@ -405,12 +406,10 @@ function updateDockScrollIndicators(prefix, scrollId){
   const row = document.getElementById(scrollId);
   const left = document.getElementById(prefix+'ArrowLeft');
   const right = document.getElementById(prefix+'ArrowRight');
-  const hint = document.getElementById('dockScrollHint');
   if (!row || !left || !right) return;
   const overflow = row.scrollWidth > row.clientWidth + 2;
   left.classList.toggle('cr-visible', overflow);
   right.classList.toggle('cr-visible', overflow);
-  if (hint) hint.classList.toggle('cr-visible', overflow);
   left.classList.toggle('active', overflow && row.scrollLeft > 4);
   right.classList.toggle('active', overflow && row.scrollLeft < row.scrollWidth - row.clientWidth - 4);
 }

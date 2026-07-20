@@ -112,7 +112,11 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 }
 .cr-icon{width:16px;height:16px;flex-shrink:0;}
 
-.cr-canvas-wrap{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;}
+/* padding-bottom nudges the flex-centered pin upward within the wrap (it
+   doesn't shrink the pin itself — sizeCanvasStage reads clientHeight, which
+   includes padding — it just biases where centering lands), so less of it
+   sits behind the floating nav menu at the bottom. */
+.cr-canvas-wrap{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding-bottom:72px;}
 
 /* Decorative sticker backdrop, purely visual — sits behind the canvas
    (z-index:0 vs the canvas's z-index:1). Positions are computed in JS
@@ -148,8 +152,8 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
      change, ...). JS only toggles visibility and sets the image src. */
   position:absolute;top:50%;left:50%;z-index:-1;
   width:128%;height:128%;
-  pointer-events:none;opacity:0.9;
-  animation:crBorderSpin 50s linear infinite;
+  pointer-events:none;opacity:0.3;
+  animation:crBorderSpin 85s linear infinite;
 }
 @keyframes crBorderSpin{
   from{ transform:translate(-50%,-50%) rotate(0deg); }
@@ -174,8 +178,8 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 }
 .cr-floating-tools > *{pointer-events:auto;}
 
-/* Semi-opaque backdrop so the legend/privacy text stays legible over
-   whatever's on the pin behind it (photos, dark colors, etc). */
+/* Legend + privacy note — normal flow, above the pin (not part of
+   .cr-floating-tools), so they stay put regardless of dock/panel state. */
 .cr-floating-notes{
   background:rgba(255,255,255,0.85);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
   border-radius:14px;padding:8px 10px;box-shadow:var(--shadow-sm);
@@ -210,8 +214,7 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 .cr-design-app.isolate .cr-cutline-warning,
 .cr-design-app.isolate .cr-floating-notes,
 .cr-design-app.isolate .cr-tool-rise-panel,
-.cr-design-app.isolate .cr-dock,
-.cr-design-app.isolate .cr-dock-scroll-hint{
+.cr-design-app.isolate .cr-dock{
   display:none;
 }
 
@@ -241,18 +244,13 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
    has more content, so it's obvious there's more to swipe to. */
 .cr-dock-scroll-wrap{flex:1;min-width:0;display:flex;align-items:stretch;}
 .cr-dock-scroll-arrow{
-  flex-shrink:0;width:20px;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;width:24px;display:flex;align-items:center;justify-content:center;
   border:none;background:none;color:var(--ink-dim);cursor:pointer;padding:0;
   opacity:0;pointer-events:none;transition:opacity 0.15s ease,color 0.15s ease;
 }
-.cr-dock-scroll-arrow svg{width:14px;height:14px;}
-.cr-dock-scroll-arrow.cr-visible{opacity:0.25;pointer-events:auto;}
+.cr-dock-scroll-arrow svg{width:19px;height:19px;}
+.cr-dock-scroll-arrow.cr-visible{opacity:0.35;pointer-events:auto;}
 .cr-dock-scroll-arrow.cr-visible.active{opacity:1;color:var(--coral);}
-.cr-dock-scroll-hint{
-  font-size:9.5px;font-weight:700;color:var(--ink-dim);text-align:center;
-  max-height:0;opacity:0;overflow:hidden;transition:opacity 0.2s ease,max-height 0.2s ease;
-}
-.cr-dock-scroll-hint.cr-visible{max-height:18px;opacity:0.75;margin-top:4px;}
 .cr-dock-btn{
   flex:1;min-width:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
   padding:10px 6px;border:none;background:none;color:var(--ink);cursor:pointer;
