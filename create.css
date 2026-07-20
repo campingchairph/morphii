@@ -444,6 +444,11 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 
 /* ── CANVAS PREVIEW ── */
 .cr-canvas-stage{
+  /* Actual size is set in JS (sizeCanvasStage) as an explicit square pixel
+     value, already shrunk to leave margin for the decorations — percentage
+     max-width/max-height here would fight that (a non-square wrap gives a
+     non-square 80%, warping the circular pin into an oval), so this stays
+     100% and only acts as a safety ceiling. */
   position:relative;z-index:1;max-width:100%;max-height:100%;
   background:transparent;touch-action:none;
   /* drop-shadow (not box-shadow) hugs the actual circular pin shape drawn on

@@ -229,11 +229,16 @@ function setupCanvas(){
 
 // Fits the canvas stage to the largest square available in cr-canvas-wrap,
 // since the design step is a fixed no-scroll viewport (pin must always be visible).
+// Shrunk by PIN_FILL_RATIO (applied equally to both dimensions, so it always
+// stays square) to guarantee a margin around the pin for the decorative
+// spinning border ring + floating stickers — without it the pin fills the
+// wrap entirely on cramped phone viewports and they have nowhere to show.
+const PIN_FILL_RATIO = 0.8;
 function sizeCanvasStage(){
   const wrap = document.querySelector('.cr-canvas-wrap');
   const stage = document.getElementById('canvasStage');
   if (!wrap || !stage) return;
-  const side = Math.max(120, Math.min(wrap.clientWidth, wrap.clientHeight));
+  const side = Math.max(120, Math.min(wrap.clientWidth, wrap.clientHeight) * PIN_FILL_RATIO);
   stage.style.width = side + 'px';
   stage.style.height = side + 'px';
 }
@@ -2131,7 +2136,7 @@ function renderCanvasBgDecor(){
   // landed underneath the opaque pin and were invisible.
   const pinCx = stageRect.left - wrapRect.left + stageRect.width/2;
   const pinCy = stageRect.top  - wrapRect.top  + stageRect.height/2;
-  const exclR = Math.max(stageRect.width, stageRect.height)/2 * 1.12;
+  const exclR = Math.max(stageRect.width, stageRect.height)/2 * 1.15;
 
   const items = [];
   for (let i=0; i<15; i++){
@@ -2166,7 +2171,7 @@ function updateCanvasBorderRing(){
   }
   const rect = stage.getBoundingClientRect();
   if (!rect.width){ ring.style.display = 'none'; return; }
-  const size = Math.round(rect.width * 1.16);
+  const size = Math.round(rect.width * 1.28);
   if (ring.src !== state.border.src) ring.src = state.border.src;
   ring.style.width = size + 'px';
   ring.style.height = size + 'px';
