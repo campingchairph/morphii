@@ -323,9 +323,11 @@ const ICON_MOON       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 const THEME_KEY = 'morphii_theme';
 function currentTheme(){ return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
 function updateThemeToggleIcon(){
-  const btn = document.getElementById('themeToggleBtn');
-  if (!btn) return;
-  btn.innerHTML = currentTheme()==='dark' ? ICON_SUN : ICON_MOON;
+  const icon = currentTheme()==='dark' ? ICON_SUN : ICON_MOON;
+  ['themeToggleBtn','themeToggleBtnDesign'].forEach(id=>{
+    const btn = document.getElementById(id);
+    if (btn) btn.innerHTML = icon;
+  });
 }
 function toggleTheme(){
   const next = currentTheme()==='dark' ? 'light' : 'dark';
@@ -411,7 +413,31 @@ function renderDock(){
   const prefix = isToolRow ? 'toolRow' : 'addRow';
   const scrollId = isToolRow ? 'toolRowScroll' : 'addRowScroll';
   requestAnimationFrame(()=>initDockScroll(prefix, scrollId));
+  updateCanvasFabButtons();
 }
+
+// While a sticker is selected, its Duplicate/Add actions move from the dock
+// into floating buttons that replace the paste FAB — keeps the paste button
+// (only relevant when nothing/something-else is selected) from competing
+// with sticker-specific actions in the same small space.
+function updateCanvasFabButtons(){
+  const paste = document.getElementById('pasteFab');
+  const dup = document.getElementById('duplicateFab');
+  const add = document.getElementById('addFab');
+  if (!paste || !dup || !add) return;
+  const isSticker = !!(state.selected && state.selected.kind==='sticker' && state.selected.id!=null);
+  paste.style.display = isSticker ? 'none' : '';
+  dup.style.display = isSticker ? '' : 'none';
+  add.style.display = isSticker ? '' : 'none';
+}
+window.updateCanvasFabButtons = updateCanvasFabButtons;
+
+function duplicateSelectedSticker(){
+  if (state.selected && state.selected.kind==='sticker' && state.selected.id!=null){
+    duplicatePlaced('sticker', state.selected.id);
+  }
+}
+window.duplicateSelectedSticker = duplicateSelectedSticker;
 
 // Left/right fade+arrow indicators for the horizontally-swipeable dock rows
 // — only lit up when the row actually overflows, so short rows (e.g.
@@ -505,12 +531,10 @@ function toolIconsForSelection(){
       { id:'replace', label:'Upload', icon:ICON_UPLOAD, instant:`promptUpload('${kind}')` },
       { id:'size', label:'Size', icon:ICON_SIZE, panel:true },
       { id:'rotate', label:'Rotate', icon:ICON_ROTATE, panel:true },
-      { id:'duplicate', label:'Duplicate', icon:ICON_DUPLICATE, instant:`duplicatePlaced('${kind}',${el.id})` },
     ];
-    // Add-another shortcut — stickers only for now, so you can add a second
-    // sticker without backing out to the main dock. (Say the word if you
-    // want this on Shape/Word Art too.)
-    if (kind==='sticker') icons.push({ id:'add', label:'Add', icon:ICON_PLUS, instant:"addNew('sticker')" });
+    // Stickers get floating Duplicate/Add buttons instead (updateCanvasFabButtons)
+    // — keep Duplicate in the dock for Shape/Word Art, which don't have those FABs.
+    if (kind!=='sticker') icons.push({ id:'duplicate', label:'Duplicate', icon:ICON_DUPLICATE, instant:`duplicatePlaced('${kind}',${el.id})` });
     icons.push(
       { id:'lock', label: el.locked?'Locked':'Lock', icon: el.locked?ICON_LOCK:ICON_UNLOCK, instant:`toggleLock('${kind}',${el.id})`, on: el.locked },
       { id:'remove', label:'Remove', icon:ICON_TRASH, instant:`removePlaced('${kind}',${el.id})`, danger:true },

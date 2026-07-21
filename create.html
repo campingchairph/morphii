@@ -54,6 +54,7 @@
           Back
         </button>
         <div class="cr-design-title" id="previewLabel"></div>
+        <button class="cr-theme-toggle" id="themeToggleBtnDesign" onclick="toggleTheme()" title="Toggle light/dark mode" aria-label="Toggle light/dark mode"></button>
         <button class="cr-icon-btn cr-next-btn" id="toSubmitBtn" onclick="goStep('submit')">
           Next
           <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
@@ -96,6 +97,12 @@
             <div class="cr-fab-group">
               <button class="cr-paste-fab" id="pasteFab" onclick="pasteStickerFromClipboard()" title="Paste a copied photo as a sticker">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M9 5H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-3"/><path d="M9 12h6M9 16h6"/></svg>
+              </button>
+              <button class="cr-duplicate-fab" id="duplicateFab" style="display:none" onclick="duplicateSelectedSticker()" title="Duplicate sticker">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
+              </button>
+              <button class="cr-add-fab" id="addFab" style="display:none" onclick="addNew('sticker')" title="Add another sticker">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
               </button>
               <button class="cr-layers-fab" id="layersFab" onclick="openLayersModal()" title="Layers">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>
@@ -211,6 +218,6 @@
 <!-- EmailJS (sends the confirmation email client-side, no backend needed) -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="email-config.js"></script>
-<script src="create.js?v=16"></script>
+<script src="create.js?v=17"></script>
 </body>
 </html>
