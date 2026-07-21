@@ -627,6 +627,9 @@ function bgToolPanelHtml(tool){
       <div class="cr-hint">Drag directly on the pin to reposition · scroll or pinch to zoom.</div>`;
   }
   if (tool==='colors'){
+    const g = state.bg.color;
+    const isSolid = !!(g && g.grad && g.grad[0]===g.grad[1]);
+    const safeBgColor = (isSolid && /^#[0-9a-fA-F]{6}$/.test(g.grad[0])) ? g.grad[0] : '#F5F1DE';
     return `
       <div class="cr-gradient-grid">${GRADIENTS.map((g,i)=>{
         const css = g.grad4
@@ -634,8 +637,13 @@ function bgToolPanelHtml(tool){
           : `linear-gradient(135deg, ${g.grad[0]}, ${g.grad[1]})`;
         return `<button class="cr-gradient-swatch ${state.bg.color===g?'active':''}" style="background:${css}" title="${g.label}" onclick="selectGradient(${i})"></button>`;
       }).join('')}</div>
+      <div class="cr-field-label" style="margin-top:10px">Or a blank color</div>
+      <label class="cr-color-swatch cr-color-swatch-picker ${isSolid?'active':''}" style="width:40px;height:40px" title="Custom solid color">
+        <input type="color" value="${safeBgColor}" oninput="setBgSolidColor(this.value)">
+        ${ICON_PICKER_WHEEL}
+      </label>
       ${state.bg.color ? `<label class="cr-checkbox-row"><input type="checkbox" ${state.bg.colorOn?'checked':''} onchange="toggleColorLayer(this.checked)">Show this color</label>` : ''}
-      <div class="cr-hint">Turn on both a photo and a color to mix them — the color shows through anywhere the photo doesn't fully cover.</div>`;
+      <div class="cr-hint">Only used when no photo is active — turn off "Show the photo" to reveal a color instead.</div>`;
   }
   if (tool==='opacity'){
     return `
@@ -655,6 +663,16 @@ function selectGradient(i){
   updateSubmitAvailability();
 }
 window.selectGradient = selectGradient;
+
+function setBgSolidColor(hex){
+  state.bg.color = { grad:[hex,hex], label:'Custom' };
+  state.bg.colorOn = true;
+  renderDock();
+  renderToolPanelContent();
+  drawPreview();
+  updateSubmitAvailability();
+}
+window.setBgSolidColor = setBgSolidColor;
 
 /* ── BORDER TOOL PANEL (single preset, fixed above the background) ── */
 function borderToolPanelHtml(tool){
@@ -805,12 +823,9 @@ function applyBgImage(img, tainted){
   state.bg.img = img;
   state.bg.tainted = tainted;
   state.bg.offsetXFrac = 0; state.bg.offsetYFrac = 0; state.bg.scale = 1;
-  // A color is always applied underneath — at less than full opacity the
-  // photo alone would look washed out with nothing behind it.
-  if (!state.bg.color){
-    state.bg.color = GRADIENTS[0];
-    state.bg.colorOn = true;
-  }
+  // Photo and color background are mutually exclusive (drawBackground draws
+  // a plain white base under an active photo instead), so no color needs
+  // to be auto-applied here anymore.
   renderDock();
   renderToolPanelContent();
   drawPreview();
@@ -946,8 +961,9 @@ function renderLayersModal(){
     </div>`).join('') : `<div class="cr-empty-hint">No layers yet — add text, a sticker, or a character to see them here.</div>`;
 
   const fixedRows = [];
-  if (state.bg.imageOn && state.bg.img) fixedRows.push({ label:'Background Photo', thumb:`<img src="${state.bg.img.src}" alt="">` });
-  if (state.bg.colorOn && state.bg.color){
+  const bgImageActive = state.bg.imageOn && state.bg.img;
+  if (bgImageActive) fixedRows.push({ label:'Background Photo', thumb:`<img src="${state.bg.img.src}" alt="">` });
+  if (!bgImageActive && state.bg.colorOn && state.bg.color){
     const g = state.bg.color;
     const css = g.grad4 ? `linear-gradient(135deg,${g.grad4[0]},${g.grad4[3]})` : `linear-gradient(135deg,${g.grad[0]},${g.grad[1]})`;
     fixedRows.push({ label:'Background Color', thumb:`<span style="display:block;width:100%;height:100%;background:${css}"></span>` });
@@ -1679,7 +1695,11 @@ function drawForegroundElements(ctx, artboardPx){
 }
 
 function drawBackground(ctx, artboardPx){
-  if (state.bg.colorOn && state.bg.color){
+  const imageActive = state.bg.imageOn && state.bg.img;
+
+  // Photo and color background are mutually exclusive — an active photo
+  // always draws over a plain white base, never a color/gradient layer.
+  if (!imageActive && state.bg.colorOn && state.bg.color){
     // Same diagonal-gradient algorithm as the kiosk avatar builder (morphii.js)
     const g = state.bg.color;
     const grad = ctx.createLinearGradient(0,0,artboardPx,artboardPx);
@@ -1691,12 +1711,12 @@ function drawBackground(ctx, artboardPx){
     }
     ctx.fillStyle = grad;
     ctx.fillRect(0,0,artboardPx,artboardPx);
-  } else if (!state.bg.imageOn || !state.bg.img){
+  } else {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0,0,artboardPx,artboardPx);
   }
 
-  if (state.bg.imageOn && state.bg.img){
+  if (imageActive){
     ctx.save();
     ctx.globalAlpha = state.bg.opacity;
     const img = state.bg.img;

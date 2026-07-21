@@ -156,7 +156,7 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
    anything. */
 .cr-canvas-bg-decor{position:absolute;inset:0;overflow:hidden;z-index:0;pointer-events:none;}
 .cr-bg-sticker{
-  position:absolute;top:0;left:0;opacity:0.85;filter:blur(1.2px);pointer-events:none;
+  position:absolute;top:0;left:0;opacity:0.35;filter:blur(1.2px);pointer-events:none;
   will-change:transform;
 }
 .cr-design-app.isolate .cr-canvas-bg-decor{display:none;}
@@ -174,8 +174,8 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
      change, ...). JS only toggles visibility and sets the image src. */
   position:absolute;top:50%;left:50%;z-index:-1;
   width:128%;height:128%;
-  pointer-events:none;opacity:0.70;
-  animation:crBorderSpin 60s linear infinite;
+  pointer-events:none;opacity:0.50;
+  animation:crBorderSpin 75s linear infinite;
 }
 @keyframes crBorderSpin{
   from{ transform:translate(-50%,-50%) rotate(0deg); }
