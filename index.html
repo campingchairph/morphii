@@ -13,8 +13,26 @@
 </style>
 <link rel="stylesheet" href="morphii.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
 </head>
 <body>
+
+<!-- ══ ADMIN GATE — this app runs on an in-store kiosk, not for public
+     access, so nothing below renders until an admin signs in. ══ -->
+<div id="adminGate" style="position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0B2E4E,#1a4a72);padding:24px;">
+  <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:36px 32px;max-width:340px;width:100%;text-align:center;">
+    <div style="font-family:'Fredoka One',cursive;font-size:26px;color:white;margin-bottom:4px;">morphii<span style="color:#FF6FAE">.</span></div>
+    <div style="font-family:'Nunito',sans-serif;font-size:12.5px;color:rgba(255,255,255,0.6);font-weight:800;margin-bottom:22px;">Kiosk — staff sign-in required</div>
+    <input type="email" id="gateEmail" placeholder="Admin email" style="width:100%;box-sizing:border-box;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.06);color:white;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;margin-bottom:10px;outline:none;">
+    <input type="password" id="gatePass" placeholder="Password" style="width:100%;box-sizing:border-box;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.06);color:white;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;margin-bottom:10px;outline:none;">
+    <button onclick="doAdminGateLogin()" style="width:100%;padding:12px;border-radius:50px;border:none;background:#FF6FAE;color:white;font-family:'Fredoka One',cursive;font-size:15px;cursor:pointer;margin-top:6px;box-shadow:0 4px 0 #c0437e;">Sign In</button>
+    <div id="gateErr" style="margin-top:10px;font-size:12px;font-weight:700;color:#ff9b98;min-height:16px;font-family:'Nunito',sans-serif;"></div>
+  </div>
+</div>
+<button id="adminGateSignOut" onclick="doAdminGateSignOut()" style="display:none;position:fixed;bottom:10px;right:10px;z-index:99998;padding:6px 12px;border-radius:20px;border:1px solid rgba(0,0,0,0.15);background:rgba(255,255,255,0.85);color:#0B2E4E;font-family:'Nunito',sans-serif;font-size:10.5px;font-weight:800;cursor:pointer;">Sign Out</button>
 
 <!-- ══ LANDING SCREEN ══ -->
 <!-- ══ MOBILE SPLASH (mode=mobile only) ══ -->
@@ -735,6 +753,44 @@
   </div>
 </div>
 
+<script>
+function doAdminGateLogin(){
+  const errEl = document.getElementById('gateErr');
+  errEl.textContent = '';
+  if (!AUTH){ errEl.textContent = 'Firebase not configured yet — see firebase-config.js'; return; }
+  const email = document.getElementById('gateEmail').value.trim();
+  const pass = document.getElementById('gatePass').value;
+  if (!email || !pass){ errEl.textContent = 'Enter email and password.'; return; }
+  AUTH.signInWithEmailAndPassword(email, pass)
+    .catch(err => { errEl.textContent = err.message; });
+}
+window.doAdminGateLogin = doAdminGateLogin;
+
+function doAdminGateSignOut(){
+  if (AUTH) AUTH.signOut();
+}
+window.doAdminGateSignOut = doAdminGateSignOut;
+
+if (AUTH){
+  AUTH.onAuthStateChanged(user => {
+    const gate = document.getElementById('adminGate');
+    const signOutBtn = document.getElementById('adminGateSignOut');
+    if (user && isAdmin(user)){
+      gate.style.display = 'none';
+      signOutBtn.style.display = 'block';
+    } else {
+      gate.style.display = 'flex';
+      signOutBtn.style.display = 'none';
+      if (user && !isAdmin(user)){
+        document.getElementById('gateErr').textContent = 'This account is not authorized as an admin.';
+        AUTH.signOut();
+      }
+    }
+  });
+} else {
+  document.getElementById('gateErr').textContent = 'Firebase not configured yet — see firebase-config.js';
+}
+</script>
 <script src="morphii.js"></script>
 </body>
 </html>
