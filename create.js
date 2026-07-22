@@ -2207,11 +2207,12 @@ function drawGuides(ctx, sizePx){
   ctx.restore();
 }
 
-function drawWatermark(ctx, sizePx){
+function drawWatermark(ctx, sizePx, opacity){
+  opacity = opacity==null ? 1 : opacity;
   ctx.save();
   ctx.font = 'bold 13px Nunito, sans-serif';
-  ctx.fillStyle = 'rgba(255,255,255,0.22)';
-  ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+  ctx.fillStyle = `rgba(255,255,255,${0.22*opacity})`;
+  ctx.strokeStyle = `rgba(0,0,0,${0.15*opacity})`;
   ctx.textAlign = 'center';
   ctx.translate(sizePx/2, sizePx/2);
   ctx.rotate(-Math.PI/6);
@@ -2273,13 +2274,18 @@ function renderWatermarkedPreview(canvas){
 // Same watermarked render, but cropped to just the FINISHED pin (the cut
 // line), not the full paper/bleed artboard — this is what the customer
 // actually receives once it's trimmed, so it's what the 3D preview shows.
-function renderFinishedPinFace(canvas){
+// The watermark stays on (just lighter by default) rather than being
+// removable — a fully clean canvas rendered to the page is something
+// devtools can always pull the pixels out of, so this is the one render
+// path where "lighter" and "still there" both matter. See openPinPreview.
+function renderFinishedPinFace(canvas, opts){
+  const watermarkOpacity = (opts && opts.watermarkOpacity!=null) ? opts.watermarkOpacity : 1;
   const px = canvas.width;
   const off = document.createElement('canvas');
   off.width = px; off.height = px;
   const offCtx = off.getContext('2d');
   drawDesignLayer(offCtx, px);
-  drawWatermark(offCtx, px);
+  drawWatermark(offCtx, px, watermarkOpacity);
 
   const cutFrac = state.size / state.paperSize;
   const cutPx = px * cutFrac;
@@ -2295,6 +2301,38 @@ function renderFinishedPinFace(canvas){
   ctx.restore();
 }
 
+// Bulges the design toward the viewer like it's printed on a domed acrylic
+// pin surface, instead of just a flat circle with a lighting overlay on
+// top. Destination pixels near the center sample source pixels from
+// further out (power<1), which reads as the middle of the image pushing
+// forward while the rim stays anchored — a one-time pixel remap, done
+// once when the preview opens, not per animation frame.
+function applyDomeWarp(canvas, strength){
+  strength = strength==null ? 0.22 : strength;
+  const px = canvas.width;
+  const ctx = canvas.getContext('2d');
+  const src = ctx.getImageData(0, 0, px, px);
+  const dst = ctx.createImageData(px, px);
+  const s = src.data, d = dst.data;
+  const cx = px/2, cy = px/2, R = px/2;
+  const power = 1 - strength;
+  for (let y=0; y<px; y++){
+    for (let x=0; x<px; x++){
+      const nx = (x-cx)/R, ny = (y-cy)/R;
+      const r = Math.sqrt(nx*nx + ny*ny);
+      const di = (y*px+x)*4;
+      if (r > 1){ d[di+3] = 0; continue; }
+      const scale = r===0 ? 1 : Math.pow(r, power)/r;
+      const sx = Math.round(cx + nx*scale*R);
+      const sy = Math.round(cy + ny*scale*R);
+      if (sx<0 || sx>=px || sy<0 || sy>=px){ d[di+3] = 0; continue; }
+      const si = (sy*px+sx)*4;
+      d[di]=s[si]; d[di+1]=s[si+1]; d[di+2]=s[si+2]; d[di+3]=s[si+3];
+    }
+  }
+  ctx.putImageData(dst, 0, 0);
+}
+
 /* ── 3D PRINT PREVIEW — CSS-3D tilt, no WebGL/3D library needed. The pin
    element itself carries the rotateX/rotateY transform; the shine overlay's
    gradient center shifts opposite the tilt so the highlight reads as a
@@ -2306,7 +2344,8 @@ let _pin3dBound = false;
 function openPinPreview(){
   const canvas = document.getElementById('pinPreviewCanvas');
   canvas.width = 500; canvas.height = 500;
-  renderFinishedPinFace(canvas);
+  renderFinishedPinFace(canvas, { watermarkOpacity: 0.4 });
+  applyDomeWarp(canvas, 0.22);
   document.getElementById('pinPreviewTitle').textContent =
     state.product ? `${state.product.label} · ${state.size}mm Preview` : 'Print Preview';
   _pin3dRot = { ...PIN3D_REST };

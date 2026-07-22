@@ -180,7 +180,7 @@
         <div class="cr-pin3d-stage" id="pinPreviewStage">
           <div class="cr-pin3d-shadow"></div>
           <div class="cr-pin3d" id="pinPreviewPin">
-            <canvas id="pinPreviewCanvas"></canvas>
+            <canvas id="pinPreviewCanvas" oncontextmenu="return false" draggable="false"></canvas>
             <div class="cr-pin3d-shine" id="pinPreviewShine"></div>
             <div class="cr-pin3d-rim"></div>
           </div>
@@ -244,6 +244,6 @@
 <!-- EmailJS (sends the confirmation email client-side, no backend needed) -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="email-config.js"></script>
-<script src="create.js?v=23"></script>
+<script src="create.js?v=24"></script>
 </body>
 </html>

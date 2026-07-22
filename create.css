@@ -395,8 +395,9 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 .cr-pin3d-stage{
   position:relative;perspective:900px;height:260px;
   display:flex;align-items:center;justify-content:center;
-  touch-action:none;cursor:grab;user-select:none;
+  touch-action:none;cursor:grab;user-select:none;-webkit-touch-callout:none;
 }
+.cr-pin3d canvas{-webkit-user-drag:none;}
 .cr-pin3d-stage:active{cursor:grabbing;}
 .cr-pin3d-shadow{
   position:absolute;width:170px;height:34px;left:50%;top:calc(50% + 105px);
