@@ -433,7 +433,9 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
   cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;overflow:hidden;
 }
 .cr-preset-thumb img{width:100%;height:100%;object-fit:contain;}
+.cr-preset-thumb svg{width:100%;height:100%;color:var(--ink-dim);}
 .cr-preset-thumb.active{border-color:var(--coral);border-width:2px;}
+.cr-preset-thumb.active svg{color:var(--coral);}
 
 .cr-range{width:100%;accent-color:var(--sage);height:16px;margin:4px 0 2px;}
 /* Midpoint sliders: default value sits at dead-center of the track — left of

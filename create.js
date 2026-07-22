@@ -76,6 +76,162 @@ const WORDART_PRESETS = [];    // premade word-art graphics ("BEST MOM" etc.)
 const BORDER_PRESETS = [];     // full-circle decorative frame overlays
 const BACKGROUND_PRESETS = []; // curated stock background photos
 
+/* ── BUILT-IN VECTOR SHAPES ─────────────────────────────────────────
+   Unlike the admin-uploaded SHAPE_PRESETS above (fixed PNGs), these are
+   generated as flat SVG path data (100x100 box, centered at 50,50) so they
+   can be recolored on demand — addVectorShape()/setShapeColor() rasterize
+   the path onto an offscreen canvas at the chosen fill color and use that
+   as the placed element's image, same as any uploaded/preset sticker. */
+function circlePoints(cx, cy, r, n){
+  n = n || 48;
+  const pts = [];
+  for (let i=0;i<n;i++){
+    const a = i*360/n * Math.PI/180;
+    pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+  }
+  return pts;
+}
+function regularPolygonPoints(n, r, rotDeg){
+  rotDeg = rotDeg==null ? -90 : rotDeg;
+  const pts = [];
+  for (let i=0;i<n;i++){
+    const a = (rotDeg + i*360/n) * Math.PI/180;
+    pts.push([50 + r*Math.cos(a), 50 + r*Math.sin(a)]);
+  }
+  return pts;
+}
+function starPoints(n, outerR, innerR, rotDeg){
+  rotDeg = rotDeg==null ? -90 : rotDeg;
+  const pts = [];
+  for (let i=0;i<n*2;i++){
+    const r = i%2===0 ? outerR : innerR;
+    const a = (rotDeg + i*360/(n*2)) * Math.PI/180;
+    pts.push([50 + r*Math.cos(a), 50 + r*Math.sin(a)]);
+  }
+  return pts;
+}
+function wobblePoints(n, baseR, amp, freq){
+  const pts = [];
+  for (let i=0;i<n;i++){
+    const a = i*360/n * Math.PI/180;
+    const r = baseR + amp*Math.sin(freq*a);
+    pts.push([50 + r*Math.cos(a), 50 + r*Math.sin(a)]);
+  }
+  return pts;
+}
+function heartPoints(){
+  const pts = [];
+  const N = 48;
+  for (let i=0;i<N;i++){
+    const t = i/N * Math.PI*2;
+    const x = 16*Math.pow(Math.sin(t),3);
+    const y = 13*Math.cos(t) - 5*Math.cos(2*t) - 2*Math.cos(3*t) - Math.cos(4*t);
+    pts.push([50 + x*2.15, 50 - y*2.15]);
+  }
+  return pts;
+}
+// Radius modulated by |cos| raised to a power — higher power pinches the
+// valleys between lobes tighter, so it reads as separated petals rather
+// than a soft wavy blob.
+function flowerPoints(petals, outerR, innerR, n){
+  n = n || petals*15;
+  const pts = [];
+  for (let i=0;i<n;i++){
+    const theta = i/n * Math.PI*2;
+    const wave = Math.pow(Math.abs(Math.cos(theta*petals/2)), 2);
+    const r = innerR + (outerR-innerR)*wave;
+    pts.push([50 + r*Math.cos(theta-Math.PI/2), 50 + r*Math.sin(theta-Math.PI/2)]);
+  }
+  return pts;
+}
+function brushStrokePoints(){
+  const top = [], bot = [];
+  const N = 12;
+  for (let i=0;i<=N;i++){
+    const t = i/N;
+    const x = 8 + t*84;
+    const half = (4 + 16*Math.sin(t*Math.PI)) / 2;
+    const cy = 50 + 7*Math.sin(t*Math.PI*2.2);
+    top.push([x, cy-half]);
+    bot.push([x, cy+half]);
+  }
+  return top.concat(bot.reverse());
+}
+// Sharp-cornered closed path through a point ring — for polygons/stars.
+function sharpPathD(pts){
+  return 'M ' + pts.map(p=>p[0].toFixed(2)+','+p[1].toFixed(2)).join(' L ') + ' Z';
+}
+// Soft closed path — curves from each edge's midpoint to the next, using
+// the shared vertex as the control point, so sharp point rings read as
+// rounded blobs/petals instead of jagged polygons.
+function smoothPathD(pts){
+  const n = pts.length;
+  const mid = (a,b) => [(a[0]+b[0])/2, (a[1]+b[1])/2];
+  const m0 = mid(pts[n-1], pts[0]);
+  let d = `M ${m0[0].toFixed(2)},${m0[1].toFixed(2)} `;
+  for (let i=0;i<n;i++){
+    const cur = pts[i], next = pts[(i+1)%n];
+    const m = mid(cur, next);
+    d += `Q ${cur[0].toFixed(2)},${cur[1].toFixed(2)} ${m[0].toFixed(2)},${m[1].toFixed(2)} `;
+  }
+  return d + 'Z';
+}
+// Several thin triangular spokes radiating from center, all wound the same
+// direction so nonzero-rule fill merges them into one sparkle/asterisk.
+function asteriskPathD(spokes, innerR, outerR, halfWidthDeg){
+  let d = '';
+  for (let i=0;i<spokes;i++){
+    const baseDeg = i*360/spokes;
+    const a1 = (baseDeg-halfWidthDeg)*Math.PI/180, a2 = (baseDeg+halfWidthDeg)*Math.PI/180, a0 = baseDeg*Math.PI/180;
+    const p1 = [50+innerR*Math.cos(a1), 50+innerR*Math.sin(a1)];
+    const tip = [50+outerR*Math.cos(a0), 50+outerR*Math.sin(a0)];
+    const p2 = [50+innerR*Math.cos(a2), 50+innerR*Math.sin(a2)];
+    d += `M ${p1[0].toFixed(2)},${p1[1].toFixed(2)} L ${tip[0].toFixed(2)},${tip[1].toFixed(2)} L ${p2[0].toFixed(2)},${p2[1].toFixed(2)} L 50,50 Z `;
+  }
+  return d;
+}
+
+const SHAPE_VECTOR_LIBRARY = [
+  { id:'circle',    label:'Circle',        d: smoothPathD(regularPolygonPoints(48, 44)) },
+  { id:'square',     label:'Square',        d: sharpPathD([[10,10],[90,10],[90,90],[10,90]]) },
+  { id:'rounded',    label:'Rounded Square',d: smoothPathD([[14,14],[86,14],[86,86],[14,86]]) },
+  { id:'triangle',   label:'Triangle',      d: sharpPathD(regularPolygonPoints(3, 44)) },
+  { id:'diamond',    label:'Diamond',       d: sharpPathD(regularPolygonPoints(4, 44)) },
+  { id:'pentagon',   label:'Pentagon',      d: sharpPathD(regularPolygonPoints(5, 44)) },
+  { id:'hexagon',    label:'Hexagon',       d: sharpPathD(regularPolygonPoints(6, 44)) },
+  { id:'star',       label:'Star',          d: sharpPathD(starPoints(5, 44, 17)) },
+  { id:'ninjastar',  label:'Ninja Star',    d: sharpPathD(starPoints(4, 45, 9)) },
+  { id:'heart',      label:'Heart',         d: sharpPathD(heartPoints()) },
+  { id:'crescent',   label:'Arc',           d: smoothPathD(circlePoints(50,50,42)) + ' ' + smoothPathD(circlePoints(62,50,30)), fillRule:'evenodd' },
+  { id:'blob1',      label:'Blob',          d: smoothPathD(blobPointsFrom([40,32,42,30,44,34,38,28])) },
+  { id:'blob2',      label:'Blob 2',        d: smoothPathD(blobPointsFrom([36,44,30,40,26,42,34,38,28,40])) },
+  { id:'flower',     label:'Flower',        d: sharpPathD(flowerPoints(5, 42, 8)) },
+  { id:'asterisk',   label:'Asterisk',      d: asteriskPathD(8, 5, 44, 8) },
+  { id:'brush',      label:'Paint Brush',   d: smoothPathD(brushStrokePoints()) },
+  { id:'wobble',     label:'Wobble',        d: smoothPathD(wobblePoints(36, 38, 6, 7)) },
+];
+function blobPointsFrom(radii){
+  const n = radii.length, pts = [];
+  for (let i=0;i<n;i++){
+    const a = i*360/n * Math.PI/180;
+    pts.push([50 + radii[i]*Math.cos(a), 50 + radii[i]*Math.sin(a)]);
+  }
+  return pts;
+}
+
+function rasterizeVectorShape(shapeId, color, px){
+  px = px || 800;
+  const def = SHAPE_VECTOR_LIBRARY.find(s=>s.id===shapeId);
+  if (!def) return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = px; canvas.height = px;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(px/100, px/100);
+  ctx.fillStyle = color;
+  ctx.fill(new Path2D(def.d), def.fillRule || 'nonzero');
+  return canvas.toDataURL('image/png');
+}
+
 // Sticker/Shape/Word Art are structurally identical placed-image elements
 // ({id, img, xFrac, yFrac, scale, rotation, locked}) that only differ in
 // which array holds them, which preset gallery feeds them, and their
@@ -532,6 +688,9 @@ function toolIconsForSelection(){
       { id:'size', label:'Size', icon:ICON_SIZE, panel:true },
       { id:'rotate', label:'Rotate', icon:ICON_ROTATE, panel:true },
     ];
+    // Built-in vector shapes (not admin PNG presets or uploads) can be
+    // recolored on demand — see setShapeColor().
+    if (kind==='shape' && el.vectorShapeId) icons.push({ id:'color', label:'Color', icon:ICON_SWATCH, panel:true });
     // Stickers get floating Duplicate/Add buttons instead (updateCanvasFabButtons)
     // — keep Duplicate in the dock for Shape/Word Art, which don't have those FABs.
     if (kind!=='sticker') icons.push({ id:'duplicate', label:'Duplicate', icon:ICON_DUPLICATE, instant:`duplicatePlaced('${kind}',${el.id})` });
@@ -1056,28 +1215,54 @@ function endLayerDrag(){
 }
 
 /* ── STICKER / SHAPE / WORD ART TOOL PANELS (shared) ──────────────── */
+// Inline-SVG grid for the built-in vector shape library — used instead of
+// <img> thumbs since these have no fixed src (they're generated on click).
+function vectorShapeGridHtml(activeId, onclickFor){
+  return `<div class="cr-preset-grid">${SHAPE_VECTOR_LIBRARY.map(s=>
+    `<button class="cr-preset-thumb ${activeId===s.id?'active':''}" onclick="${onclickFor(s.id)}" title="${s.label}"><svg viewBox="0 0 100 100"><path d="${s.d}" fill="currentColor" fill-rule="${s.fillRule||'nonzero'}"/></svg></button>`
+  ).join('')}</div>`;
+}
+
 function placedToolPanelHtml(kind, tool, id){
   const noun = PLACED_META[kind].label.toLowerCase();
+  const isShape = kind==='shape';
 
   // Pending — nothing created yet. Presets grid creates a new element when
   // tapped; there's nothing to show for any other tool in this state.
   if (id == null){
     if (tool!=='presets') return '';
     const presets = placedPresets(kind);
-    if (!presets.length) return `<div class="cr-empty-hint">😢 No ${noun}s here yet — check back soon, or use Upload above.</div>`;
-    return `<div class="cr-preset-grid">${presets.map((p,i)=>
-      `<button class="cr-preset-thumb" onclick="addPlacedFromPreset('${kind}',${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`
-    ).join('')}</div>`;
+    if (!isShape && !presets.length) return `<div class="cr-empty-hint">😢 No ${noun}s here yet — check back soon, or use Upload above.</div>`;
+    return `
+      ${isShape ? vectorShapeGridHtml(null, sid=>`addVectorShape('${sid}')`) : ''}
+      ${presets.length ? `${isShape?'<div class="cr-field-label">More Presets</div>':''}<div class="cr-preset-grid">${presets.map((p,i)=>
+        `<button class="cr-preset-thumb" onclick="addPlacedFromPreset('${kind}',${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`
+      ).join('')}</div>` : ''}`;
   }
 
   const el = placedArray(kind).find(x=>x.id===id);
   if (!el) return '';
   if (tool==='presets'){
     const presets = placedPresets(kind);
-    if (!presets.length) return `<div class="cr-empty-hint">😢 No ${noun}s here yet — check back soon!</div>`;
-    return `<div class="cr-preset-grid">${presets.map((p,i)=>
-      `<button class="cr-preset-thumb ${el.img && el.img.src===p.src ? 'active' : ''}" onclick="swapPlacedImage('${kind}',${el.id},${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`
-    ).join('')}</div>`;
+    if (!isShape && !presets.length) return `<div class="cr-empty-hint">😢 No ${noun}s here yet — check back soon!</div>`;
+    return `
+      ${isShape ? vectorShapeGridHtml(el.vectorShapeId, sid=>`swapToVectorShape('${kind}',${el.id},'${sid}')`) : ''}
+      ${presets.length ? `${isShape?'<div class="cr-field-label">More Presets</div>':''}<div class="cr-preset-grid">${presets.map((p,i)=>
+        `<button class="cr-preset-thumb ${el.img && el.img.src===p.src ? 'active' : ''}" onclick="swapPlacedImage('${kind}',${el.id},${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`
+      ).join('')}</div>` : ''}`;
+  }
+  if (tool==='color' && isShape && el.vectorShapeId){
+    const cur = (el.color||'').toLowerCase();
+    const safeColor = /^#[0-9a-fA-F]{6}$/.test(el.color) ? el.color : SHAPE_DEFAULT_COLOR;
+    return `<div class="cr-color-swatch-grid">
+      ${TEXT_COLOR_SWATCHES.map(c=>
+        `<button class="cr-color-swatch ${cur===c.toLowerCase()?'active':''}" style="background:${c}" onclick="setShapeColor(${el.id},'${c}')" title="${c}"></button>`
+      ).join('')}
+      <label class="cr-color-swatch cr-color-swatch-picker" title="Custom color">
+        <input type="color" value="${safeColor}" oninput="setShapeColor(${el.id},this.value)">
+        ${ICON_PICKER_WHEEL}
+      </label>
+    </div>`;
   }
   if (tool==='size'){
     return `
@@ -1120,6 +1305,50 @@ function addPlacedFromPreset(kind, i){
   img.src = preset.src;
 }
 window.addPlacedFromPreset = addPlacedFromPreset;
+
+const SHAPE_DEFAULT_COLOR = '#FF6F91';
+
+function addVectorShape(shapeId){
+  const color = SHAPE_DEFAULT_COLOR;
+  const img = new Image();
+  img.onload = () => {
+    const el = { id: nextPlacedId('shape'), img, xFrac:0.15, yFrac:-0.15, scale:1, rotation:0, locked:false, vectorShapeId:shapeId, color };
+    placedArray('shape').push(el);
+    pushLayer({ kind:'shape', id: el.id });
+    selectLayer({ kind:'shape', id: el.id });
+    renderCanvasBgDecor();
+  };
+  img.src = rasterizeVectorShape(shapeId, color);
+}
+window.addVectorShape = addVectorShape;
+
+// Swap-in-place for the vector shape library, mirroring swapPlacedImage —
+// keeps the element's position/size/rotation, and its current color if it
+// was already a vector shape (otherwise starts at the default color).
+function swapToVectorShape(kind, id, shapeId){
+  const el = placedArray(kind).find(x=>x.id===id);
+  if (!el) return;
+  const color = el.vectorShapeId ? (el.color||SHAPE_DEFAULT_COLOR) : SHAPE_DEFAULT_COLOR;
+  const img = new Image();
+  img.onload = () => {
+    el.img = img; el.vectorShapeId = shapeId; el.color = color;
+    renderToolPanelContent(); drawPreview();
+  };
+  img.src = rasterizeVectorShape(shapeId, color);
+}
+window.swapToVectorShape = swapToVectorShape;
+
+function setShapeColor(id, hex){
+  const el = state.shapes.find(x=>x.id===id);
+  if (!el || !el.vectorShapeId) return;
+  const img = new Image();
+  img.onload = () => {
+    el.img = img; el.color = hex;
+    renderToolPanelContent(); drawPreview();
+  };
+  img.src = rasterizeVectorShape(el.vectorShapeId, hex);
+}
+window.setShapeColor = setShapeColor;
 
 // Shared by the file-input flow and the clipboard-paste flow — both end up
 // with a Blob (a File is just a Blob with a name), so FileReader handles
@@ -1190,6 +1419,7 @@ function duplicatePlaced(kind, id){
     yFrac: Math.max(-0.4, Math.min(0.4, el.yFrac + 0.08)),
     scale: el.scale, rotation: el.rotation, locked: false,
   };
+  if (el.vectorShapeId){ copy.vectorShapeId = el.vectorShapeId; copy.color = el.color; }
   arr.push(copy);
   pushLayer({ kind, id: copy.id });
   selectLayer({ kind, id: copy.id });
