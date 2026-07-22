@@ -91,9 +91,14 @@
              to make the pin visibly jump/resize on every tool interaction). -->
         <div class="cr-floating-tools" id="floatingTools">
           <div class="cr-canvas-fab-row">
-            <button class="cr-isolate-btn" id="isolateBtn" onclick="toggleIsolateMode()" title="Full-screen view">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/></svg>
-            </button>
+            <div class="cr-fab-group-left">
+              <button class="cr-isolate-btn" id="isolateBtn" onclick="toggleIsolateMode()" title="Full-screen view">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/></svg>
+              </button>
+              <button class="cr-isolate-btn" id="printPreviewBtn" onclick="openPinPreview()" title="Print preview">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
             <div class="cr-fab-group">
               <button class="cr-paste-fab" id="pasteFab" onclick="pasteStickerFromClipboard()" title="Paste a copied photo as a sticker">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M9 5H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-3"/><path d="M9 12h6M9 16h6"/></svg>
@@ -162,6 +167,27 @@
         <button class="cr-btn-primary" style="margin-top:16px" onclick="closeLayersModal()">Done</button>
       </div>
     </div>
+
+    <!-- 3D PRINT PREVIEW — a CSS-3D-tilted render of just the finished
+         (trimmed) pin face, so the customer can see roughly how it'll look
+         once printed rather than the flat editing canvas. -->
+    <div class="cr-modal-overlay" id="pinPreviewOverlay">
+      <div class="cr-pin3d-card">
+        <button class="cr-pin3d-close" onclick="closePinPreview()" title="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+        <div class="cr-modal-title" id="pinPreviewTitle">Print Preview</div>
+        <div class="cr-pin3d-stage" id="pinPreviewStage">
+          <div class="cr-pin3d-shadow"></div>
+          <div class="cr-pin3d" id="pinPreviewPin">
+            <canvas id="pinPreviewCanvas"></canvas>
+            <div class="cr-pin3d-shine" id="pinPreviewShine"></div>
+            <div class="cr-pin3d-rim"></div>
+          </div>
+        </div>
+        <div class="cr-pin3d-hint">Drag to tilt</div>
+      </div>
+    </div>
   </section>
 
   <!-- STEP 4: SUBMIT -->
@@ -218,6 +244,6 @@
 <!-- EmailJS (sends the confirmation email client-side, no backend needed) -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="email-config.js"></script>
-<script src="create.js?v=22"></script>
+<script src="create.js?v=23"></script>
 </body>
 </html>

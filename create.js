@@ -2270,6 +2270,108 @@ function renderWatermarkedPreview(canvas){
   drawWatermark(ctx, canvas.width);
 }
 
+// Same watermarked render, but cropped to just the FINISHED pin (the cut
+// line), not the full paper/bleed artboard — this is what the customer
+// actually receives once it's trimmed, so it's what the 3D preview shows.
+function renderFinishedPinFace(canvas){
+  const px = canvas.width;
+  const off = document.createElement('canvas');
+  off.width = px; off.height = px;
+  const offCtx = off.getContext('2d');
+  drawDesignLayer(offCtx, px);
+  drawWatermark(offCtx, px);
+
+  const cutFrac = state.size / state.paperSize;
+  const cutPx = px * cutFrac;
+  const srcOffset = (px - cutPx) / 2;
+
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, px, px);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(px/2, px/2, px/2, 0, Math.PI*2);
+  ctx.clip();
+  ctx.drawImage(off, srcOffset, srcOffset, cutPx, cutPx, 0, 0, px, px);
+  ctx.restore();
+}
+
+/* ── 3D PRINT PREVIEW — CSS-3D tilt, no WebGL/3D library needed. The pin
+   element itself carries the rotateX/rotateY transform; the shine overlay's
+   gradient center shifts opposite the tilt so the highlight reads as a
+   fixed light source reacting to the surface angle, not painted-on. ── */
+const PIN3D_REST = { x:14, y:-10 };
+let _pin3dRot = { ...PIN3D_REST };
+let _pin3dBound = false;
+
+function openPinPreview(){
+  const canvas = document.getElementById('pinPreviewCanvas');
+  canvas.width = 500; canvas.height = 500;
+  renderFinishedPinFace(canvas);
+  document.getElementById('pinPreviewTitle').textContent =
+    state.product ? `${state.product.label} · ${state.size}mm Preview` : 'Print Preview';
+  _pin3dRot = { ...PIN3D_REST };
+  applyPin3dTransform();
+  document.getElementById('pinPreviewOverlay').classList.add('show');
+  initPin3dDrag();
+}
+window.openPinPreview = openPinPreview;
+
+function closePinPreview(){
+  document.getElementById('pinPreviewOverlay').classList.remove('show');
+}
+window.closePinPreview = closePinPreview;
+
+function applyPin3dTransform(){
+  const pin = document.getElementById('pinPreviewPin');
+  const shine = document.getElementById('pinPreviewShine');
+  if (!pin || !shine) return;
+  pin.style.transform = `rotateX(${_pin3dRot.x}deg) rotateY(${_pin3dRot.y}deg)`;
+  const hx = 50 - _pin3dRot.y*1.3, hy = 50 - _pin3dRot.x*1.3;
+  const sx = 50 + _pin3dRot.y*1.3, sy = 50 + _pin3dRot.x*1.3;
+  shine.style.background =
+    `radial-gradient(circle at ${hx}% ${hy}%, rgba(255,255,255,0.85), rgba(255,255,255,0.15) 35%, rgba(255,255,255,0) 55%),` +
+    `radial-gradient(circle at ${sx}% ${sy}%, rgba(0,0,0,0.18), rgba(0,0,0,0) 45%)`;
+}
+
+function initPin3dDrag(){
+  const stage = document.getElementById('pinPreviewStage');
+  const pin = document.getElementById('pinPreviewPin');
+  if (_pin3dBound) return; // listeners only need wiring once, ever
+  _pin3dBound = true;
+
+  let start = null;
+  const clampRot = (v, min, max) => Math.max(min, Math.min(max, v));
+
+  function onDown(e){
+    const p = e.touches ? e.touches[0] : e;
+    start = { x:p.clientX, y:p.clientY, rot:{ ..._pin3dRot } };
+    pin.classList.add('dragging');
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onMove, { passive:false });
+    window.addEventListener('touchend', onUp);
+  }
+  function onMove(e){
+    if (!start) return;
+    if (e.cancelable) e.preventDefault();
+    const p = e.touches ? e.touches[0] : e;
+    const dx = p.clientX - start.x, dy = p.clientY - start.y;
+    _pin3dRot.y = clampRot(start.rot.y + dx*0.35, -35, 35);
+    _pin3dRot.x = clampRot(start.rot.x - dy*0.35, -8, 32);
+    applyPin3dTransform();
+  }
+  function onUp(){
+    start = null;
+    pin.classList.remove('dragging');
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup', onUp);
+    window.removeEventListener('touchmove', onMove);
+    window.removeEventListener('touchend', onUp);
+  }
+  stage.addEventListener('mousedown', onDown);
+  stage.addEventListener('touchstart', onDown, { passive:true });
+}
+
 /* ── CLEAN EXPORT (no watermark/guides) — admin only ── */
 function compositeCleanDesign(){
   const px = Math.round(artboardDiameter() * EXPORT_PPMM);

@@ -229,6 +229,7 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 .cr-isolate-btn.active{background:var(--pill);border-color:var(--pill);color:var(--pill-text);}
 
 .cr-fab-group{display:flex;align-items:center;gap:8px;}
+.cr-fab-group-left{display:flex;align-items:center;gap:8px;}
 
 .cr-paste-fab,.cr-duplicate-fab,.cr-add-fab{
   width:38px;height:38px;border-radius:50%;flex-shrink:0;
@@ -379,6 +380,50 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 .cr-layer-row-delete:hover{background:var(--coral-light);border-color:var(--coral);color:var(--coral);}
 .cr-layer-row-tag{flex-shrink:0;font-size:9px;font-weight:800;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.4px;}
 .cr-layers-fixed-label{font-size:9.5px;font-weight:800;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.4px;margin:10px 0 6px;}
+
+/* ── 3D PRINT PREVIEW ── */
+.cr-pin3d-card{
+  background:var(--cream);border-radius:24px;padding:22px;max-width:380px;width:100%;
+  box-shadow:var(--shadow);position:relative;text-align:center;
+}
+.cr-pin3d-close{
+  position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:50%;
+  border:1px solid var(--border);background:var(--card);color:var(--ink-dim);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;
+}
+.cr-pin3d-close svg{width:15px;height:15px;}
+.cr-pin3d-stage{
+  position:relative;perspective:900px;height:260px;
+  display:flex;align-items:center;justify-content:center;
+  touch-action:none;cursor:grab;user-select:none;
+}
+.cr-pin3d-stage:active{cursor:grabbing;}
+.cr-pin3d-shadow{
+  position:absolute;width:170px;height:34px;left:50%;top:calc(50% + 105px);
+  transform:translateX(-50%);pointer-events:none;
+  background:radial-gradient(ellipse at center, rgba(0,0,0,0.28), rgba(0,0,0,0) 70%);
+  filter:blur(2px);
+}
+.cr-pin3d{
+  position:relative;width:210px;height:210px;border-radius:50%;
+  transform-style:preserve-3d;transform:rotateX(14deg) rotateY(-10deg);
+  transition:transform 0.4s cubic-bezier(.2,.8,.3,1);
+  box-shadow:0 16px 28px rgba(0,0,0,0.25),
+             inset 0 -6px 14px rgba(0,0,0,0.25),
+             inset 0 6px 10px rgba(255,255,255,0.35);
+}
+.cr-pin3d.dragging{transition:none;}
+.cr-pin3d canvas{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;display:block;}
+.cr-pin3d-shine{
+  position:absolute;inset:0;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle at 32% 28%, rgba(255,255,255,0.85), rgba(255,255,255,0.15) 35%, rgba(255,255,255,0) 55%),
+             radial-gradient(circle at 70% 80%, rgba(0,0,0,0.18), rgba(0,0,0,0) 45%);
+}
+.cr-pin3d-rim{
+  position:absolute;inset:0;border-radius:50%;pointer-events:none;
+  box-shadow:inset 0 0 0 3px rgba(255,255,255,0.5), inset 0 0 0 6px rgba(0,0,0,0.08);
+}
+.cr-pin3d-hint{font-size:10.5px;font-weight:800;color:var(--ink-dim);margin-top:12px;text-transform:uppercase;letter-spacing:0.3px;}
 
 /* ── UPLOAD INSTRUCTIONS MODAL ── */
 .cr-modal-overlay{
