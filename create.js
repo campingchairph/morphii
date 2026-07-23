@@ -2430,26 +2430,57 @@ const PIN3D_RADIUS = 105; // half of .cr-pin3d's 210px width
 const PIN3D_DEPTH = 18;   // physical "thickness" — how far the face sits in front of the back
 let _pin3dRot = { ...PIN3D_REST };
 let _pin3dBound = false;
-let _pin3dEdgeBuilt = false;
+
+function shadeColor(c, amt){
+  const f = v => Math.max(0, Math.min(255, Math.round(amt>0 ? v+(255-v)*amt : v*(1+amt))));
+  return `rgb(${f(c.r)},${f(c.g)},${f(c.b)})`;
+}
+
+// Averages pixel color from a ring near the outer rim of the rendered pin
+// face, so the edge wall reads as the print's own colors curving around
+// the side rather than an unrelated metal rim.
+function samplePinEdgeColor(canvas){
+  const px = canvas.width;
+  const ctx = canvas.getContext('2d');
+  const cx = px/2, cy = px/2, sampleR = px*0.47;
+  let r=0,g=0,b=0,count=0;
+  const N = 24;
+  for (let i=0; i<N; i++){
+    const a = i*360/N * Math.PI/180;
+    const x = Math.round(cx + sampleR*Math.cos(a)), y = Math.round(cy + sampleR*Math.sin(a));
+    if (x<0||x>=px||y<0||y>=px) continue;
+    const d = ctx.getImageData(x,y,1,1).data;
+    if (d[3] < 10) continue; // skip transparent samples
+    r+=d[0]; g+=d[1]; b+=d[2]; count++;
+  }
+  return count ? { r:Math.round(r/count), g:Math.round(g/count), b:Math.round(b/count) } : { r:210,g:212,b:216 };
+}
 
 // Classic CSS-3D "barrel": N thin flat strips arranged radially around the
-// Y axis form an edge wall that reads as a continuous curved surface once
-// rendered — this is what gives the pin real, visible side thickness when
-// tilted instead of it just being a flat disc.
-function buildPin3dEdgeWall(){
-  if (_pin3dEdgeBuilt) return;
-  _pin3dEdgeBuilt = true;
+// Z axis — the SAME axis the front/back faces are perpendicular to, so the
+// wall actually wraps around the pin's rim instead of swinging out toward
+// the camera. Per strip: rotateZ(angle+90deg) orients it tangent to the
+// circle at that angle, rotateX(90deg) tips its "height" dimension to run
+// along Z (the depth direction) instead of Y, and translateZ(radius) then
+// pushes it out along its own (now-radial) local Z axis to the rim.
+// A vertical light/dark gradient per strip fakes a rounded bevel instead
+// of a hard flat-walled "coaster" edge.
+function buildPin3dEdgeWall(edgeColor){
   const wall = document.getElementById('pinPreviewEdgeWall');
   if (!wall) return;
-  const N = 40;
+  const N = 48;
   const stripW = Math.ceil((2*Math.PI*PIN3D_RADIUS)/N) + 1; // +1 to avoid seams between strips
+  const light = shadeColor(edgeColor, 0.3);
+  const dark = shadeColor(edgeColor, -0.5);
+  const bg = `linear-gradient(180deg, ${dark}, ${light} 45%, ${dark})`;
   let html = '';
   for (let i=0; i<N; i++){
     const angle = i*360/N;
     // Crude directional shading: strips facing the default light angle
     // read lighter, strips facing away read darker, like a lit cylinder.
-    const shade = (0.55 + 0.45*Math.abs(Math.cos(angle*Math.PI/180))).toFixed(2);
-    html += `<div class="cr-pin3d-edge-strip" style="width:${stripW}px;margin-left:${-stripW/2}px;transform:rotateY(${angle}deg) translateZ(${PIN3D_RADIUS}px);filter:brightness(${shade})"></div>`;
+    const shade = (0.7 + 0.3*Math.cos(angle*Math.PI/180)).toFixed(2);
+    const t = `rotateZ(${angle+90}deg) rotateX(90deg) translateZ(${PIN3D_RADIUS}px)`;
+    html += `<div class="cr-pin3d-edge-strip" style="width:${stripW}px;margin-left:${-stripW/2}px;transform:${t};background:${bg};filter:brightness(${shade})"></div>`;
   }
   wall.innerHTML = html;
 }
@@ -2461,7 +2492,7 @@ function openPinPreview(){
   applyDomeWarp(canvas, 0.22);
   document.getElementById('pinPreviewTitle').textContent =
     state.product ? `${state.product.label} · ${state.size}mm Preview` : 'Print Preview';
-  buildPin3dEdgeWall();
+  buildPin3dEdgeWall(samplePinEdgeColor(canvas));
   _pin3dRot = { ...PIN3D_REST };
   applyPin3dTransform();
   document.getElementById('pinPreviewOverlay').classList.add('show');
