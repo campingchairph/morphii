@@ -70,6 +70,7 @@
           <span><i class="cr-legend-swatch cr-legend-safe"></i>Safe area</span>
         </div>
         <div class="cr-privacy-note">This preview is watermarked for privacy — your printed pin will be clean.</div>
+        <div class="cr-privacy-note">Pinch to zoom in for detail work, two fingers to pan around while zoomed, double-tap to reset.</div>
       </div>
       <div class="cr-cutline-warning" id="cutlineWarning" style="display:none">
         ⚠️ Something's hanging past the cut line and won't fully print — drag it back inside the red circle.
@@ -179,10 +180,18 @@
         <div class="cr-modal-title" id="pinPreviewTitle">Print Preview</div>
         <div class="cr-pin3d-stage" id="pinPreviewStage">
           <div class="cr-pin3d-shadow"></div>
+          <!-- Front face, cylindrical edge wall, and back all rotate together
+               as one rigid body (shared preserve-3d parent) so the pin reads
+               as an actual mounted, physically thick object when tilted,
+               not a flat disc with a lighting trick painted on it. -->
           <div class="cr-pin3d" id="pinPreviewPin">
-            <canvas id="pinPreviewCanvas" oncontextmenu="return false" draggable="false"></canvas>
-            <div class="cr-pin3d-shine" id="pinPreviewShine"></div>
-            <div class="cr-pin3d-rim"></div>
+            <div class="cr-pin3d-back"></div>
+            <div class="cr-pin3d-edge-wall" id="pinPreviewEdgeWall"></div>
+            <div class="cr-pin3d-face">
+              <canvas id="pinPreviewCanvas" oncontextmenu="return false" draggable="false"></canvas>
+              <div class="cr-pin3d-shine" id="pinPreviewShine"></div>
+              <div class="cr-pin3d-rim"></div>
+            </div>
           </div>
         </div>
         <div class="cr-pin3d-hint">Drag to tilt</div>
@@ -244,6 +253,6 @@
 <!-- EmailJS (sends the confirmation email client-side, no backend needed) -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="email-config.js"></script>
-<script src="create.js?v=24"></script>
+<script src="create.js?v=25"></script>
 </body>
 </html>

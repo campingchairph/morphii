@@ -308,7 +308,7 @@ function goStep(name){
     el.classList.toggle('done', i<idx && i>=0);
   });
   window.scrollTo({top:0,behavior:'smooth'});
-  if (name==='design'){ setupCanvas(); drawPreview(); renderCanvasBgDecor(); updateCanvasBorderRing(); }
+  if (name==='design'){ setupCanvas(); drawPreview(); renderCanvasBgDecor(); updateCanvasBorderRing(); resetCanvasView(); }
   if (name==='submit'){ renderSubmitSummary(); }
 }
 window.goStep = goStep;
@@ -402,6 +402,46 @@ window.addEventListener('resize', ()=>{
   if (document.getElementById('step-design').classList.contains('active')) sizeCanvasStage();
 });
 
+/* ── CANVAS VIEW ZOOM/PAN — a pure CSS transform on #canvasStage so the
+   customer can zoom in close for detail work. Doesn't touch any design
+   data or coordinates: pointerFrac() below already reads
+   getBoundingClientRect() fresh on every pointer event, and that always
+   reflects the current on-screen (post-transform) size/position, so
+   dragging/resizing/hit-testing all keep working correctly at any zoom
+   level with no changes needed there. Only active when the existing
+   background-photo pinch/scroll gesture isn't (see bindCanvasInteractions)
+   so the two never compete for the same two-finger gesture. ── */
+let canvasViewZoom = 1, canvasViewPanX = 0, canvasViewPanY = 0;
+const CANVAS_VIEW_ZOOM_MIN = 1, CANVAS_VIEW_ZOOM_MAX = 3;
+
+function applyCanvasViewTransform(){
+  const stage = document.getElementById('canvasStage');
+  if (!stage) return;
+  stage.style.transform = `translate(${canvasViewPanX}px, ${canvasViewPanY}px) scale(${canvasViewZoom})`;
+}
+
+function clampCanvasViewPan(){
+  const stage = document.getElementById('canvasStage');
+  if (!stage) return;
+  const maxPan = (canvasViewZoom - 1) * stage.offsetWidth / 2;
+  canvasViewPanX = Math.max(-maxPan, Math.min(maxPan, canvasViewPanX));
+  canvasViewPanY = Math.max(-maxPan, Math.min(maxPan, canvasViewPanY));
+}
+
+function resetCanvasView(){
+  const stage = document.getElementById('canvasStage');
+  canvasViewZoom = 1; canvasViewPanX = 0; canvasViewPanY = 0;
+  if (!stage) return;
+  stage.classList.add('cr-view-snapping');
+  applyCanvasViewTransform();
+  setTimeout(()=>stage.classList.remove('cr-view-snapping'), 260);
+}
+window.resetCanvasView = resetCanvasView;
+
+function touchMid(touches){
+  return { x:(touches[0].clientX+touches[1].clientX)/2, y:(touches[0].clientY+touches[1].clientY)/2 };
+}
+
 const ICON_EXPAND   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/></svg>';
 const ICON_COLLAPSE  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v3a2 2 0 01-2 2H4M15 3v3a2 2 0 002 2h3M9 21v-3a2 2 0 00-2-2H4M15 21v-3a2 2 0 012-2h3"/></svg>';
 
@@ -416,6 +456,7 @@ function toggleIsolateMode(){
   btn.classList.toggle('active', on);
   btn.title = on ? 'Exit full-screen view' : 'Full-screen view';
   btn.innerHTML = on ? ICON_COLLAPSE : ICON_EXPAND;
+  resetCanvasView(); // stage's base size is about to change — old pixel pan/zoom values wouldn't line up
   sizeCanvasStage();
   requestAnimationFrame(sizeCanvasStage);
 }
@@ -1853,33 +1894,80 @@ function bindCanvasInteractions(canvas){
 
   const stickerOrCharSelected = () => state.selected && ['sticker','shape','wordart','character','text','border'].includes(state.selected.kind);
 
+  const bgPinchApplies = () => state.bg.imageOn && state.bg.img && !state.bg.locked && !stickerOrCharSelected();
+
   canvas.addEventListener('wheel', e=>{
-    if (!state.bg.imageOn || !state.bg.img || state.bg.locked || stickerOrCharSelected()) return;
     e.preventDefault();
     const delta = e.deltaY > 0 ? 0.92 : 1.08;
-    state.bg.scale = state.bg.scale*delta;
-    clampBgTransform();
-    drawPreview();
+    if (bgPinchApplies()){
+      state.bg.scale = state.bg.scale*delta;
+      clampBgTransform();
+      drawPreview();
+    } else {
+      canvasViewZoom = Math.max(CANVAS_VIEW_ZOOM_MIN, Math.min(CANVAS_VIEW_ZOOM_MAX, canvasViewZoom*delta));
+      clampCanvasViewPan();
+      applyCanvasViewTransform();
+    }
   }, { passive:false });
 
-  // Basic pinch-to-zoom for touch (background only, when no sticker/character is selected)
+  // Two-finger touch drives either the background photo's pinch-to-zoom
+  // (when that gesture applies) or the canvas view's zoom+pan (otherwise)
+  // — the two never fight over the same gesture since bgPinchApplies() is
+  // checked once at touchstart and that branch sticks for the whole touch.
   let pinchStartDist = null, pinchStartScale = 1;
+  let viewPinchActive = false, viewPinchStartDist = 1, viewPinchStartZoom = 1;
+  let viewPinchStartMid = null, viewPinchStartPanX = 0, viewPinchStartPanY = 0;
+  let lastTapTime = 0;
+
   canvas.addEventListener('touchstart', e=>{
     if (e.touches.length===2){
-      pinchStartDist = touchDist(e.touches);
-      pinchStartScale = state.bg.scale;
+      if (bgPinchApplies()){
+        pinchStartDist = touchDist(e.touches);
+        pinchStartScale = state.bg.scale;
+        viewPinchActive = false;
+      } else {
+        viewPinchActive = true;
+        viewPinchStartDist = touchDist(e.touches);
+        viewPinchStartZoom = canvasViewZoom;
+        viewPinchStartMid = touchMid(e.touches);
+        viewPinchStartPanX = canvasViewPanX;
+        viewPinchStartPanY = canvasViewPanY;
+      }
     }
   }, { passive:true });
+
   canvas.addEventListener('touchmove', e=>{
-    if (e.touches.length===2 && pinchStartDist && state.bg.imageOn && !state.bg.locked && !stickerOrCharSelected()){
+    if (e.touches.length===2 && pinchStartDist){
       e.preventDefault();
       const d = touchDist(e.touches);
       state.bg.scale = pinchStartScale * (d/pinchStartDist);
       clampBgTransform();
       drawPreview();
+    } else if (e.touches.length===2 && viewPinchActive){
+      e.preventDefault();
+      const d = touchDist(e.touches);
+      const mid = touchMid(e.touches);
+      canvasViewZoom = Math.max(CANVAS_VIEW_ZOOM_MIN, Math.min(CANVAS_VIEW_ZOOM_MAX, viewPinchStartZoom * (d/viewPinchStartDist)));
+      canvasViewPanX = viewPinchStartPanX + (mid.x - viewPinchStartMid.x);
+      canvasViewPanY = viewPinchStartPanY + (mid.y - viewPinchStartMid.y);
+      clampCanvasViewPan();
+      applyCanvasViewTransform();
     }
   }, { passive:false });
-  canvas.addEventListener('touchend', ()=>{ pinchStartDist=null; });
+
+  canvas.addEventListener('touchend', e=>{
+    pinchStartDist = null;
+    viewPinchActive = false;
+    // Double-tap to reset the view zoom — only counts a clean single-finger
+    // tap (not the two fingers of a pinch lifting off together).
+    if (e.touches.length===0 && e.changedTouches && e.changedTouches.length===1){
+      const now = Date.now();
+      if (now - lastTapTime < 320 && canvasViewZoom > 1) resetCanvasView();
+      lastTapTime = now;
+    }
+  });
+
+  canvas.addEventListener('dblclick', ()=>{ if (canvasViewZoom > 1) resetCanvasView(); });
 }
 function touchDist(touches){
   const dx = touches[0].clientX-touches[1].clientX, dy = touches[0].clientY-touches[1].clientY;
@@ -2338,8 +2426,33 @@ function applyDomeWarp(canvas, strength){
    gradient center shifts opposite the tilt so the highlight reads as a
    fixed light source reacting to the surface angle, not painted-on. ── */
 const PIN3D_REST = { x:14, y:-10 };
+const PIN3D_RADIUS = 105; // half of .cr-pin3d's 210px width
+const PIN3D_DEPTH = 18;   // physical "thickness" — how far the face sits in front of the back
 let _pin3dRot = { ...PIN3D_REST };
 let _pin3dBound = false;
+let _pin3dEdgeBuilt = false;
+
+// Classic CSS-3D "barrel": N thin flat strips arranged radially around the
+// Y axis form an edge wall that reads as a continuous curved surface once
+// rendered — this is what gives the pin real, visible side thickness when
+// tilted instead of it just being a flat disc.
+function buildPin3dEdgeWall(){
+  if (_pin3dEdgeBuilt) return;
+  _pin3dEdgeBuilt = true;
+  const wall = document.getElementById('pinPreviewEdgeWall');
+  if (!wall) return;
+  const N = 40;
+  const stripW = Math.ceil((2*Math.PI*PIN3D_RADIUS)/N) + 1; // +1 to avoid seams between strips
+  let html = '';
+  for (let i=0; i<N; i++){
+    const angle = i*360/N;
+    // Crude directional shading: strips facing the default light angle
+    // read lighter, strips facing away read darker, like a lit cylinder.
+    const shade = (0.55 + 0.45*Math.abs(Math.cos(angle*Math.PI/180))).toFixed(2);
+    html += `<div class="cr-pin3d-edge-strip" style="width:${stripW}px;margin-left:${-stripW/2}px;transform:rotateY(${angle}deg) translateZ(${PIN3D_RADIUS}px);filter:brightness(${shade})"></div>`;
+  }
+  wall.innerHTML = html;
+}
 
 function openPinPreview(){
   const canvas = document.getElementById('pinPreviewCanvas');
@@ -2348,6 +2461,7 @@ function openPinPreview(){
   applyDomeWarp(canvas, 0.22);
   document.getElementById('pinPreviewTitle').textContent =
     state.product ? `${state.product.label} · ${state.size}mm Preview` : 'Print Preview';
+  buildPin3dEdgeWall();
   _pin3dRot = { ...PIN3D_REST };
   applyPin3dTransform();
   document.getElementById('pinPreviewOverlay').classList.add('show');
