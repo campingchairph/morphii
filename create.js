@@ -11,11 +11,16 @@ const PRODUCTS = [
   { id:'challenge-coin', label:'Challenge Coins',        icon:'🪙', enabled:true },
   { id:'medal',        label:'Medals',                  icon:'🏅', enabled:true },
   { id:'golf-marker',  label:'Golf Ball Markers',        icon:'⛳', enabled:true },
+  // `assetGroup` isolates a product's sticker/border/background/character/
+  // shape/word-art presets into their own assets/pins/<assetGroup>/<category>/
+  // folders instead of the shared pool everything else pulls from — see
+  // applyAssetGroup() below. Products without it (every one above) keep
+  // pulling from the shared folders exactly as before this existed.
   { id:'election',     label:'Election Pins',           icon:'🗳️', enabled:true,
-    tools:['background','border','character','sticker','text','shape'] },
+    tools:['background','border','character','sticker','text','shape'], assetGroup:'election' },
   { id:'ph-souvenir',  label:'Philippine Souvenir Pins', icon:'🇵🇭', enabled:true,
-    tools:['background','border','character','sticker','text'] },
-  { id:'wedding',      label:'Wedding Pins',            icon:'💍', enabled:true },
+    tools:['background','border','character','sticker','text'], assetGroup:'ph-souvenir' },
+  { id:'wedding',      label:'Wedding Pins',            icon:'💍', enabled:true, assetGroup:'wedding' },
   { id:'patch',        label:'Patches',                 icon:'🧵', enabled:false },
   { id:'keychain',     label:'Keychains',                icon:'🔑', enabled:false },
   { id:'ai-marker',    label:'AI Ball Marker Generator', icon:'🤖', enabled:false },
@@ -336,6 +341,7 @@ function selectProduct(id){
   const p = PRODUCTS.find(p=>p.id===id);
   if (!p || !p.enabled) return;
   state.product = p;
+  applyAssetGroup(currentAssetGroup());
   renderSizeGrid();
   goStep('size');
 }
@@ -2704,43 +2710,76 @@ function showDoneScreen(code, emailResult){
    up; the admin's Assets page can override specific labels (stored in
    Firestore, morphii_config/assetLabels) without touching GitHub. The
    admin page never gates which files show up — it's monitoring/labeling
-   only. See assets/pins/README.md. ── */
+   only. See assets/pins/README.md.
+
+   Products with an `assetGroup` (see PRODUCTS above) get their OWN isolated
+   set of folders — assets/pins/<assetGroup>/<category>/ — instead of pulling
+   from the shared pool every other product uses. Rather than rewriting every
+   place that reads STICKER_PRESETS/BORDER_PRESETS/etc. directly, we fetch
+   every group up front into a cache and, on product selection, clear+refill
+   those same shared arrays with whichever group applies — so every existing
+   consumer keeps working unchanged, it just sees different contents. ── */
 const PINS_REPO_CONTENTS_BASE = 'https://api.github.com/repos/campingchairph/morphii/contents/assets/pins/';
 const PINS_RAW_BASE = 'https://raw.githubusercontent.com/campingchairph/morphii/main/assets/pins/';
-// category folder -> preset array it feeds (holders shares Shapes' gallery)
-const ASSET_CATEGORY_TARGETS = {
-  stickers: () => STICKER_PRESETS,
-  shapes: () => SHAPE_PRESETS,
-  holders: () => SHAPE_PRESETS,
-  texts: () => WORDART_PRESETS,
-  borders: () => BORDER_PRESETS,
-  background: () => BACKGROUND_PRESETS,
-  characters: () => CHARACTER_PRESETS,
+const ASSET_CATEGORIES = ['stickers','shapes','holders','texts','borders','background','characters'];
+// category folder -> which key of a per-group asset set it feeds (holders shares Shapes' gallery)
+const CATEGORY_TO_SET_KEY = {
+  stickers:'stickers', shapes:'shapes', holders:'shapes', texts:'wordart',
+  borders:'borders', background:'background', characters:'characters',
 };
+const NEW_PRODUCT_ASSET_GROUPS = ['election','ph-souvenir','wedding'];
+const ASSET_GROUP_CACHE = {}; // groupId -> { stickers, shapes, wordart, borders, background, characters }
 
 function assetLabelFromFilename(name){
   return name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase());
 }
+function emptyAssetSet(){ return { stickers:[], shapes:[], wordart:[], borders:[], background:[], characters:[] }; }
+function currentAssetGroup(){ return (state.product && state.product.assetGroup) || 'shared'; }
 
-async function loadPinAssetManifest(){
-  let overrides = {};
-  try { overrides = await getAssetLabelOverrides(); } catch(e){}
-  await Promise.all(Object.keys(ASSET_CATEGORY_TARGETS).map(async cat => {
+// basePath is '' for the shared/global folders (assets/pins/<category>/,
+// unchanged from before groups existed) or '<groupId>/' for an isolated
+// product's own folders (assets/pins/<groupId>/<category>/).
+async function fetchAssetGroup(basePath, overrides){
+  const set = emptyAssetSet();
+  await Promise.all(ASSET_CATEGORIES.map(async cat => {
     try {
-      const res = await fetch(PINS_REPO_CONTENTS_BASE + cat);
+      const res = await fetch(PINS_REPO_CONTENTS_BASE + basePath + cat);
       if (!res.ok) return; // folder missing/empty — that category just stays empty
       const items = await res.json();
-      const target = ASSET_CATEGORY_TARGETS[cat]();
+      const key = CATEGORY_TO_SET_KEY[cat];
       items
         .filter(it => it.type==='file' && /\.(png|jpe?g|webp|gif)$/i.test(it.name))
         .forEach(it => {
-          const url = PINS_RAW_BASE + cat + '/' + it.name;
-          target.push({ label: overrides[url] || assetLabelFromFilename(it.name), src: url });
+          const url = PINS_RAW_BASE + basePath + cat + '/' + it.name;
+          set[key].push({ label: overrides[url] || assetLabelFromFilename(it.name), src: url });
         });
     } catch(e){
       // offline or GitHub unreachable — that category's presets just stay empty
     }
   }));
+  return set;
+}
+
+// Clears and refills the shared preset arrays from whichever group's cached
+// data applies — everything that reads STICKER_PRESETS etc. directly just
+// sees the swap, no other code needs to know groups exist.
+function applyAssetGroup(groupId){
+  const set = ASSET_GROUP_CACHE[groupId] || emptyAssetSet();
+  STICKER_PRESETS.length = 0;    STICKER_PRESETS.push(...set.stickers);
+  SHAPE_PRESETS.length = 0;      SHAPE_PRESETS.push(...set.shapes);
+  WORDART_PRESETS.length = 0;    WORDART_PRESETS.push(...set.wordart);
+  BORDER_PRESETS.length = 0;     BORDER_PRESETS.push(...set.borders);
+  BACKGROUND_PRESETS.length = 0; BACKGROUND_PRESETS.push(...set.background);
+  CHARACTER_PRESETS.length = 0;  CHARACTER_PRESETS.push(...set.characters);
+}
+
+async function loadPinAssetManifest(){
+  let overrides = {};
+  try { overrides = await getAssetLabelOverrides(); } catch(e){}
+  const groups = ['shared', ...NEW_PRODUCT_ASSET_GROUPS];
+  const results = await Promise.all(groups.map(g => fetchAssetGroup(g==='shared' ? '' : g+'/', overrides)));
+  groups.forEach((g,i) => { ASSET_GROUP_CACHE[g] = results[i]; });
+  applyAssetGroup(currentAssetGroup());
   renderCanvasBgDecor(); // in case the design step is already open when presets finish loading
 }
 

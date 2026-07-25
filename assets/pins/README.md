@@ -42,6 +42,28 @@ PNG with a transparent background is required for stickers/shapes/holders/texts/
 so they blend into the design (same rule as customer uploads). Borders and
 backgrounds should be square images.
 
+## Isolated pin types
+
+**Election Pins**, **Philippine Souvenir Pins**, and **Wedding Pins** don't
+draw from the shared folders above at all — each has its own separate set,
+under a subfolder named for the product:
+
+```
+assets/pins/election/{stickers,shapes,holders,texts,borders,background,characters}/
+assets/pins/ph-souvenir/{stickers,shapes,holders,texts,borders,background,characters}/
+assets/pins/wedding/{stickers,shapes,holders,texts,borders,background,characters}/
+```
+
+Same category names, same rules (transparent PNG, square borders/
+backgrounds, etc.) — just push into the matching product's subfolder instead
+of the top-level one. A file in `assets/pins/election/stickers/` only shows
+up as a Sticker option when a customer is designing an Election pin; it
+never appears for Lapel Pins, Wedding Pins, or any other product, and vice
+versa. These folders start out empty (with a `.gitkeep` placeholder so git
+tracks them) — nothing shows in the picker for these three products until
+real files are pushed in. Customers can still upload their own image
+regardless of what's in the library.
+
 ## Where the data actually lives
 
 - **Files**: this folder, in git, served via `raw.githubusercontent.com`.

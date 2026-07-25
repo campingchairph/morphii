@@ -328,6 +328,12 @@ h1,.logo{font-family:'Fredoka One',cursive;}
       <div style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-bottom:12px;line-height:1.5;">
         This is just a monitor. Any file pushed to <code>assets/pins/&lt;category&gt;/</code> on GitHub is already live in the pin designer — using its filename as the label. Edit a label here if you want a nicer name; it saves immediately, no need to re-upload anything.
       </div>
+      <select class="adm-status-select" id="assetGroupSelect" onchange="setAssetGroup(this.value)" style="margin-bottom:10px;align-self:flex-start">
+        <option value="shared">Shared (Lapel Pins, Coins, Medals, Golf Markers)</option>
+        <option value="election">Election Pins</option>
+        <option value="ph-souvenir">Philippine Souvenir Pins</option>
+        <option value="wedding">Wedding Pins</option>
+      </select>
       <div class="adm-tabs" id="assetCatTabs" style="margin-bottom:14px"></div>
       <div id="assetFilesList" style="display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto"></div>
     </div>
@@ -776,7 +782,13 @@ function assetLabelFromFilename(name){
 
 let assetLabelOverrides = {};
 let currentAssetCat = 'stickers';
+let currentAssetGroup = 'shared'; // 'shared' or a product's own assetGroup id — see create.js PRODUCTS
 let currentAssetFiles = [];
+
+// 'shared' reads the original top-level assets/pins/<category>/ folders;
+// anything else reads assets/pins/<group>/<category>/ — the same isolated
+// per-product folders create.js's applyAssetGroup() pulls from.
+function assetGroupBasePath(){ return currentAssetGroup==='shared' ? '' : currentAssetGroup + '/'; }
 
 async function openAssetsModal(){
   assetLabelOverrides = await getAssetLabelOverrides();
@@ -789,6 +801,12 @@ function closeAssetsModal(){
   document.getElementById('assetsModal').classList.remove('open');
 }
 window.closeAssetsModal = closeAssetsModal;
+
+async function setAssetGroup(id){
+  currentAssetGroup = id;
+  await loadAssetCatFiles();
+}
+window.setAssetGroup = setAssetGroup;
 
 function renderAssetCatTabs(){
   document.getElementById('assetCatTabs').innerHTML = ASSET_CATEGORIES.map(c =>
@@ -809,13 +827,14 @@ window.setAssetCat = setAssetCat;
 async function loadAssetCatFiles(){
   const list = document.getElementById('assetFilesList');
   list.innerHTML = '<div style="color:var(--ink-dim);font-size:12px;">Loading files from GitHub…</div>';
+  const base = assetGroupBasePath();
   try {
-    const res = await fetch(ASSET_REPO_CONTENTS_BASE + currentAssetCat);
+    const res = await fetch(ASSET_REPO_CONTENTS_BASE + base + currentAssetCat);
     if (!res.ok) throw new Error('GitHub returned ' + res.status);
     const items = await res.json();
     currentAssetFiles = items
       .filter(it => it.type==='file' && /\.(png|jpe?g|webp|gif)$/i.test(it.name))
-      .map(it => ({ name: it.name, url: ASSET_RAW_BASE + currentAssetCat + '/' + it.name }));
+      .map(it => ({ name: it.name, url: ASSET_RAW_BASE + base + currentAssetCat + '/' + it.name }));
   } catch(e){
     currentAssetFiles = [];
     list.innerHTML = `<div style="color:#ff9b98;font-size:12px;font-weight:700;">Couldn't load files from GitHub: ${escHtml(e.message)}</div>`;
@@ -827,7 +846,7 @@ async function loadAssetCatFiles(){
 function renderAssetFilesList(){
   const list = document.getElementById('assetFilesList');
   if (!currentAssetFiles.length){
-    list.innerHTML = `<div style="color:var(--ink-dim);font-size:12px;">No files in assets/pins/${escHtml(currentAssetCat)}/ yet — push some images there first.</div>`;
+    list.innerHTML = `<div style="color:var(--ink-dim);font-size:12px;">No files in assets/pins/${escHtml(assetGroupBasePath())}${escHtml(currentAssetCat)}/ yet — push some images there first.</div>`;
     return;
   }
   list.innerHTML = currentAssetFiles.map((f,i) => {
