@@ -2,11 +2,20 @@
    MORPHII CREATE — Online Custom Pin Designer
    ═══════════════════════════════════════════════ */
 
+// `tools` restricts which dock add-row icons a product offers (kind ids:
+// background/border/character/sticker/shape/wordart/text) — omit it (as on
+// every product below except the three new ones) for the full unrestricted
+// set every product had before this existed.
 const PRODUCTS = [
   { id:'lapel-pin',    label:'Lapel Pins',              icon:'📌', enabled:true },
   { id:'challenge-coin', label:'Challenge Coins',        icon:'🪙', enabled:true },
   { id:'medal',        label:'Medals',                  icon:'🏅', enabled:true },
   { id:'golf-marker',  label:'Golf Ball Markers',        icon:'⛳', enabled:true },
+  { id:'election',     label:'Election Pins',           icon:'🗳️', enabled:true,
+    tools:['background','border','character','sticker','text','shape'] },
+  { id:'ph-souvenir',  label:'Philippine Souvenir Pins', icon:'🇵🇭', enabled:true,
+    tools:['background','border','character','sticker','text'] },
+  { id:'wedding',      label:'Wedding Pins',            icon:'💍', enabled:true },
   { id:'patch',        label:'Patches',                 icon:'🧵', enabled:false },
   { id:'keychain',     label:'Keychains',                icon:'🔑', enabled:false },
   { id:'ai-marker',    label:'AI Ball Marker Generator', icon:'🤖', enabled:false },
@@ -667,15 +676,17 @@ function initDockScroll(prefix, scrollId){
 }
 
 function addRowHtml(){
-  const items = [
-    { onclick:'quickSelectBackground()', icon: bgChipThumb(), label:'Background', thumb:true },
-    { onclick:'quickSelectBorder()', icon: state.border ? `<img src="${state.border.img.src}" alt="">` : ICON_BORDER, label:'Border', thumb: !!state.border },
-    { onclick:'quickSelectCharacter()', icon: state.character ? `<img src="${state.character.img.src}" alt="">` : ICON_CHARACTER, label:'Character', thumb: !!state.character },
-    { onclick:'quickAddSticker()', icon: ICON_STICKER, label:'Sticker' },
-    { onclick:'quickAddShape()', icon: ICON_SHAPE, label:'Shapes' },
-    { onclick:'quickAddWordArt()', icon: ICON_WORDART, label:'Word Art' },
-    { onclick:'quickAddText()', icon: ICON_TEXT, label:'Text' },
+  const allItems = [
+    { kind:'background', onclick:'quickSelectBackground()', icon: bgChipThumb(), label:'Background', thumb:true },
+    { kind:'border', onclick:'quickSelectBorder()', icon: state.border ? `<img src="${state.border.img.src}" alt="">` : ICON_BORDER, label:'Border', thumb: !!state.border },
+    { kind:'character', onclick:'quickSelectCharacter()', icon: state.character ? `<img src="${state.character.img.src}" alt="">` : ICON_CHARACTER, label: state.product && state.product.id==='ph-souvenir' ? 'Image' : 'Character', thumb: !!state.character },
+    { kind:'sticker', onclick:'quickAddSticker()', icon: ICON_STICKER, label:'Sticker' },
+    { kind:'shape', onclick:'quickAddShape()', icon: ICON_SHAPE, label:'Shapes' },
+    { kind:'wordart', onclick:'quickAddWordArt()', icon: ICON_WORDART, label:'Word Art' },
+    { kind:'text', onclick:'quickAddText()', icon: ICON_TEXT, label:'Text' },
   ];
+  const allowed = state.product && state.product.tools;
+  const items = allowed ? allItems.filter(it=>allowed.includes(it.kind)) : allItems;
   const btns = items.map(it=>`
     <button class="cr-dock-btn" onclick="${it.onclick}">
       <span class="cr-dock-icon ${it.thumb?'cr-dock-icon-thumb':''}">${it.icon}</span>
