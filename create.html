@@ -44,6 +44,14 @@
     <div class="cr-size-grid" id="sizeGrid"></div>
   </section>
 
+  <!-- STEP: TEMPLATE (Election only) — premade designs or start blank -->
+  <section class="cr-panel" id="step-template">
+    <h1 class="cr-title">Start with a premade design?</h1>
+    <p class="cr-sub"><button class="cr-link-back" onclick="goStep('size')">&larr; Change size</button></p>
+    <button class="cr-btn-primary" style="margin-bottom:18px" onclick="startElectionFromScratch()">✏️ Start from Scratch Instead</button>
+    <div class="cr-product-grid" id="templateGrid"></div>
+  </section>
+
   <!-- STEP 3: DESIGN (mobile-first — pin always visible, controls in popup sheets) -->
   <section class="cr-panel cr-panel-design" id="step-design">
     <div class="cr-design-app">
@@ -243,6 +251,17 @@
     </div>
   </section>
 
+  <!-- ELECTION TEMPLATE FILL-IN FORM — top-level (not nested in a .cr-panel)
+       since it's opened from the Template step, not Design. -->
+  <div class="cr-modal-overlay" id="templateFormOverlay">
+    <div class="cr-modal" style="max-width:380px">
+      <div class="cr-modal-title" id="templateFormTitle">Design</div>
+      <div id="templateFormBody"></div>
+      <button class="cr-btn-primary" style="margin-top:16px" onclick="generateFromTemplateForm()">Generate My Pin</button>
+      <button class="cr-link-back" style="display:block;margin:10px auto 0" onclick="closeTemplateForm()">Cancel</button>
+    </div>
+  </div>
+
 </main>
 
 <!-- Firebase SDK (compat mode — no build step needed) -->
@@ -253,6 +272,6 @@
 <!-- EmailJS (sends the confirmation email client-side, no backend needed) -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="email-config.js"></script>
-<script src="create.js?v=28"></script>
+<script src="create.js?v=29"></script>
 </body>
 </html>

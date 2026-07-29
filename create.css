@@ -95,6 +95,7 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
   display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 12px;
 }
 .cr-product-name{font-size:14px;font-weight:700;}
+.cr-template-desc{font-size:11px;font-weight:700;color:var(--ink-dim);margin-top:4px;line-height:1.4;}
 .cr-product-badge{
   position:absolute;top:10px;right:10px;background:var(--coral-light);color:var(--coral);
   font-size:8.5px;font-weight:800;padding:3px 8px;border-radius:20px;letter-spacing:0.4px;

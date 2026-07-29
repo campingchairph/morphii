@@ -29,6 +29,331 @@ const PRODUCTS = [
   { id:'luggage-tag',  label:'Luggage Tags',             icon:'🏷️', enabled:false },
 ];
 
+/* ── ELECTION PIN TEMPLATES — premade designs the customer fills a short
+   form for, generated onto the normal editable canvas (see
+   applyElectionTemplate() near the design-generation code). Each `elements`
+   entry is applied in listed order (back to front). `field` pulls straight
+   from the form; `composite` is a "${field}" template string combining more
+   than one; `text` is a fixed literal. Position/scale are approximate —
+   the customer can drag, resize, recolor, or delete anything afterward,
+   same as a from-scratch design. `photo` elements always render dead-center
+   (the Character slot's xFrac/yFrac are stored but drawOneCharacter() never
+   reads them — a pre-existing constraint, not new here) — their xFrac/yFrac
+   below are kept only as position notes for a future off-center photo slot,
+   `scale` is the only field that actually takes effect. ── */
+const PH_BLUE = '#0038A8', PH_RED = '#CE1126', PH_GOLD = '#FCD116', PH_WHITE = '#FFFFFF';
+const ELECTION_TEMPLATES = [
+  { id:'sash-classic', label:'Sash Classic',
+    description:'Blue pin with a diagonal sash carrying your name.',
+    fields:['photo','name','position','slogan'],
+    background:{color:PH_BLUE},
+    elements:[
+      {type:'shape', shapeId:'band', color:PH_GOLD, xFrac:-0.22, yFrac:-0.32, scale:0.55, rotation:25},
+      {type:'shape', shapeId:'band', color:PH_GOLD, xFrac:0.22, yFrac:-0.18, scale:0.5, rotation:25},
+      {type:'shape', shapeId:'star', color:PH_GOLD, xFrac:-0.3, yFrac:-0.08, scale:0.16},
+      {type:'shape', shapeId:'star', color:PH_GOLD, xFrac:0.32, yFrac:0.02, scale:0.14},
+      {type:'photo', xFrac:0, yFrac:-0.24, scale:1.1},
+      {type:'shape', shapeId:'band', color:PH_RED, xFrac:0, yFrac:0.1, scale:1.7, rotation:-12},
+      {type:'text', field:'position', xFrac:0, yFrac:0.03, color:PH_GOLD, size:0.045, rotation:-12},
+      {type:'text', field:'name', xFrac:0, yFrac:0.12, color:PH_WHITE, size:0.075, rotation:-12},
+      {type:'text', field:'slogan', xFrac:0, yFrac:0.42, color:PH_WHITE, size:0.035, placement:'bottom-arc'},
+    ] },
+  { id:'sunburst', label:'Sunburst',
+    description:'Gold sunburst with a blue center medallion.',
+    fields:['photo','name','position','voteNumber'],
+    background:{color:PH_GOLD},
+    elements:[
+      {type:'shape', shapeId:'circle', color:PH_RED, xFrac:0, yFrac:0, scale:1.9},
+      {type:'shape', shapeId:'circle', color:PH_BLUE, xFrac:0, yFrac:0, scale:1.35},
+      {type:'photo', xFrac:0, yFrac:-0.14, scale:0.62},
+      {type:'text', field:'name', xFrac:0, yFrac:0.14, color:PH_WHITE, size:0.06},
+      {type:'text', composite:'${position} · #${voteNumber}', xFrac:0, yFrac:0.22, color:PH_GOLD, size:0.035},
+    ] },
+  { id:'big-ballot-number', label:'Big Ballot Number',
+    description:'Your vote number front and center.',
+    fields:['voteNumber','name','slogan'],
+    background:{color:PH_RED},
+    elements:[
+      {type:'shape', shapeId:'star', color:PH_GOLD, xFrac:0.32, yFrac:-0.32, scale:0.16},
+      {type:'text', text:'OFFICIAL CANDIDATE', xFrac:0.14, yFrac:-0.4, color:PH_GOLD, size:0.026},
+      {type:'text', field:'slogan', xFrac:0, yFrac:-0.18, color:PH_WHITE, size:0.04},
+      {type:'text', field:'voteNumber', prefix:'#', xFrac:0, yFrac:0.02, color:PH_WHITE, size:0.22},
+      {type:'shape', shapeId:'band', color:PH_GOLD, xFrac:0, yFrac:0.22, scale:0.7},
+      {type:'text', field:'name', xFrac:0, yFrac:0.32, color:PH_WHITE, size:0.06},
+    ] },
+  { id:'ph-flag', label:'Philippine Flag',
+    description:'Accurate flag colors and layout.',
+    fields:['photo','name','position'],
+    background:{color:PH_BLUE},
+    elements:[
+      {type:'shape', shapeId:'band', color:PH_RED, xFrac:0, yFrac:0.28, scale:2.3},
+      {type:'shape', shapeId:'triangle', color:PH_WHITE, xFrac:-0.28, yFrac:0, scale:1.5, rotation:90},
+      {type:'shape', shapeId:'star', color:PH_GOLD, xFrac:-0.34, yFrac:-0.13, scale:0.08},
+      {type:'shape', shapeId:'star', color:PH_GOLD, xFrac:-0.34, yFrac:0.13, scale:0.08},
+      {type:'shape', shapeId:'star', color:PH_GOLD, xFrac:-0.44, yFrac:0, scale:0.08},
+      {type:'shape', shapeId:'circle', color:PH_GOLD, xFrac:-0.28, yFrac:0, scale:0.12},
+      {type:'photo', xFrac:0.22, yFrac:-0.05, scale:0.7},
+      {type:'shape', shapeId:'pill', color:PH_GOLD, xFrac:0.22, yFrac:0.28, scale:0.75},
+      {type:'text', field:'name', xFrac:0.22, yFrac:0.28, color:PH_BLUE, size:0.04},
+      {type:'text', field:'position', xFrac:0.22, yFrac:0.38, color:PH_WHITE, size:0.03},
+    ] },
+  { id:'star-ring', label:'Star Ring',
+    description:'A ring of stars with your number watermarked behind.',
+    fields:['voteNumber','photo','name','position'],
+    background:{color:PH_WHITE},
+    elements:[
+      {type:'shape', shapeId:'circle', color:PH_BLUE, xFrac:0, yFrac:0, scale:2.0},
+      {type:'shape', shapeId:'circle', color:PH_WHITE, xFrac:0, yFrac:0, scale:1.86},
+      {type:'shape', shapeId:'star', color:PH_GOLD, xFrac:0, yFrac:-0.38, scale:0.13},
+      {type:'shape', shapeId:'star', color:PH_RED, xFrac:0.27, yFrac:-0.27, scale:0.1},
+      {type:'shape', shapeId:'star', color:PH_GOLD, xFrac:0.38, yFrac:0, scale:0.13},
+      {type:'shape', shapeId:'star', color:PH_RED, xFrac:0.27, yFrac:0.27, scale:0.1},
+      {type:'shape', shapeId:'star', color:PH_GOLD, xFrac:0, yFrac:0.38, scale:0.13},
+      {type:'shape', shapeId:'star', color:PH_RED, xFrac:-0.27, yFrac:0.27, scale:0.1},
+      {type:'shape', shapeId:'star', color:PH_GOLD, xFrac:-0.38, yFrac:0, scale:0.13},
+      {type:'shape', shapeId:'star', color:PH_RED, xFrac:-0.27, yFrac:-0.27, scale:0.1},
+      {type:'text', field:'voteNumber', prefix:'#', xFrac:0, yFrac:0, color:'#EDEDED', size:0.24},
+      {type:'photo', xFrac:0, yFrac:-0.08, scale:0.55},
+      {type:'text', field:'name', xFrac:0, yFrac:0.18, color:PH_BLUE, size:0.05},
+      {type:'text', field:'position', xFrac:0, yFrac:0.25, color:PH_RED, size:0.032},
+    ] },
+  { id:'bold-portrait', label:'Bold Portrait',
+    description:'One large photo with a bold position pill.',
+    fields:['photo','name','position','slogan'],
+    background:{color:PH_BLUE},
+    elements:[
+      {type:'shape', shapeId:'band', color:PH_GOLD, xFrac:0.1, yFrac:-0.42, scale:0.4, rotation:8},
+      {type:'shape', shapeId:'band', color:PH_GOLD, xFrac:-0.15, yFrac:-0.38, scale:0.35, rotation:8},
+      {type:'shape', shapeId:'band', color:PH_RED, xFrac:0, yFrac:-0.35, scale:1.9, rotation:-6},
+      {type:'text', field:'slogan', xFrac:0, yFrac:-0.32, color:PH_WHITE, size:0.03},
+      {type:'photo', xFrac:0, yFrac:-0.02, scale:1.1},
+      {type:'text', field:'name', xFrac:0, yFrac:0.28, color:PH_WHITE, size:0.065},
+      {type:'shape', shapeId:'pill', color:PH_GOLD, xFrac:0, yFrac:0.37, scale:0.95},
+      {type:'text', field:'position', xFrac:0, yFrac:0.37, color:PH_BLUE, size:0.032},
+    ] },
+  { id:'slogan-focus', label:'Slogan Focus',
+    description:'Your campaign slogan as the headline.',
+    fields:['slogan','name','photo','position'],
+    background:{color:PH_GOLD},
+    elements:[
+      {type:'shape', shapeId:'band', color:PH_RED, xFrac:-0.25, yFrac:-0.3, scale:0.4, rotation:20},
+      {type:'shape', shapeId:'band', color:PH_RED, xFrac:0.25, yFrac:-0.15, scale:0.35, rotation:20},
+      {type:'shape', shapeId:'star', color:PH_WHITE, xFrac:0.3, yFrac:0.3, scale:0.1},
+      {type:'shape', shapeId:'star', color:PH_WHITE, xFrac:-0.3, yFrac:0.32, scale:0.09},
+      {type:'text', field:'slogan', xFrac:0, yFrac:-0.34, color:PH_RED, size:0.05},
+      {type:'shape', shapeId:'pill', color:PH_WHITE, xFrac:0, yFrac:-0.02, scale:0.9},
+      {type:'text', field:'name', xFrac:0, yFrac:-0.02, color:PH_RED, size:0.05},
+      {type:'photo', xFrac:0, yFrac:0.2, scale:0.55},
+      {type:'text', field:'position', xFrac:0, yFrac:0.4, color:PH_BLUE, size:0.032},
+      {type:'shape', shapeId:'triangle', color:PH_BLUE, xFrac:-0.28, yFrac:0.42, scale:0.14},
+      {type:'shape', shapeId:'triangle', color:PH_RED, xFrac:0, yFrac:0.44, scale:0.14},
+      {type:'shape', shapeId:'triangle', color:PH_BLUE, xFrac:0.28, yFrac:0.42, scale:0.14},
+    ] },
+  { id:'flag-stripe', label:'Flag Stripe',
+    description:'Photo on top, name and number in flag-colored stripes.',
+    fields:['photo','position','name','voteNumber'],
+    background:{color:PH_WHITE},
+    elements:[
+      {type:'photo', xFrac:0.04, yFrac:-0.2, scale:1.1},
+      {type:'shape', shapeId:'band', color:PH_RED, xFrac:0.04, yFrac:0.16, scale:1.55, rotation:-8},
+      {type:'text', field:'position', xFrac:0.04, yFrac:0.13, color:PH_WHITE, size:0.032, rotation:-8},
+      {type:'shape', shapeId:'band', color:PH_BLUE, xFrac:0.04, yFrac:0.3, scale:1.55, rotation:-8},
+      {type:'text', field:'name', xFrac:0.04, yFrac:0.3, color:PH_WHITE, size:0.045, rotation:-8},
+      {type:'text', field:'voteNumber', prefix:'#', xFrac:-0.4, yFrac:0, color:PH_RED, size:0.06, rotation:90},
+    ] },
+  { id:'photo-seal', label:'Photo Seal',
+    description:'A formal seal with your number watermarked behind.',
+    fields:['voteNumber','photo','name','position','year'],
+    background:{color:PH_WHITE},
+    elements:[
+      {type:'shape', shapeId:'circle', color:PH_BLUE, xFrac:0, yFrac:0, scale:2.0},
+      {type:'shape', shapeId:'circle', color:PH_WHITE, xFrac:0, yFrac:0, scale:1.9},
+      {type:'shape', shapeId:'circle', color:PH_BLUE, xFrac:0, yFrac:0, scale:1.82},
+      {type:'shape', shapeId:'circle', color:PH_WHITE, xFrac:0, yFrac:0, scale:1.76},
+      {type:'shape', shapeId:'star', color:PH_GOLD, xFrac:-0.36, yFrac:-0.36, scale:0.1},
+      {type:'shape', shapeId:'star', color:PH_GOLD, xFrac:0.36, yFrac:-0.36, scale:0.1},
+      {type:'shape', shapeId:'star', color:PH_GOLD, xFrac:-0.36, yFrac:0.36, scale:0.1},
+      {type:'shape', shapeId:'star', color:PH_GOLD, xFrac:0.36, yFrac:0.36, scale:0.1},
+      {type:'text', field:'voteNumber', prefix:'#', xFrac:0, yFrac:0, color:'#EAEAEA', size:0.24},
+      {type:'photo', xFrac:0, yFrac:-0.1, scale:0.55},
+      {type:'text', field:'name', xFrac:0, yFrac:0.18, color:PH_BLUE, size:0.05},
+      {type:'text', composite:'${position} · ${year}', xFrac:0, yFrac:0.26, color:PH_RED, size:0.032},
+    ] },
+];
+const ELECTION_FIELD_META = {
+  photo:      { label:'Photo',       type:'photo' },
+  name:       { label:'Name',        type:'text', placeholder:'Juan Dela Cruz' },
+  position:   { label:'Position',    type:'text', placeholder:'FOR MAYOR' },
+  voteNumber: { label:'Vote Number', type:'text', placeholder:'15' },
+  slogan:     { label:'Slogan',      type:'text', placeholder:'Serbisyong Tapat' },
+  year:       { label:'Year',        type:'text', placeholder:'2028' },
+};
+
+/* ── ELECTION TEMPLATE PICKER + FILL-IN FORM ─────
+   Picker card grid -> short form for just that template's fields -> one
+   generator builds the real, fully-editable elements onto the normal
+   design canvas and drops the customer straight into Design. Nothing here
+   is a special "locked" mode — after generating it's just an ordinary
+   in-progress pin, same as building one from scratch. ── */
+let _activeTemplateId = null;
+let _templateFormPhotoDataUrl = null;
+
+function renderTemplateGrid(){
+  const grid = document.getElementById('templateGrid');
+  if (!grid) return;
+  grid.innerHTML = ELECTION_TEMPLATES.map(t => `
+    <div class="cr-product-card" onclick="openTemplateForm('${t.id}')">
+      <div class="cr-product-icon">🗳️</div>
+      <div class="cr-product-name">${t.label}</div>
+      <div class="cr-template-desc">${escHtml(t.description)}</div>
+    </div>`).join('');
+}
+window.renderTemplateGrid = renderTemplateGrid;
+
+function startElectionFromScratch(){
+  resetDesignForTemplate();
+  goStep('design');
+}
+window.startElectionFromScratch = startElectionFromScratch;
+
+function openTemplateForm(templateId){
+  const t = ELECTION_TEMPLATES.find(x=>x.id===templateId);
+  if (!t) return;
+  _activeTemplateId = templateId;
+  _templateFormPhotoDataUrl = null;
+  document.getElementById('templateFormTitle').textContent = t.label;
+  const body = document.getElementById('templateFormBody');
+  body.innerHTML = t.fields.map(f=>{
+    const meta = ELECTION_FIELD_META[f];
+    if (meta.type==='photo'){
+      return `
+        <div class="cr-field-label">${meta.label}</div>
+        <button type="button" class="cr-upload-btn" onclick="document.getElementById('templatePhotoInput').click()">
+          ${ICON_UPLOAD}<span id="templatePhotoLabelText">Choose a Photo</span>
+        </button>
+        <input type="file" id="templatePhotoInput" accept="image/*" class="cr-visually-hidden" onchange="onTemplatePhotoChosen(event)">`;
+    }
+    return `
+      <div class="cr-field-label">${meta.label}</div>
+      <input type="text" class="cr-text-input" id="templateField_${f}" placeholder="${escHtml(meta.placeholder||'')}">`;
+  }).join('');
+  document.getElementById('templateFormOverlay').classList.add('show');
+}
+window.openTemplateForm = openTemplateForm;
+
+function closeTemplateForm(){
+  document.getElementById('templateFormOverlay').classList.remove('show');
+}
+window.closeTemplateForm = closeTemplateForm;
+
+function onTemplatePhotoChosen(e){
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    _templateFormPhotoDataUrl = ev.target.result;
+    const label = document.getElementById('templatePhotoLabelText');
+    if (label) label.textContent = file.name;
+  };
+  reader.readAsDataURL(file);
+}
+window.onTemplatePhotoChosen = onTemplatePhotoChosen;
+
+async function generateFromTemplateForm(){
+  const t = ELECTION_TEMPLATES.find(x=>x.id===_activeTemplateId);
+  if (!t) return;
+  const values = {};
+  t.fields.forEach(f=>{
+    if (f==='photo') return;
+    const el = document.getElementById('templateField_'+f);
+    values[f] = el ? el.value.trim() : '';
+  });
+  closeTemplateForm();
+  await applyElectionTemplate(t, values, _templateFormPhotoDataUrl);
+}
+window.generateFromTemplateForm = generateFromTemplateForm;
+
+// Clears every design element — used both by "Start from Scratch" and right
+// before a template generates, so re-generating (or backing out and trying
+// a different template) never mixes leftovers from a previous attempt.
+function resetDesignForTemplate(){
+  state.bg = { colorOn:false, color:null, imageOn:false, img:null, tainted:false, opacity:0.7, offsetXFrac:0, offsetYFrac:0, scale:1, locked:false };
+  state.textLines = [];
+  state.stickers = [];
+  state.shapes = [];
+  state.wordArts = [];
+  state.character = null;
+  state.border = null;
+  state.layerOrder = [];
+  state.selected = null;
+  state.nextStickerId = 1; state.nextShapeId = 1; state.nextWordArtId = 1; state.nextTextId = 1;
+}
+
+function pushGeneratedShape(shapeId, color, xFrac, yFrac, scale, rotationDeg){
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const el = { id: state.nextShapeId++, img, xFrac, yFrac, scale, rotation:(rotationDeg||0)*Math.PI/180, locked:false, vectorShapeId:shapeId, color };
+      state.shapes.push(el);
+      pushLayer({ kind:'shape', id: el.id });
+      resolve();
+    };
+    img.src = rasterizeVectorShape(shapeId, color);
+  });
+}
+
+function pushGeneratedText(text, opts){
+  if (!text) return;
+  const line = {
+    id: state.nextTextId++, text, font:FONTS[0], color:opts.color||'#000000',
+    placement: opts.placement||'straight', size: opts.size||0.06, arcRadiusMult:0.78, shadow:false,
+    xFrac: opts.xFrac||0, yFrac: opts.yFrac||0, rotation:(opts.rotation||0)*Math.PI/180, locked:false,
+  };
+  state.textLines.push(line);
+  pushLayer({ kind:'text', id: line.id });
+}
+
+// xFrac/yFrac aren't passed through here on purpose — see the note on
+// ELECTION_TEMPLATES above, the Character slot always renders centered.
+function setGeneratedPhoto(dataUrl, scale){
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      state.character = { img, scale, rotation:0, xFrac:0, yFrac:0, locked:false };
+      pushLayer({ kind:'character' });
+      resolve();
+    };
+    img.src = dataUrl;
+  });
+}
+
+function fillTemplateString(str, values){
+  return str.replace(/\$\{(\w+)\}/g, (_, key) => values[key] || '');
+}
+
+async function applyElectionTemplate(template, values, photoDataUrl){
+  resetDesignForTemplate();
+  state.bg.color = { grad:[template.background.color, template.background.color], label:'Custom' };
+  state.bg.colorOn = true;
+
+  for (const el of template.elements){
+    if (el.type==='shape'){
+      await pushGeneratedShape(el.shapeId, el.color, el.xFrac, el.yFrac, el.scale, el.rotation);
+    } else if (el.type==='photo'){
+      if (photoDataUrl) await setGeneratedPhoto(photoDataUrl, el.scale);
+    } else if (el.type==='text'){
+      let text;
+      if (el.text != null) text = el.text;
+      else if (el.composite) text = fillTemplateString(el.composite, values);
+      else text = (el.prefix||'') + (values[el.field]||'');
+      pushGeneratedText(text, el);
+    }
+  }
+
+  goStep('design');
+}
+window.applyElectionTemplate = applyElectionTemplate;
+
 // Standard badge-making sizes — mm (finished/cut diameter) + paperMM (the
 // full print/PVC-wrap sheet diameter, incl. bleed) per the supplier's size
 // chart. Paper size is a fixed property of each size now, not a customer
@@ -42,7 +367,7 @@ const SIZES = [
   { mm:75, paperMM:86.3, tag:'XL',       enabled:true },
 ];
 
-const STEP_ORDER = ['product','size','design','submit','done'];
+const STEP_ORDER = ['product','size','template','design','submit','done'];
 const CANVAS_PX   = 480;   // fixed on-screen render resolution
 const EXPORT_PPMM = 11.8;  // export resolution for the clean (admin-facing) design, px per mm (~300 DPI)
 const FONTS = ['Luckiest Guy','Shrikhand','Carter One','Ceviche One','Kavoon','Cherry Bomb One','Lobster','Spicy Rice','Chicle'];
@@ -223,7 +548,20 @@ const SHAPE_VECTOR_LIBRARY = [
   { id:'asterisk',   label:'Asterisk',      d: asteriskPathD(8, 5, 44, 8) },
   { id:'brush',      label:'Paint Brush',   d: smoothPathD(brushStrokePoints()) },
   { id:'wobble',     label:'Wobble',        d: smoothPathD(wobblePoints(36, 38, 6, 7)) },
+  { id:'band',       label:'Band',          d: sharpPathD([[3,38],[97,38],[97,62],[3,62]]) },
+  { id:'pill',       label:'Pill',          d: sharpPathD(pillPoints(92, 30)) },
 ];
+// A horizontal capsule (rectangle with fully-rounded semicircular ends), for
+// name/position "plate" shapes — width/height are box units (100x100 box).
+function pillPoints(width, height, n){
+  n = n || 20;
+  const r = height/2;
+  const left = 50 - width/2 + r, right = 50 + width/2 - r;
+  const pts = [];
+  for (let i=0; i<=n; i++){ const a = (-90 + i*180/n) * Math.PI/180; pts.push([right + r*Math.cos(a), 50 + r*Math.sin(a)]); }
+  for (let i=0; i<=n; i++){ const a = (90 + i*180/n) * Math.PI/180; pts.push([left + r*Math.cos(a), 50 + r*Math.sin(a)]); }
+  return pts;
+}
 function blobPointsFrom(radii){
   const n = radii.length, pts = [];
   for (let i=0;i<n;i++){
@@ -322,6 +660,7 @@ function goStep(name){
     el.classList.toggle('done', i<idx && i>=0);
   });
   window.scrollTo({top:0,behavior:'smooth'});
+  if (name==='template'){ renderTemplateGrid(); }
   if (name==='design'){ setupCanvas(); drawPreview(); renderCanvasBgDecor(); updateCanvasBorderRing(); resetCanvasView(); }
   if (name==='submit'){ renderSubmitSummary(); }
 }
@@ -365,7 +704,9 @@ function selectSize(mm){
   if (!s || !s.enabled) return;
   state.size = s.mm;
   state.paperSize = s.paperMM;
-  goStep('design');
+  // Election has a bank of premade designs to start from — everything else
+  // (today) goes straight to a blank canvas exactly as before this existed.
+  goStep(state.product && state.product.id==='election' ? 'template' : 'design');
 }
 window.selectSize = selectSize;
 
