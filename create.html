@@ -139,6 +139,7 @@
     <input type="file" id="borderFileInput" accept="image/png" onchange="onBorderFileChosen(event)" class="cr-visually-hidden">
     <input type="file" id="shapeFileInput" accept="image/png" onchange="onPlacedFileChosen('shape', event)" class="cr-visually-hidden">
     <input type="file" id="wordartFileInput" accept="image/png" onchange="onPlacedFileChosen('wordart', event)" class="cr-visually-hidden">
+    <input type="file" id="letterFileInput" accept="image/png" onchange="onPlacedFileChosen('letter', event)" class="cr-visually-hidden">
 
     <!-- UPLOAD INSTRUCTIONS MODAL — only reached via a tool row's Upload icon
          (never shown before that, whether adding new or replacing existing). -->
@@ -272,6 +273,6 @@
 <!-- EmailJS (sends the confirmation email client-side, no backend needed) -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="email-config.js"></script>
-<script src="create.js?v=29"></script>
+<script src="create.js?v=30"></script>
 </body>
 </html>

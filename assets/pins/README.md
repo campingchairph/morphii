@@ -37,10 +37,21 @@ override saves to Firestore (`morphii_config/assetLabels`, a simple
 | `borders/` | Border | A single full-circle frame, sized to the finished cut diameter (not the paper/bleed), rotatable. Author as a **square PNG with a transparent center**. Upload or choose from library |
 | `background/` | Background → Photo → Presets | Curated stock background photos, shown alongside the upload option |
 | `characters/` | Character | The centered mascot/logo slot; upload or choose from library |
+| `letters/` | Letters | Freely placed alphabet graphics, grouped by design set; see below |
 
-PNG with a transparent background is required for stickers/shapes/holders/texts/characters
+PNG with a transparent background is required for stickers/shapes/holders/texts/characters/letters
 so they blend into the design (same rule as customer uploads). Borders and
 backgrounds should be square images.
+
+### Letters — filename convention
+
+Letters files must be named `<designNumber>_<LETTER>.png` (e.g. `1_A.png`,
+`1_B.png`, `2_A.png`, `2_B.png`...). The number groups a full alphabet into
+one "design set" (font/style); the letter is which character it is. In the
+picker, customers first see one thumbnail per design set (always that set's
+`A`), then tap one to see its full available alphabet and pick the letter
+they actually want. A design set doesn't need to cover the whole alphabet —
+whatever letters exist for that number are what shows up.
 
 ## Isolated pin types
 

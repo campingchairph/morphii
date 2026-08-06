@@ -282,11 +282,12 @@ function resetDesignForTemplate(){
   state.stickers = [];
   state.shapes = [];
   state.wordArts = [];
+  state.letters = [];
   state.character = null;
   state.border = null;
   state.layerOrder = [];
   state.selected = null;
-  state.nextStickerId = 1; state.nextShapeId = 1; state.nextWordArtId = 1; state.nextTextId = 1;
+  state.nextStickerId = 1; state.nextShapeId = 1; state.nextWordArtId = 1; state.nextLetterId = 1; state.nextTextId = 1;
 }
 
 function pushGeneratedShape(shapeId, color, xFrac, yFrac, scale, rotationDeg){
@@ -592,20 +593,24 @@ const PLACED_META = {
   sticker: { label:'Sticker',  uploadNoun:'sticker' },
   shape:   { label:'Shape',    uploadNoun:'shape' },
   wordart: { label:'Word Art', uploadNoun:'word art graphic' },
+  letter:  { label:'Letter',   uploadNoun:'letter' },
 };
 function placedArray(kind){
   if (kind==='sticker') return state.stickers;
   if (kind==='shape') return state.shapes;
+  if (kind==='letter') return state.letters;
   return state.wordArts;
 }
 function placedPresets(kind){
   if (kind==='sticker') return STICKER_PRESETS;
   if (kind==='shape') return SHAPE_PRESETS;
-  return WORDART_PRESETS;
+  if (kind==='wordart') return WORDART_PRESETS;
+  return []; // letter uses its own two-level LETTER_GROUPS picker, not the flat-preset system
 }
 function nextPlacedId(kind){
   if (kind==='sticker') return state.nextStickerId++;
   if (kind==='shape') return state.nextShapeId++;
+  if (kind==='letter') return state.nextLetterId++;
   return state.nextWordArtId++;
 }
 
@@ -625,11 +630,13 @@ const state = {
   stickers: [],             // [{id, img, xFrac, yFrac, scale, rotation}]
   shapes: [],                // same shape as stickers — decorative shapes/holders
   wordArts: [],               // same shape as stickers — premade word-art graphics
+  letters: [],                // same shape as stickers — letter graphics picked via LETTER_GROUPS
   character: null,          // {img, scale, rotation} | null
   border: null,              // {img, src, label} | null — single preset, fixed above background
   nextStickerId: 1,
   nextShapeId: 1,
   nextWordArtId: 1,
+  nextLetterId: 1,
   selected: null,           // {kind:'sticker', id} | {kind:'character'} | {kind:'background'} | null
   // Z-order of everything EXCEPT the background and border (which are always
   // fixed at the very back: color, then image, then border, then everything
@@ -841,6 +848,7 @@ const ICON_CHARACTER  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 const ICON_TEXT       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h7"/></svg>';
 const ICON_SHAPE      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="16" r="3.5"/><rect x="13" y="12.5" width="7" height="7" rx="1.2"/><path d="M9 3l4 7H5z"/></svg>';
 const ICON_WORDART    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l4-3 4 3 4-3 4 3v10l-4-3-4 3-4-3-4 3z"/></svg>';
+const ICON_LETTER      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><path d="M15.5 20.5l3-9 3 9M16.3 18h4.4"/></svg>';
 const ICON_BORDER     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5" stroke-dasharray="2 2.4"/></svg>';
 const ICON_PRINT      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M6 16h12v5H6z"/></svg>';
 const ICON_PLUS       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>';
@@ -897,7 +905,10 @@ function layerKey(l){ return l ? l.kind + (l.id!=null ? ':'+l.id : '') : ''; }
 function selectLayer(descriptor){
   const changingElement = layerKey(state.selected) !== layerKey(descriptor);
   state.selected = descriptor;
-  if (changingElement) _activeTool = null; // close any open tool panel for the previous element
+  if (changingElement){
+    _activeTool = null; // close any open tool panel for the previous element
+    _letterPickerGroupId = null; // reset the Letters picker back to the group-grid level
+  }
   renderDock();
   renderToolPanelContent();
   drawPreview();
@@ -949,6 +960,9 @@ window.quickAddShape = quickAddShape;
 
 function quickAddWordArt(){ addNew('wordart'); }
 window.quickAddWordArt = quickAddWordArt;
+
+function quickAddLetter(){ addNew('letter'); }
+window.quickAddLetter = quickAddLetter;
 
 /* ── BOTTOM DOCK (GoDaddy-style icon bar) ──────────────────────────
    Two swappable rows live in #dockArea:
@@ -1030,6 +1044,7 @@ function addRowHtml(){
     { kind:'sticker', onclick:'quickAddSticker()', icon: ICON_STICKER, label:'Sticker' },
     { kind:'shape', onclick:'quickAddShape()', icon: ICON_SHAPE, label:'Shapes' },
     { kind:'wordart', onclick:'quickAddWordArt()', icon: ICON_WORDART, label:'Word Art' },
+    { kind:'letter', onclick:'quickAddLetter()', icon: ICON_LETTER, label:'Letters' },
     { kind:'text', onclick:'quickAddText()', icon: ICON_TEXT, label:'Text' },
   ];
   const allowed = state.product && state.product.tools;
@@ -1073,7 +1088,7 @@ function toolIconsForSelection(){
     { id:'rotate', label:'Rotate', icon:ICON_ROTATE, panel:true },
     { id:'remove', label:'Remove', icon:ICON_TRASH, instant:'removeBorder()', danger:true },
   ];
-  if (kind==='sticker' || kind==='shape' || kind==='wordart'){
+  if (kind==='sticker' || kind==='shape' || kind==='wordart' || kind==='letter'){
     // Same pattern as border: pick from the library or upload your own.
     if (state.selected.id == null) return [
       { id:'presets', label:'Presets', icon:ICON_PALETTE, panel:true },
@@ -1161,7 +1176,7 @@ function renderToolPanelContent(){
   if (kind==='background') html = bgToolPanelHtml(_activeTool);
   else if (kind==='border') html = borderToolPanelHtml(_activeTool);
   else if (kind==='character') html = characterToolPanelHtml(_activeTool);
-  else if (kind==='sticker' || kind==='shape' || kind==='wordart') html = placedToolPanelHtml(kind, _activeTool, state.selected.id);
+  else if (kind==='sticker' || kind==='shape' || kind==='wordart' || kind==='letter') html = placedToolPanelHtml(kind, _activeTool, state.selected.id);
   else if (kind==='text') html = textToolPanelHtml(_activeTool, state.selected.id);
   if (!html){ wrap.classList.remove('show'); body.innerHTML=''; return; }
   body.innerHTML = html;
@@ -1448,7 +1463,7 @@ window.addNew = addNew;
    Reached only via a tool row's Upload icon. */
 const UPLOAD_INPUT_IDS = {
   sticker:'stickerFileInput', character:'characterFileInput', border:'borderFileInput',
-  shape:'shapeFileInput', wordart:'wordartFileInput',
+  shape:'shapeFileInput', wordart:'wordartFileInput', letter:'letterFileInput',
 };
 
 function promptUpload(kind){
@@ -1485,7 +1500,7 @@ function closeLayersModal(){
 }
 window.closeLayersModal = closeLayersModal;
 
-const PLACED_ICON = { sticker: ICON_STICKER, shape: ICON_SHAPE, wordart: ICON_WORDART };
+const PLACED_ICON = { sticker: ICON_STICKER, shape: ICON_SHAPE, wordart: ICON_WORDART, letter: ICON_LETTER };
 function layerThumbFor(d){
   if (d.kind==='character') return state.character ? `<img src="${state.character.img.src}" alt="">` : ICON_CHARACTER;
   if (PLACED_META[d.kind]){ const el=placedArray(d.kind).find(x=>x.id===d.id); return el ? `<img src="${el.img.src}" alt="">` : PLACED_ICON[d.kind]; }
@@ -1622,14 +1637,65 @@ function vectorShapeGridHtml(activeId, onclickFor){
   ).join('')}</div>`;
 }
 
+// Two-level Letters picker: Level 1 is one thumbnail per design group (always
+// that group's "A"); tapping a group drills into Level 2, its full alphabet.
+// _letterPickerGroupId is transient nav state (not part of `state`/undo) — it
+// just tracks which level the currently-open panel is showing.
+let _letterPickerGroupId = null;
+
+function openLetterGroup(groupId){
+  _letterPickerGroupId = groupId;
+  renderToolPanelContent();
+}
+window.openLetterGroup = openLetterGroup;
+
+function closeLetterGroup(){
+  _letterPickerGroupId = null;
+  renderToolPanelContent();
+}
+window.closeLetterGroup = closeLetterGroup;
+
+function letterGroupGridHtml(onClickFor){
+  if (!LETTER_GROUPS.length) return `<div class="cr-empty-hint">😢 No letters here yet — check back soon, or use Upload above.</div>`;
+  return `<div class="cr-preset-grid">${LETTER_GROUPS.map(g=>
+    `<button class="cr-preset-thumb" onclick="${onClickFor(g.groupId)}" title="Letters ${g.groupId}"><img src="${g.thumbSrc}" alt="Letters ${g.groupId}"></button>`
+  ).join('')}</div>`;
+}
+
+function letterAlphabetGridHtml(groupId, activeSrc, onClickFor){
+  const group = LETTER_GROUPS.find(g=>g.groupId===groupId);
+  if (!group) return '';
+  const letters = Object.keys(group.letters).sort();
+  return `
+    <button class="cr-back-link" onclick="closeLetterGroup()">&larr; Back to designs</button>
+    <div class="cr-preset-grid">${letters.map(L=>
+      `<button class="cr-preset-thumb ${activeSrc===group.letters[L]?'active':''}" onclick="${onClickFor(groupId, L)}" title="${L}"><img src="${group.letters[L]}" alt="${L}"></button>`
+    ).join('')}</div>`;
+}
+
+// Shared by both the "nothing added yet" and "swap the existing one" panels
+// — el is null when adding fresh, or the existing placed element when swapping.
+function letterPickerHtml(el){
+  if (_letterPickerGroupId){
+    const activeSrc = el ? el.img.src : null;
+    const onClickFor = el
+      ? (groupId, L) => `swapLetterFromGroup(${el.id},'${groupId}','${L}')`
+      : (groupId, L) => `addLetterFromGroup('${groupId}','${L}')`;
+    return letterAlphabetGridHtml(_letterPickerGroupId, activeSrc, onClickFor);
+  }
+  return letterGroupGridHtml(groupId => `openLetterGroup('${groupId}')`);
+}
+
 function placedToolPanelHtml(kind, tool, id){
   const noun = PLACED_META[kind].label.toLowerCase();
   const isShape = kind==='shape';
+  const isLetter = kind==='letter';
 
   // Pending — nothing created yet. Presets grid creates a new element when
   // tapped; there's nothing to show for any other tool in this state.
   if (id == null){
     if (tool!=='presets') return '';
+    if (isLetter) return letterPickerHtml(null);
     const presets = placedPresets(kind);
     if (!isShape && !presets.length) return `<div class="cr-empty-hint">😢 No ${noun}s here yet — check back soon, or use Upload above.</div>`;
     return `
@@ -1642,6 +1708,7 @@ function placedToolPanelHtml(kind, tool, id){
   const el = placedArray(kind).find(x=>x.id===id);
   if (!el) return '';
   if (tool==='presets'){
+    if (isLetter) return letterPickerHtml(el);
     const presets = placedPresets(kind);
     if (!isShape && !presets.length) return `<div class="cr-empty-hint">😢 No ${noun}s here yet — check back soon!</div>`;
     return `
@@ -1704,6 +1771,38 @@ function addPlacedFromPreset(kind, i){
   img.src = preset.src;
 }
 window.addPlacedFromPreset = addPlacedFromPreset;
+
+// Letters bypass the flat placedPresets() array (their picker is the
+// two-level LETTER_GROUPS structure instead), so they get their own
+// add/swap pair mirroring addPlacedFromPreset/swapPlacedImage.
+function addLetterFromGroup(groupId, letter){
+  const group = LETTER_GROUPS.find(g=>g.groupId===groupId);
+  const src = group && group.letters[letter];
+  if (!src) return;
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    const el = { id: nextPlacedId('letter'), img, xFrac:0.15, yFrac:-0.15, scale:1, rotation:0, locked:false };
+    placedArray('letter').push(el);
+    pushLayer({ kind:'letter', id: el.id });
+    selectLayer({ kind:'letter', id: el.id });
+    renderCanvasBgDecor();
+  };
+  img.src = src;
+}
+window.addLetterFromGroup = addLetterFromGroup;
+
+function swapLetterFromGroup(id, groupId, letter){
+  const group = LETTER_GROUPS.find(g=>g.groupId===groupId);
+  const src = group && group.letters[letter];
+  const el = placedArray('letter').find(x=>x.id===id);
+  if (!src || !el) return;
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => { el.img = img; renderToolPanelContent(); drawPreview(); };
+  img.src = src;
+}
+window.swapLetterFromGroup = swapLetterFromGroup;
 
 const SHAPE_DEFAULT_COLOR = '#FF6F91';
 
@@ -1887,7 +1986,7 @@ function characterToolPanelHtml(tool){
 function toggleLock(kind, id){
   const el = kind==='background' ? state.bg
     : kind==='character' ? state.character
-    : (kind==='sticker' || kind==='shape' || kind==='wordart') ? placedArray(kind).find(x=>x.id===id)
+    : (kind==='sticker' || kind==='shape' || kind==='wordart' || kind==='letter') ? placedArray(kind).find(x=>x.id===id)
     : state.textLines.find(t=>t.id===id);
   if (!el) return;
   el.locked = !el.locked;
@@ -2120,7 +2219,7 @@ function hitTestTopmost(xFrac, yFrac){
     if (d.kind==='text'){
       const t = state.textLines.find(x=>x.id===d.id);
       if (t && !t.locked && hitTestOneText(t, xFrac, yFrac)) return { kind:'text', el:t };
-    } else if (d.kind==='sticker' || d.kind==='shape' || d.kind==='wordart'){
+    } else if (d.kind==='sticker' || d.kind==='shape' || d.kind==='wordart' || d.kind==='letter'){
       const el = placedArray(d.kind).find(x=>x.id===d.id);
       if (el && !el.locked && hitTestOneSticker(el, xFrac, yFrac)) return { kind:d.kind, el };
     } else if (d.kind==='character'){
@@ -2171,7 +2270,7 @@ function bindCanvasInteractions(canvas){
     // uncapped number field (see textToolPanelHtml), kept independent of it.
     {
       const { el, kind } = selectedElementAndKind();
-      if (el && !el.locked && (kind==='sticker' || kind==='shape' || kind==='wordart' || kind==='text' || kind==='border')){
+      if (el && !el.locked && (kind==='sticker' || kind==='shape' || kind==='wordart' || kind==='letter' || kind==='text' || kind==='border')){
         const hp = handlePositions(el, kind);
         if (dist2(p.x,p.y,hp.resize.x,hp.resize.y) <= HANDLE_R*HANDLE_R){
           startElementDrag(canvas, e, 'resize', el); return;
@@ -2250,7 +2349,7 @@ function bindCanvasInteractions(canvas){
   canvas.addEventListener('pointerup', ()=>{ state.dragging=false; state.dragTarget=null; });
   canvas.addEventListener('pointercancel', ()=>{ state.dragging=false; state.dragTarget=null; });
 
-  const stickerOrCharSelected = () => state.selected && ['sticker','shape','wordart','character','text','border'].includes(state.selected.kind);
+  const stickerOrCharSelected = () => state.selected && ['sticker','shape','wordart','letter','character','text','border'].includes(state.selected.kind);
 
   const bgPinchApplies = () => state.bg.imageOn && state.bg.img && !state.bg.locked && !stickerOrCharSelected();
 
@@ -2365,7 +2464,7 @@ function drawDesignLayer(ctx, sizePx, opts){
 function drawForegroundElements(ctx, artboardPx){
   state.layerOrder.forEach(d => {
     if (d.kind==='character') drawOneCharacter(ctx, artboardPx);
-    else if (d.kind==='sticker' || d.kind==='shape' || d.kind==='wordart') drawOnePlaced(ctx, artboardPx, placedArray(d.kind).find(x=>x.id===d.id));
+    else if (d.kind==='sticker' || d.kind==='shape' || d.kind==='wordart' || d.kind==='letter') drawOnePlaced(ctx, artboardPx, placedArray(d.kind).find(x=>x.id===d.id));
     else if (d.kind==='text') drawOneTextLine(ctx, artboardPx, state.textLines.find(t=>t.id===d.id));
   });
 }
@@ -2561,7 +2660,7 @@ function drawArcText(ctx, text, cx, cy, radius, bottom){
    character (no handles, always centered), border (resize handle only) ── */
 function elementRadiusFrac(el, kind){
   if (kind==='character') return CHARACTER_BASE_R * el.scale;
-  if (kind==='sticker' || kind==='shape' || kind==='wordart') return STICKER_BASE_R * el.scale;
+  if (kind==='sticker' || kind==='shape' || kind==='wordart' || kind==='letter') return STICKER_BASE_R * el.scale;
   if (kind==='text')      return textFootprintFrac(el);
   if (kind==='border')    return (state.size/state.paperSize/2) * (el.scale||1);
   return 0.14;
@@ -2581,14 +2680,14 @@ function selectedElementAndKind(){
   const kind = state.selected.kind;
   const el = kind==='character' ? state.character
     : kind==='border' ? state.border
-    : (kind==='sticker' || kind==='shape' || kind==='wordart') ? placedArray(kind).find(x=>x.id===state.selected.id)
+    : (kind==='sticker' || kind==='shape' || kind==='wordart' || kind==='letter') ? placedArray(kind).find(x=>x.id===state.selected.id)
     : kind==='text' ? state.textLines.find(t=>t.id===state.selected.id)
     : null;
   return { el, kind };
 }
 function drawSelectionHandles(ctx, artboardPx){
   const { el, kind } = selectedElementAndKind();
-  const handleKinds = ['sticker','shape','wordart','text','border'];
+  const handleKinds = ['sticker','shape','wordart','letter','text','border'];
   if (!el || !handleKinds.includes(kind)) return;
   const r = elementRadiusFrac(el, kind) * artboardPx;
   const cx = artboardPx/2 + el.xFrac*artboardPx, cy = artboardPx/2 + el.yFrac*artboardPx;
@@ -2696,7 +2795,7 @@ function anyElementOverlapsCutLine(){
   };
   if (overlaps(state.character, 'character')) return true;
   if (state.textLines.some(t => overlaps(t, 'text'))) return true;
-  for (const kind of ['sticker','shape','wordart']){
+  for (const kind of ['sticker','shape','wordart','letter']){
     if (placedArray(kind).some(el => overlaps(el, kind))) return true;
   }
   return false;
@@ -3062,19 +3161,46 @@ function showDoneScreen(code, emailResult){
    consumer keeps working unchanged, it just sees different contents. ── */
 const PINS_REPO_CONTENTS_BASE = 'https://api.github.com/repos/campingchairph/morphii/contents/assets/pins/';
 const PINS_RAW_BASE = 'https://raw.githubusercontent.com/campingchairph/morphii/main/assets/pins/';
-const ASSET_CATEGORIES = ['stickers','shapes','holders','texts','borders','background','characters'];
+const ASSET_CATEGORIES = ['stickers','shapes','holders','texts','borders','background','characters','letters'];
 // category folder -> which key of a per-group asset set it feeds (holders shares Shapes' gallery)
 const CATEGORY_TO_SET_KEY = {
   stickers:'stickers', shapes:'shapes', holders:'shapes', texts:'wordart',
-  borders:'borders', background:'background', characters:'characters',
+  borders:'borders', background:'background', characters:'characters', letters:'letters',
 };
+// Letters assets are named "<groupNumber>_<LETTER>.ext" (e.g. 1_A.png, 1_B.png,
+// 2_A.png...) — each number is a distinct design; buildLetterGroups() below
+// turns the flat file list into { groupId, thumbSrc (always the "A"), letters }.
+const LETTER_FILENAME_RE = /^(\d+)_([A-Za-z])\.[^.]+$/i;
 const NEW_PRODUCT_ASSET_GROUPS = ['election','ph-souvenir','wedding'];
-const ASSET_GROUP_CACHE = {}; // groupId -> { stickers, shapes, wordart, borders, background, characters }
+const ASSET_GROUP_CACHE = {}; // groupId -> { stickers, shapes, wordart, borders, background, characters, letters }
+let LETTER_GROUPS = []; // rebuilt in applyAssetGroup() — [{ groupId, thumbSrc, letters:{A:url,...} }]
 
 function assetLabelFromFilename(name){
   return name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase());
 }
-function emptyAssetSet(){ return { stickers:[], shapes:[], wordart:[], borders:[], background:[], characters:[] }; }
+function emptyAssetSet(){ return { stickers:[], shapes:[], wordart:[], borders:[], background:[], characters:[], letters:[] }; }
+
+// Turns a flat list of { label, src, name } letter-asset entries into grouped
+// { groupId, thumbSrc, letters:{A:url,...} } records, sorted by group number.
+// Files that don't match "<number>_<LETTER>.ext" are silently skipped.
+function buildLetterGroups(flatList){
+  const byGroup = {};
+  flatList.forEach(it => {
+    const m = LETTER_FILENAME_RE.exec(it.name || '');
+    if (!m) return;
+    const groupId = m[1];
+    const letter = m[2].toUpperCase();
+    if (!byGroup[groupId]) byGroup[groupId] = { groupId, letters:{} };
+    byGroup[groupId].letters[letter] = it.src;
+  });
+  return Object.keys(byGroup)
+    .sort((a,b) => Number(a) - Number(b))
+    .map(groupId => {
+      const g = byGroup[groupId];
+      return { groupId, thumbSrc: g.letters['A'] || Object.values(g.letters)[0], letters: g.letters };
+    })
+    .filter(g => g.thumbSrc);
+}
 function currentAssetGroup(){ return (state.product && state.product.assetGroup) || 'shared'; }
 
 // basePath is '' for the shared/global folders (assets/pins/<category>/,
@@ -3092,7 +3218,7 @@ async function fetchAssetGroup(basePath, overrides){
         .filter(it => it.type==='file' && /\.(png|jpe?g|webp|gif)$/i.test(it.name))
         .forEach(it => {
           const url = PINS_RAW_BASE + basePath + cat + '/' + it.name;
-          set[key].push({ label: overrides[url] || assetLabelFromFilename(it.name), src: url });
+          set[key].push({ label: overrides[url] || assetLabelFromFilename(it.name), src: url, name: it.name });
         });
     } catch(e){
       // offline or GitHub unreachable — that category's presets just stay empty
@@ -3112,6 +3238,7 @@ function applyAssetGroup(groupId){
   BORDER_PRESETS.length = 0;     BORDER_PRESETS.push(...set.borders);
   BACKGROUND_PRESETS.length = 0; BACKGROUND_PRESETS.push(...set.background);
   CHARACTER_PRESETS.length = 0;  CHARACTER_PRESETS.push(...set.characters);
+  LETTER_GROUPS = buildLetterGroups(set.letters);
 }
 
 async function loadPinAssetManifest(){
@@ -3132,7 +3259,7 @@ async function loadPinAssetManifest(){
 // library presets before they've added anything, so the backdrop isn't empty.
 function decorAssetPool(){
   const srcs = [];
-  ['sticker','shape','wordart'].forEach(kind => {
+  ['sticker','shape','wordart','letter'].forEach(kind => {
     placedArray(kind).forEach(el => { if (el.img && el.img.src) srcs.push(el.img.src); });
   });
   if (state.character && state.character.img && state.character.img.src) srcs.push(state.character.img.src);
