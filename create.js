@@ -290,6 +290,299 @@ function resetDesignForTemplate(){
   state.nextStickerId = 1; state.nextShapeId = 1; state.nextWordArtId = 1; state.nextLetterId = 1; state.nextTextId = 1;
 }
 
+/* ── ADMIN PIN TEMPLATES (save the current design / load a saved one) ──
+   A template is just a JSON snapshot of the design portion of `state`,
+   stored in Firestore — see savePinTemplate/getPinTemplates in
+   firebase-config.js. Image objects aren't serializable, so every img gets
+   reduced to its .src URL going in, and rebuilt with `new Image()` coming
+   back out. Ids are NOT preserved across the round-trip (they're reassigned
+   via nextPlacedId/nextTextId on load, same as duplicatePlaced) — the
+   snapshot keeps its own internal ids only so layerOrder can be rebuilt in
+   the original front-to-back order via an old-id -> new-id map. ── */
+function serializePlacedArray(kind){
+  return placedArray(kind).map(el => {
+    const out = { id: el.id, xFrac: el.xFrac, yFrac: el.yFrac, scale: el.scale, rotation: el.rotation||0, src: el.img.src };
+    if (el.vectorShapeId){ out.vectorShapeId = el.vectorShapeId; out.color = el.color; }
+    return out;
+  });
+}
+
+function serializeCurrentDesign(){
+  return {
+    bg: {
+      colorOn: state.bg.colorOn, color: state.bg.color,
+      imageOn: !!(state.bg.imageOn && state.bg.img), src: state.bg.imageOn && state.bg.img ? state.bg.img.src : null,
+      opacity: state.bg.opacity, offsetXFrac: state.bg.offsetXFrac, offsetYFrac: state.bg.offsetYFrac, scale: state.bg.scale,
+    },
+    textLines: state.textLines.map(t => ({ ...t })),
+    stickers: serializePlacedArray('sticker'),
+    shapes: serializePlacedArray('shape'),
+    wordArts: serializePlacedArray('wordart'),
+    letters: serializePlacedArray('letter'),
+    character: state.character ? { scale: state.character.scale, rotation: state.character.rotation||0, src: state.character.img.src } : null,
+    border: state.border ? {
+      src: state.border.src || state.border.img.src, label: state.border.label || null,
+      rotation: state.border.rotation||0, scale: state.border.scale||1,
+      xFrac: state.border.xFrac||0, yFrac: state.border.yFrac||0,
+    } : null,
+    layerOrder: state.layerOrder.map(d => ({ ...d })),
+  };
+}
+
+// Reloads every image-bearing element of one placed kind from a snapshot
+// array, assigning each a fresh id (via nextPlacedId) and returning an
+// old-id -> new-id map so layerOrder can be rebuilt afterward. Any image
+// that fails to load (dead/expired src) is silently skipped — same
+// "degrade gracefully" spirit as the asset-library fetches.
+function loadPlacedArrayFromSnapshot(kind, list){
+  const idMap = {};
+  return Promise.all((list||[]).map(item => new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const el = { id: nextPlacedId(kind), img, xFrac: item.xFrac||0, yFrac: item.yFrac||0, scale: item.scale||1, rotation: item.rotation||0, locked:false };
+      if (item.vectorShapeId){ el.vectorShapeId = item.vectorShapeId; el.color = item.color; }
+      placedArray(kind).push(el);
+      idMap[item.id] = el.id;
+      resolve();
+    };
+    img.onerror = resolve;
+    img.src = item.src;
+  }))).then(() => idMap);
+}
+
+async function applyPinTemplateSnapshot(snap){
+  resetDesignForTemplate();
+
+  state.bg.colorOn = !!snap.bg.colorOn;
+  state.bg.color = snap.bg.color || null;
+  state.bg.opacity = snap.bg.opacity != null ? snap.bg.opacity : 0.7;
+  state.bg.offsetXFrac = snap.bg.offsetXFrac || 0;
+  state.bg.offsetYFrac = snap.bg.offsetYFrac || 0;
+  state.bg.scale = snap.bg.scale || 1;
+  if (snap.bg.imageOn && snap.bg.src){
+    await new Promise(resolve => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => { state.bg.img = img; state.bg.imageOn = true; resolve(); };
+      img.onerror = resolve; // leaves bg.imageOn false — same as any other failed image
+      img.src = snap.bg.src;
+    });
+  }
+
+  const textIdMap = {};
+  (snap.textLines||[]).forEach(t => {
+    const newId = state.nextTextId++;
+    textIdMap[t.id] = newId;
+    const { id, ...rest } = t;
+    state.textLines.push({ ...rest, id:newId, locked:false });
+  });
+
+  const idMaps = { text: textIdMap };
+  idMaps.sticker = await loadPlacedArrayFromSnapshot('sticker', snap.stickers);
+  idMaps.shape   = await loadPlacedArrayFromSnapshot('shape', snap.shapes);
+  idMaps.wordart = await loadPlacedArrayFromSnapshot('wordart', snap.wordArts);
+  idMaps.letter  = await loadPlacedArrayFromSnapshot('letter', snap.letters);
+
+  if (snap.character){
+    await new Promise(resolve => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => { state.character = { img, scale: snap.character.scale||1, rotation: snap.character.rotation||0, xFrac:0, yFrac:0, locked:false }; resolve(); };
+      img.onerror = resolve;
+      img.src = snap.character.src;
+    });
+  }
+
+  if (snap.border){
+    await new Promise(resolve => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        state.border = { img, src: snap.border.src, label: snap.border.label||null, rotation: snap.border.rotation||0, scale: snap.border.scale||1, xFrac: snap.border.xFrac||0, yFrac: snap.border.yFrac||0 };
+        resolve();
+      };
+      img.onerror = resolve;
+      img.src = snap.border.src;
+    });
+  }
+
+  // Rebuild z-order in the snapshot's original relative sequence, remapping
+  // every id and silently dropping any entry whose image failed to load.
+  state.layerOrder = (snap.layerOrder||[]).map(d => {
+    if (d.kind==='character') return state.character ? { kind:'character' } : null;
+    if (d.kind==='text') return textIdMap[d.id]!=null ? { kind:'text', id:textIdMap[d.id] } : null;
+    if (idMaps[d.kind] && idMaps[d.kind][d.id]!=null) return { kind:d.kind, id:idMaps[d.kind][d.id] };
+    return null;
+  }).filter(Boolean);
+
+  goStep('design');
+}
+
+// Small offscreen render for the template-browsing grid — reuses the same
+// clean (no watermark, no handles) drawing path as compositeCleanDesign,
+// just downsized and JPEG-compressed since it's only ever a thumbnail.
+function generateTemplateThumbnail(){
+  const THUMB_PX = 280;
+  const c = document.createElement('canvas');
+  c.width = THUMB_PX; c.height = THUMB_PX;
+  drawDesignLayer(c.getContext('2d'), THUMB_PX);
+  return c.toDataURL('image/jpeg', 0.75);
+}
+
+/* ── ADMIN: SAVE CURRENT DESIGN AS A TEMPLATE ────
+   Reached only via #saveTemplateBtn, which stays hidden unless
+   currentUserIsAdmin — see updateAdminUI(). No server-side gate beyond the
+   Firestore security rule (admin-only write on morphii_pin_templates); this
+   button is a convenience, not the access control. */
+let PIN_TEMPLATES = []; // every admin-saved template, all products — loaded once, refreshed after save/delete
+async function loadPinTemplates(){
+  try { PIN_TEMPLATES = await getPinTemplates(); } catch(e){ PIN_TEMPLATES = []; }
+}
+
+function templatesForCurrentProduct(){
+  return PIN_TEMPLATES.filter(t => state.product && t.productId === state.product.id);
+}
+// Distinct typeLabel values already used for this product, in first-seen
+// order — this list IS "the types the admin added", no separate collection.
+function pinTemplateTypesForCurrentProduct(){
+  const seen = [];
+  templatesForCurrentProduct().forEach(t => { if (t.typeLabel && !seen.includes(t.typeLabel)) seen.push(t.typeLabel); });
+  return seen;
+}
+
+function openSaveTemplateModal(){
+  if (!currentUserIsAdmin || !state.product) return;
+  document.getElementById('saveTemplateName').value = '';
+  document.getElementById('saveTemplateType').value = '';
+  document.getElementById('saveTemplateTypeList').innerHTML = pinTemplateTypesForCurrentProduct()
+    .map(t => `<option value="${escHtml(t)}">`).join('');
+  document.getElementById('saveTemplateError').style.display = 'none';
+  document.getElementById('saveTemplateOverlay').classList.add('show');
+}
+window.openSaveTemplateModal = openSaveTemplateModal;
+
+function closeSaveTemplateModal(){
+  document.getElementById('saveTemplateOverlay').classList.remove('show');
+}
+window.closeSaveTemplateModal = closeSaveTemplateModal;
+
+async function confirmSaveTemplate(){
+  const errEl = document.getElementById('saveTemplateError');
+  errEl.style.display = 'none';
+  const name = document.getElementById('saveTemplateName').value.trim();
+  const typeLabel = document.getElementById('saveTemplateType').value.trim();
+  if (!name || !typeLabel){
+    errEl.textContent = 'Please fill in both a name and a type.';
+    errEl.style.display = 'block';
+    return;
+  }
+  const btn = document.getElementById('saveTemplateConfirmBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const payload = {
+      productId: state.product.id,
+      typeLabel, name,
+      thumbnail: generateTemplateThumbnail(),
+      size: state.size,
+      snapshot: serializeCurrentDesign(),
+      createdBy: (AUTH && AUTH.currentUser && AUTH.currentUser.email) || 'unknown',
+    };
+    // Firestore hard-caps a document at 1MB — most of that budget is any
+    // custom-uploaded (base64) images baked into the snapshot, not the
+    // thumbnail. Catch it here with a clear message rather than a cryptic
+    // Firestore error, since there's no cheap way to shrink those further.
+    if (JSON.stringify(payload).length > 900*1024){
+      throw new Error("This design is too large to save as a template (likely from custom-uploaded photos) — try using library presets instead of uploads.");
+    }
+    await savePinTemplate(payload);
+    await loadPinTemplates();
+    closeSaveTemplateModal();
+  } catch(e){
+    errEl.textContent = e.message || 'Could not save template.';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save Template';
+  }
+}
+window.confirmSaveTemplate = confirmSaveTemplate;
+
+/* ── CUSTOMER: BROWSE ADMIN TEMPLATES (any non-Election product) ──
+   Reached from selectSize() when templatesForCurrentProduct().length > 0.
+   Two levels: type grid -> templates-within-type grid -> apply + Design.
+   _pinTemplateTypesCache holds the CURRENT type list so click handlers can
+   reference it by index (avoids escaping arbitrary admin-typed strings into
+   inline onclick HTML). */
+let _pinTemplateActiveType = null;
+let _pinTemplateTypesCache = [];
+
+function renderPinTemplateGrid(){
+  const grid = document.getElementById('pinTemplateGrid');
+  if (!grid) return;
+  if (_pinTemplateActiveType == null){
+    _pinTemplateTypesCache = pinTemplateTypesForCurrentProduct();
+    grid.innerHTML = `<div class="cr-product-grid">${_pinTemplateTypesCache.map((typeLabel,i) => {
+      const first = templatesForCurrentProduct().find(t=>t.typeLabel===typeLabel);
+      return `
+      <div class="cr-product-card" onclick="openPinTemplateTypeByIndex(${i})">
+        ${first && first.thumbnail ? `<img class="cr-template-thumb" src="${first.thumbnail}" alt="">` : '<div class="cr-product-icon">🎨</div>'}
+        <div class="cr-product-name">${escHtml(typeLabel)}</div>
+      </div>`;
+    }).join('')}</div>`;
+    return;
+  }
+  const inType = templatesForCurrentProduct().filter(t=>t.typeLabel===_pinTemplateActiveType);
+  grid.innerHTML = `
+    <button class="cr-link-back" style="margin-bottom:12px" onclick="closePinTemplateType()">&larr; Back to template types</button>
+    <div class="cr-product-grid">${inType.map(t => `
+      <div class="cr-product-card">
+        ${currentUserIsAdmin ? `<button class="cr-template-admin-del" title="Delete template" onclick="event.stopPropagation();deletePinTemplateConfirm('${t.id}')">${ICON_TRASH}</button>` : ''}
+        <div onclick="usePinTemplate('${t.id}')">
+          ${t.thumbnail ? `<img class="cr-template-thumb" src="${t.thumbnail}" alt="">` : '<div class="cr-product-icon">📌</div>'}
+          <div class="cr-product-name">${escHtml(t.name)}</div>
+        </div>
+      </div>`).join('')}</div>`;
+}
+window.renderPinTemplateGrid = renderPinTemplateGrid;
+
+function openPinTemplateTypeByIndex(i){
+  _pinTemplateActiveType = _pinTemplateTypesCache[i];
+  renderPinTemplateGrid();
+}
+window.openPinTemplateTypeByIndex = openPinTemplateTypeByIndex;
+
+function closePinTemplateType(){
+  _pinTemplateActiveType = null;
+  renderPinTemplateGrid();
+}
+window.closePinTemplateType = closePinTemplateType;
+
+function startPinDesignFromScratch(){
+  resetDesignForTemplate();
+  goStep('design');
+}
+window.startPinDesignFromScratch = startPinDesignFromScratch;
+
+async function usePinTemplate(templateId){
+  const t = PIN_TEMPLATES.find(x=>x.id===templateId);
+  if (!t) return;
+  await applyPinTemplateSnapshot(t.snapshot);
+}
+window.usePinTemplate = usePinTemplate;
+
+async function deletePinTemplateConfirm(templateId){
+  if (!currentUserIsAdmin) return;
+  if (!confirm('Delete this template? This cannot be undone.')) return;
+  try {
+    await deletePinTemplate(templateId);
+    PIN_TEMPLATES = PIN_TEMPLATES.filter(t=>t.id!==templateId);
+    renderPinTemplateGrid();
+  } catch(e){
+    alert('Could not delete: ' + e.message);
+  }
+}
+window.deletePinTemplateConfirm = deletePinTemplateConfirm;
+
 function pushGeneratedShape(shapeId, color, xFrac, yFrac, scale, rotationDeg){
   return new Promise(resolve => {
     const img = new Image();
@@ -368,7 +661,7 @@ const SIZES = [
   { mm:75, paperMM:86.3, tag:'XL',       enabled:true },
 ];
 
-const STEP_ORDER = ['product','size','template','design','submit','done'];
+const STEP_ORDER = ['product','size','template','pinTemplates','design','submit','done'];
 const CANVAS_PX   = 480;   // fixed on-screen render resolution
 const EXPORT_PPMM = 11.8;  // export resolution for the clean (admin-facing) design, px per mm (~300 DPI)
 const FONTS = ['Luckiest Guy','Shrikhand','Carter One','Ceviche One','Kavoon','Cherry Bomb One','Lobster','Spicy Rice','Chicle'];
@@ -668,7 +961,8 @@ function goStep(name){
   });
   window.scrollTo({top:0,behavior:'smooth'});
   if (name==='template'){ renderTemplateGrid(); }
-  if (name==='design'){ setupCanvas(); drawPreview(); renderCanvasBgDecor(); updateCanvasBorderRing(); resetCanvasView(); }
+  if (name==='pinTemplates'){ _pinTemplateActiveType = null; renderPinTemplateGrid(); }
+  if (name==='design'){ setupCanvas(); drawPreview(); renderCanvasBgDecor(); updateCanvasBorderRing(); resetCanvasView(); updateAdminUI(); }
   if (name==='submit'){ renderSubmitSummary(); }
 }
 window.goStep = goStep;
@@ -711,9 +1005,14 @@ function selectSize(mm){
   if (!s || !s.enabled) return;
   state.size = s.mm;
   state.paperSize = s.paperMM;
-  // Election has a bank of premade designs to start from — everything else
-  // (today) goes straight to a blank canvas exactly as before this existed.
-  goStep(state.product && state.product.id==='election' ? 'template' : 'design');
+  // Election has its own fill-in-a-form premade bank (see 'template' step
+  // above). Any OTHER product with at least one admin-saved template (see
+  // Firestore morphii_pin_templates) offers the same "start blank or pick a
+  // template" choice generically. Everything else goes straight to a blank
+  // canvas exactly as before either of those existed.
+  if (state.product && state.product.id==='election') goStep('template');
+  else if (templatesForCurrentProduct().length) goStep('pinTemplates');
+  else goStep('design');
 }
 window.selectSize = selectSize;
 
@@ -1260,7 +1559,8 @@ function borderToolPanelHtml(tool){
     return `
       <div class="cr-field-label">Rotation <span class="cr-slider-val" id="borderRotVal">${rotDeg}°</span></div>
       <input type="range" class="cr-range cr-range-mid" min="-180" max="180" value="${rotDeg}"
-        oninput="setBorderRotation(this.value); document.getElementById('borderRotVal').textContent=this.value+'°'">`;
+        oninput="setBorderRotation(this.value); document.getElementById('borderRotVal').textContent=this.value+'°'">
+      <div class="cr-hint">Drag the border on the pin to nudge its position — handy if it's not a perfect circle.</div>`;
   }
   return '';
 }
@@ -2290,7 +2590,20 @@ function bindCanvasInteractions(canvas){
       return;
     }
 
-    // 3. Nothing hit — fall back to the background layer, and drag the photo if there is one (unless locked)
+    // 3. Border is a fixed frame overlay, not part of the reorderable stack,
+    // so it's deliberately left out of hitTestTopmost above — it visually
+    // covers nearly the whole pin and would swallow every tap meant for
+    // stickers/text underneath it. Instead: once it's the selected layer
+    // (tapped its dock icon), dragging anywhere on the canvas nudges its
+    // position — same "drag while selected" pattern as the background photo
+    // below. This is what lets an off-center or non-perfectly-circular
+    // border asset be recentered by eye.
+    if (state.selected && state.selected.kind==='border' && state.border && !state.border.locked){
+      startElementDrag(canvas, e, 'move', state.border);
+      return;
+    }
+
+    // 4. Nothing hit — fall back to the background layer, and drag the photo if there is one (unless locked)
     if (layerKey(state.selected)!=='background') selectLayer({ kind:'background' });
     if (state.bg.imageOn && state.bg.img && !state.bg.locked){
       state.dragging = true;
@@ -2319,9 +2632,9 @@ function bindCanvasInteractions(canvas){
       state.dragTarget.xFrac = state.dragStartOffX + dxFrac;
       state.dragTarget.yFrac = state.dragStartOffY + dyFrac;
       // Character never gets a 'move' drag (always centered) — this only
-      // ever runs for sticker/shape/wordart/text, all of which should be
-      // held back from leaving the cut line entirely.
-      clampElementToCutLine(state.dragTarget);
+      // ever runs for sticker/shape/wordart/text/border.
+      if (state.dragTarget === state.border) clampBorderOffset();
+      else clampElementToCutLine(state.dragTarget);
     } else if (state.dragTarget && state.dragMode==='resize'){
       const dist = Math.hypot(p.x-state.dragTarget.xFrac, p.y-state.dragTarget.yFrac);
       const ratio = dist/state.dragStartDist;
@@ -2521,7 +2834,7 @@ function drawOnePlaced(ctx, artboardPx, el){
 function drawBorder(ctx, artboardPx){
   if (!state.border || !state.border.img) return;
   const cutFrac = (state.size / state.paperSize) * (state.border.scale||1);
-  drawPlacedImage(ctx, artboardPx, state.border.img, 0, 0, cutFrac, state.border.rotation||0);
+  drawPlacedImage(ctx, artboardPx, state.border.img, state.border.xFrac||0, state.border.yFrac||0, cutFrac, state.border.rotation||0);
 }
 
 function drawOneCharacter(ctx, artboardPx){
@@ -2598,6 +2911,21 @@ function clampElementToCutLine(el){
   if (dist > cutFrac && dist > 0){
     const ratio = cutFrac / dist;
     el.xFrac *= ratio; el.yFrac *= ratio;
+  }
+}
+
+// Border covers nearly the whole pin, so its drag range is deliberately
+// tiny — same spirit as its 0.7-1.3 scale-tweak range above: this is for
+// recentering an off-center or non-perfectly-circular border asset, not for
+// moving it around like a sticker.
+function clampBorderOffset(){
+  if (!state.border) return;
+  const cutFrac = state.size / state.paperSize / 2;
+  const maxOffset = cutFrac * 0.15;
+  const dist = Math.hypot(state.border.xFrac||0, state.border.yFrac||0);
+  if (dist > maxOffset && dist > 0){
+    const ratio = maxOffset / dist;
+    state.border.xFrac *= ratio; state.border.yFrac *= ratio;
   }
 }
 
@@ -3473,7 +3801,26 @@ document.addEventListener('DOMContentLoaded', ()=>{
   loadPinAssetManifest();
   loadCustomFonts();
   loadCatalogConfig();
+  loadPinTemplates();
 });
+
+// This page has no login UI of its own — an admin who already signed in on
+// index.html or orders-admin.html (same browser) is picked up automatically
+// via Firebase Auth's persisted session, which is all "Save as Template"
+// needs: it's a design-step button, not a separate admin area.
+let currentUserIsAdmin = false;
+if (typeof AUTH !== 'undefined' && AUTH){
+  AUTH.onAuthStateChanged(user => {
+    currentUserIsAdmin = typeof isAdmin === 'function' && isAdmin(user);
+    updateAdminUI();
+  });
+}
+function updateAdminUI(){
+  const btn = document.getElementById('saveTemplateBtn');
+  if (btn) btn.style.display = currentUserIsAdmin ? '' : 'none';
+  const templateStep = document.getElementById('step-pinTemplates');
+  if (templateStep && templateStep.classList.contains('active')) renderPinTemplateGrid();
+}
 
 // Keeps the spinning border ring's size correct if the viewport (and so
 // the pin's rendered size) changes — e.g. rotating a phone.

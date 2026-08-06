@@ -52,6 +52,16 @@
     <div class="cr-product-grid" id="templateGrid"></div>
   </section>
 
+  <!-- STEP: PIN TEMPLATES (any product with at least one admin-saved
+       template — see create.js selectSize()) — admin-built designs grouped
+       into whatever "types" the admin has typed when saving them, or blank -->
+  <section class="cr-panel" id="step-pinTemplates">
+    <h1 class="cr-title">Start with a template?</h1>
+    <p class="cr-sub"><button class="cr-link-back" onclick="goStep('size')">&larr; Change size</button></p>
+    <button class="cr-btn-primary" style="margin-bottom:18px" onclick="startPinDesignFromScratch()">✏️ Start from Scratch Instead</button>
+    <div id="pinTemplateGrid"></div>
+  </section>
+
   <!-- STEP 3: DESIGN (mobile-first — pin always visible, controls in popup sheets) -->
   <section class="cr-panel cr-panel-design" id="step-design">
     <div class="cr-design-app">
@@ -106,6 +116,10 @@
               </button>
               <button class="cr-isolate-btn" id="printPreviewBtn" onclick="openPinPreview()" title="Print preview">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+              <!-- Admin-only — see updateAdminUI() in create.js. Not shown to customers. -->
+              <button class="cr-isolate-btn" id="saveTemplateBtn" style="display:none" onclick="openSaveTemplateModal()" title="Save this design as a template (admin only)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2v16z"/><path d="M9 8h6M12 5v6"/></svg>
               </button>
             </div>
             <div class="cr-fab-group">
@@ -263,6 +277,25 @@
     </div>
   </div>
 
+  <!-- ADMIN: SAVE CURRENT DESIGN AS A TEMPLATE — reached only via
+       #saveTemplateBtn, which stays hidden for non-admins (see
+       updateAdminUI() in create.js). Not a security boundary by itself —
+       the Firestore rule on morphii_pin_templates is. -->
+  <div class="cr-modal-overlay" id="saveTemplateOverlay">
+    <div class="cr-modal" style="max-width:380px">
+      <div class="cr-modal-title">Save as Template</div>
+      <div class="cr-field-label">Template Name</div>
+      <input type="text" class="cr-text-input" id="saveTemplateName" placeholder="e.g. Blue Star Badge">
+      <div class="cr-field-label" style="margin-top:12px">Type</div>
+      <input type="text" class="cr-text-input" id="saveTemplateType" list="saveTemplateTypeList" placeholder="e.g. Sporty, Elegant, Minimalist">
+      <datalist id="saveTemplateTypeList"></datalist>
+      <div class="cr-hint">Customers browse templates for this product grouped by type. Type a new one to create it, or reuse an existing one.</div>
+      <div id="saveTemplateError" class="cr-warning" style="display:none"></div>
+      <button class="cr-btn-primary" id="saveTemplateConfirmBtn" style="margin-top:16px" onclick="confirmSaveTemplate()">Save Template</button>
+      <button class="cr-link-back" style="display:block;margin:10px auto 0" onclick="closeSaveTemplateModal()">Cancel</button>
+    </div>
+  </div>
+
 </main>
 
 <!-- Firebase SDK (compat mode — no build step needed) -->
@@ -273,6 +306,6 @@
 <!-- EmailJS (sends the confirmation email client-side, no backend needed) -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="email-config.js"></script>
-<script src="create.js?v=30"></script>
+<script src="create.js?v=31"></script>
 </body>
 </html>

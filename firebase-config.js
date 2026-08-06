@@ -187,6 +187,45 @@ async function saveGoalsConfig(list) {
   return DB.collection('morphii_finance').doc('goals').set({ list });
 }
 
+/* ── PIN TEMPLATES (morphii_pin_templates collection) ──
+   One doc per admin-saved reusable design. Doc shape:
+   {
+     productId:   'lapel-pin' (etc — matches create.js PRODUCTS ids)
+     typeLabel:   'Sporty' — free text the admin types when saving; the
+                  distinct values already in use ARE the "types" list (no
+                  separate types collection — adding a new type is just
+                  typing a name that hasn't been used yet)
+     name:        'Blue Star Badge'
+     thumbnail:   small base64 JPEG data URL, for the browsing grid
+     size:        32 (mm, finished/cut diameter)
+     snapshot:    { bg, textLines, stickers, shapes, wordArts, letters,
+                    character, border, layerOrder } — a JSON-serializable
+                    copy of create.js's design state (Image objects reduced
+                    to their .src URL, reconstructed on load)
+     createdAt:   server timestamp
+     createdBy:   admin's email
+   }
+   Public read (customers browse these while designing, unauthenticated) —
+   admin-only write, same as morphii_config. */
+async function getPinTemplates() {
+  if (!DB) return [];
+  try {
+    const snap = await DB.collection('morphii_pin_templates').orderBy('createdAt', 'desc').get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) { return []; }
+}
+async function savePinTemplate(tpl) {
+  if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
+  return DB.collection('morphii_pin_templates').add({
+    ...tpl,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+}
+async function deletePinTemplate(id) {
+  if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
+  return DB.collection('morphii_pin_templates').doc(id).delete();
+}
+
 /* ── Firestore Security Rules ──────────────────
    Publish these in Firebase Console → Firestore → Rules:
 
@@ -209,6 +248,11 @@ async function saveGoalsConfig(list) {
        }
        match /morphii_finance/{docId} {
          allow read, write: if request.auth != null
+           && request.auth.token.email in ['buboyseph@gmail.com'];
+       }
+       match /morphii_pin_templates/{templateId} {
+         allow read: if true;
+         allow create, update, delete: if request.auth != null
            && request.auth.token.email in ['buboyseph@gmail.com'];
        }
      }
