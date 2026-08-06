@@ -163,6 +163,14 @@ h1,.logo{font-family:'Fredoka One',cursive;}
   color:var(--ink-dim);font-size:10.5px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:0.4px;
 }
 .catalog-toggle.on{background:#55EFC4;border-color:#55EFC4;color:#0B2E4E;}
+.catalog-state-group{display:flex;gap:4px;flex-shrink:0;}
+.catalog-state-btn{
+  padding:6px 10px;border-radius:16px;border:1.5px solid var(--border);background:rgba(255,255,255,0.06);
+  color:var(--ink-dim);font-size:9.5px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:0.3px;
+}
+.catalog-state-btn.active[data-state="enabled"]{background:#55EFC4;border-color:#55EFC4;color:#0B2E4E;}
+.catalog-state-btn.active[data-state="disabled"]{background:#FFB454;border-color:#FFB454;color:#3A2400;}
+.catalog-state-btn.active[data-state="hidden"]{background:#8C93A8;border-color:#8C93A8;color:#1A1E28;}
 .font-row{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:8px 10px;}
 .font-row-preview{font-size:18px;flex-shrink:0;width:38px;text-align:center;color:white;}
 .asset-row{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:8px 10px;}
@@ -950,41 +958,56 @@ function closeCatalogModal(){
 }
 window.closeCatalogModal = closeCatalogModal;
 
+// A saved value can be the old boolean shape (true/false, from before
+// "hidden" existed) or the new tri-state string — normalize either into
+// 'enabled'/'disabled'/'hidden'.
+function normalizeCatalogState(v, fallbackEnabled){
+  if (v === true) return 'enabled';
+  if (v === false) return 'disabled';
+  if (v === 'enabled' || v === 'disabled' || v === 'hidden') return v;
+  return fallbackEnabled ? 'enabled' : 'disabled';
+}
+const CATALOG_STATE_LABEL = { enabled:'Available', disabled:'Disabled', hidden:'Hidden' };
+
+function catalogStateGroupHtml(cur, onclickPrefix){
+  return `<div class="catalog-state-group">${['enabled','disabled','hidden'].map(st =>
+    `<button class="catalog-state-btn ${cur===st?'active':''}" data-state="${st}" onclick="${onclickPrefix}('${st}')">${CATALOG_STATE_LABEL[st]}</button>`
+  ).join('')}</div>`;
+}
+
 function renderCatalogModal(){
   document.getElementById('catalogProductsList').innerHTML = CATALOG_PRODUCTS.map(p => {
-    const on = catalogConfig.products[p.id] !== undefined ? catalogConfig.products[p.id] : (CATALOG_PRODUCT_DEFAULTS[p.id] !== false);
+    const cur = normalizeCatalogState(catalogConfig.products[p.id], CATALOG_PRODUCT_DEFAULTS[p.id] !== false);
     return `<div class="catalog-row">
       <span class="catalog-row-icon">${p.icon}</span>
       <span class="catalog-row-label">${escHtml(p.label)}</span>
-      <button class="catalog-toggle ${on?'on':''}" onclick="toggleCatalogProduct('${p.id}')">${on?'Available':'Off'}</button>
+      ${catalogStateGroupHtml(cur, `setCatalogProductState('${p.id}',`)}
     </div>`;
   }).join('');
 
   document.getElementById('catalogSizesList').innerHTML = CATALOG_SIZES.map(s => {
-    const on = catalogConfig.sizes[s.mm] !== undefined ? catalogConfig.sizes[s.mm] : true;
+    const cur = normalizeCatalogState(catalogConfig.sizes[s.mm], true);
     return `<div class="catalog-row">
       <span class="catalog-row-icon">${s.mm}</span>
       <span class="catalog-row-label">${s.mm}mm Circle — ${escHtml(s.tag)}</span>
-      <button class="catalog-toggle ${on?'on':''}" onclick="toggleCatalogSize(${s.mm})">${on?'Available':'Off'}</button>
+      ${catalogStateGroupHtml(cur, `setCatalogSizeState(${s.mm},`)}
     </div>`;
   }).join('');
 }
 
-async function toggleCatalogProduct(id){
-  const cur = catalogConfig.products[id] !== undefined ? catalogConfig.products[id] : (CATALOG_PRODUCT_DEFAULTS[id] !== false);
-  catalogConfig.products[id] = !cur;
+async function setCatalogProductState(id, state){
+  catalogConfig.products[id] = state;
   renderCatalogModal();
   try { await saveCatalogConfig(catalogConfig); } catch(e){ alert('Error saving: '+e.message); }
 }
-window.toggleCatalogProduct = toggleCatalogProduct;
+window.setCatalogProductState = setCatalogProductState;
 
-async function toggleCatalogSize(mm){
-  const cur = catalogConfig.sizes[mm] !== undefined ? catalogConfig.sizes[mm] : true;
-  catalogConfig.sizes[mm] = !cur;
+async function setCatalogSizeState(mm, state){
+  catalogConfig.sizes[mm] = state;
   renderCatalogModal();
   try { await saveCatalogConfig(catalogConfig); } catch(e){ alert('Error saving: '+e.message); }
 }
-window.toggleCatalogSize = toggleCatalogSize;
+window.setCatalogSizeState = setCatalogSizeState;
 
 /* ── FINANCE ──────────────────────────────────────────────────────
    Four tabs sharing one modal: manually-logged costs, per-product/size

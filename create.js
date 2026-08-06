@@ -6,27 +6,32 @@
 // background/border/character/sticker/shape/wordart/text) — omit it (as on
 // every product below except the three new ones) for the full unrestricted
 // set every product had before this existed.
+// catalogState is one of 'enabled' (available), 'disabled' (visible, greyed
+// out, "Coming Soon" badge — for stuff not built yet), or 'hidden' (not
+// rendered in the grid at all). The admin's catalog toggles in
+// orders-admin.html override this per id at runtime — see
+// applyCatalogOverrides() below; these are just the hardcoded defaults.
 const PRODUCTS = [
-  { id:'lapel-pin',    label:'Lapel Pins',              icon:'📌', enabled:true },
-  { id:'challenge-coin', label:'Challenge Coins',        icon:'🪙', enabled:true },
-  { id:'medal',        label:'Medals',                  icon:'🏅', enabled:true },
-  { id:'golf-marker',  label:'Golf Ball Markers',        icon:'⛳', enabled:true },
+  { id:'lapel-pin',    label:'Lapel Pins',              icon:'📌', catalogState:'enabled' },
+  { id:'challenge-coin', label:'Challenge Coins',        icon:'🪙', catalogState:'enabled' },
+  { id:'medal',        label:'Medals',                  icon:'🏅', catalogState:'enabled' },
+  { id:'golf-marker',  label:'Golf Ball Markers',        icon:'⛳', catalogState:'enabled' },
   // `assetGroup` isolates a product's sticker/border/background/character/
   // shape/word-art presets into their own assets/pins/<assetGroup>/<category>/
   // folders instead of the shared pool everything else pulls from — see
   // applyAssetGroup() below. Products without it (every one above) keep
   // pulling from the shared folders exactly as before this existed.
-  { id:'election',     label:'Election Pins',           icon:'🗳️', enabled:true,
+  { id:'election',     label:'Election Pins',           icon:'🗳️', catalogState:'enabled',
     tools:['background','border','character','sticker','text','shape'], assetGroup:'election' },
-  { id:'ph-souvenir',  label:'Philippine Souvenir Pins', icon:'🇵🇭', enabled:true,
+  { id:'ph-souvenir',  label:'Philippine Souvenir Pins', icon:'🇵🇭', catalogState:'enabled',
     tools:['background','border','character','sticker','text'], assetGroup:'ph-souvenir' },
-  { id:'wedding',      label:'Wedding Pins',            icon:'💍', enabled:true, assetGroup:'wedding' },
-  { id:'patch',        label:'Patches',                 icon:'🧵', enabled:false },
-  { id:'keychain',     label:'Keychains',                icon:'🔑', enabled:false },
-  { id:'ai-marker',    label:'AI Ball Marker Generator', icon:'🤖', enabled:false },
-  { id:'lanyard',      label:'Lanyards & ID Badges',     icon:'🪪', enabled:false },
-  { id:'belt-buckle',  label:'Belt Buckles',             icon:'🎗️', enabled:false },
-  { id:'luggage-tag',  label:'Luggage Tags',             icon:'🏷️', enabled:false },
+  { id:'wedding',      label:'Wedding Pins',            icon:'💍', catalogState:'enabled', assetGroup:'wedding' },
+  { id:'patch',        label:'Patches',                 icon:'🧵', catalogState:'disabled' },
+  { id:'keychain',     label:'Keychains',                icon:'🔑', catalogState:'disabled' },
+  { id:'ai-marker',    label:'AI Ball Marker Generator', icon:'🤖', catalogState:'disabled' },
+  { id:'lanyard',      label:'Lanyards & ID Badges',     icon:'🪪', catalogState:'disabled' },
+  { id:'belt-buckle',  label:'Belt Buckles',             icon:'🎗️', catalogState:'disabled' },
+  { id:'luggage-tag',  label:'Luggage Tags',             icon:'🏷️', catalogState:'disabled' },
 ];
 
 /* ── ELECTION PIN TEMPLATES — premade designs the customer fills a short
@@ -653,12 +658,12 @@ window.applyElectionTemplate = applyElectionTemplate;
 // chart. Paper size is a fixed property of each size now, not a customer
 // choice (see the removed Print Settings step).
 const SIZES = [
-  { mm:25, paperMM:35.2, tag:'Smallest', enabled:true },
-  { mm:32, paperMM:44,   tag:'Compact',  enabled:true },
-  { mm:37, paperMM:48.8, tag:'Popular',  enabled:true },
-  { mm:44, paperMM:56.4, tag:'Standard', enabled:true }, // ⚠ estimated (not legible on the chart) — confirm and update
-  { mm:58, paperMM:70,   tag:'Large',    enabled:true },
-  { mm:75, paperMM:86.3, tag:'XL',       enabled:true },
+  { mm:25, paperMM:35.2, tag:'Smallest', catalogState:'enabled' },
+  { mm:32, paperMM:44,   tag:'Compact',  catalogState:'enabled' },
+  { mm:37, paperMM:48.8, tag:'Popular',  catalogState:'enabled' },
+  { mm:44, paperMM:56.4, tag:'Standard', catalogState:'enabled' }, // ⚠ estimated (not legible on the chart) — confirm and update
+  { mm:58, paperMM:70,   tag:'Large',    catalogState:'enabled' },
+  { mm:75, paperMM:86.3, tag:'XL',       catalogState:'enabled' },
 ];
 
 const STEP_ORDER = ['product','size','template','pinTemplates','design','submit','done'];
@@ -968,18 +973,32 @@ function goStep(name){
 window.goStep = goStep;
 
 /* ── STEP 1: PRODUCT ─────────────────────────── */
+// catalogResolved goes true the moment PRODUCTS/SIZES reflect real truth —
+// either an instant cache hit (applyCachedCatalogConfig, before first
+// paint) or the live Firestore fetch resolving (loadCatalogConfig). Until
+// then, render a loading skeleton instead of the hardcoded defaults: that's
+// what stops a disabled/hidden item from ever visibly flashing as available
+// before flipping to its real state a moment later.
+let catalogResolved = false;
 function renderProductGrid(){
   const grid = document.getElementById('productGrid');
-  grid.innerHTML = PRODUCTS.map(p=>`
-    <div class="cr-product-card ${p.enabled?'':'disabled'}" onclick="${p.enabled?`selectProduct('${p.id}')`:''}">
-      ${p.enabled?'':'<div class="cr-product-badge">Coming Soon</div>'}
+  if (!catalogResolved){ grid.innerHTML = catalogSkeletonHtml(6); return; }
+  grid.innerHTML = PRODUCTS.filter(p=>p.catalogState!=='hidden').map(p=>{
+    const on = p.catalogState==='enabled';
+    return `
+    <div class="cr-product-card ${on?'':'disabled'}" onclick="${on?`selectProduct('${p.id}')`:''}">
+      ${on?'':'<div class="cr-product-badge">Coming Soon</div>'}
       <div class="cr-product-icon">${p.icon}</div>
       <div class="cr-product-name">${p.label}</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+}
+function catalogSkeletonHtml(n){
+  return Array.from({length:n}).map(()=>'<div class="cr-skeleton-card"></div>').join('');
 }
 function selectProduct(id){
   const p = PRODUCTS.find(p=>p.id===id);
-  if (!p || !p.enabled) return;
+  if (!p || p.catalogState!=='enabled') return;
   state.product = p;
   applyAssetGroup(currentAssetGroup());
   renderSizeGrid();
@@ -990,19 +1009,23 @@ window.selectProduct = selectProduct;
 /* ── STEP 2: SIZE ─────────────────────────────── */
 function renderSizeGrid(){
   const grid = document.getElementById('sizeGrid');
-  grid.innerHTML = SIZES.map(s=>`
-    <div class="cr-size-card ${s.enabled?'':'disabled'}" onclick="${s.enabled?`selectSize(${s.mm})`:''}">
-      ${s.enabled?'':'<div class="cr-product-badge">Unavailable</div>'}
+  if (!catalogResolved){ grid.innerHTML = catalogSkeletonHtml(6); return; }
+  grid.innerHTML = SIZES.filter(s=>s.catalogState!=='hidden').map(s=>{
+    const on = s.catalogState==='enabled';
+    return `
+    <div class="cr-size-card ${on?'':'disabled'}" onclick="${on?`selectSize(${s.mm})`:''}">
+      ${on?'':'<div class="cr-product-badge">Unavailable</div>'}
       <div class="cr-size-ring" style="width:${24+s.mm*0.85}px;height:${24+s.mm*0.85}px"></div>
       <div class="cr-size-num">${s.mm}mm Circle</div>
       <div class="cr-size-tag">${s.tag}</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 // Bleed/paper size is a fixed property of the chosen size (see SIZES above)
 // — customers don't control it, so picking a size goes straight to Design.
 function selectSize(mm){
   const s = SIZES.find(x=>x.mm===mm);
-  if (!s || !s.enabled) return;
+  if (!s || s.catalogState!=='enabled') return;
   state.size = s.mm;
   state.paperSize = s.paperMM;
   // Election has its own fill-in-a-form premade bank (see 'template' step
@@ -3505,10 +3528,12 @@ const CATEGORY_TO_SET_KEY = {
   stickers:'stickers', shapes:'shapes', holders:'shapes', texts:'wordart',
   borders:'borders', background:'background', characters:'characters', letters:'letters',
 };
-// Letters assets are named "<groupNumber>_<LETTER>.ext" (e.g. 1_A.png, 1_B.png,
-// 2_A.png...) — each number is a distinct design; buildLetterGroups() below
-// turns the flat file list into { groupId, thumbSrc (always the "A"), letters }.
-const LETTER_FILENAME_RE = /^(\d+)_([A-Za-z])\.[^.]+$/i;
+// Letters assets are named "<groupNumber>_<LETTER>-<variant>.ext" (e.g.
+// 1_A-01.png, 1_B-01.png, 2_A-01.png...) — each number is a distinct design;
+// the trailing -variant number is captured but not used for anything (any
+// digits work, not just "01") — buildLetterGroups() below turns the flat
+// file list into { groupId, thumbSrc (always the "A"), letters }.
+const LETTER_FILENAME_RE = /^(\d+)_([A-Za-z])-\d+\.[^.]+$/i;
 const NEW_PRODUCT_ASSET_GROUPS = ['election','ph-souvenir','wedding'];
 const ASSET_GROUP_CACHE = {}; // groupId -> { stickers, shapes, wordart, borders, background, characters, letters }
 let LETTER_GROUPS = []; // rebuilt in applyAssetGroup() — [{ groupId, thumbSrc, letters:{A:url,...} }]
@@ -3832,24 +3857,31 @@ window.addEventListener('resize', ()=>{ updateCanvasBorderRing(); });
 // value above, so this is purely additive/overriding.
 const CATALOG_CACHE_KEY = 'morphii_catalog_cache_v1';
 
+// A saved override can be the old boolean shape (true/false, from before
+// "hidden" existed) or the new tri-state string — normalize either into
+// 'enabled'/'disabled'/'hidden'. `v===undefined` means no override was ever
+// saved for this id, so it keeps its hardcoded default.
+function normalizeCatalogState(v, hardcodedDefault){
+  if (v === true) return 'enabled';
+  if (v === false) return 'disabled';
+  if (v === 'enabled' || v === 'disabled' || v === 'hidden') return v;
+  return hardcodedDefault;
+}
 function applyCatalogOverrides(cfg){
-  Object.entries(cfg.products||{}).forEach(([id, enabled]) => {
-    const p = PRODUCTS.find(x=>x.id===id);
-    if (p) p.enabled = !!enabled;
-  });
-  Object.entries(cfg.sizes||{}).forEach(([mm, enabled]) => {
-    const s = SIZES.find(x=>x.mm===Number(mm));
-    if (s) s.enabled = !!enabled;
-  });
+  PRODUCTS.forEach(p => { p.catalogState = normalizeCatalogState((cfg.products||{})[p.id], p.catalogState); });
+  SIZES.forEach(s => { s.catalogState = normalizeCatalogState((cfg.sizes||{})[s.mm], s.catalogState); });
 }
 
 // Synchronous — applied before the very first render so returning
 // customers see the correct product/size availability immediately instead
-// of the hardcoded defaults flashing briefly while Firestore responds.
+// of the hardcoded defaults flashing briefly while Firestore responds. If
+// there's no cache yet (first-ever visit on this device), catalogResolved
+// stays false and renderProductGrid/renderSizeGrid show a loading skeleton
+// instead of guessing — see the note on catalogResolved above.
 function applyCachedCatalogConfig(){
   try {
     const raw = localStorage.getItem(CATALOG_CACHE_KEY);
-    if (raw) applyCatalogOverrides(JSON.parse(raw));
+    if (raw){ applyCatalogOverrides(JSON.parse(raw)); catalogResolved = true; }
   } catch(e){ /* corrupt cache or storage unavailable — just skip it */ }
 }
 
@@ -3857,6 +3889,7 @@ async function loadCatalogConfig(){
   if (typeof getCatalogConfig !== 'function') return; // firebase-config.js not loaded/configured
   const cfg = await getCatalogConfig();
   applyCatalogOverrides(cfg);
+  catalogResolved = true;
   try { localStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify(cfg)); } catch(e){ /* storage full/unavailable — not critical */ }
   renderProductGrid();
   if (state.product) renderSizeGrid();
