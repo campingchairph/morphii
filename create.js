@@ -3159,8 +3159,18 @@ function showDoneScreen(code, emailResult){
    every group up front into a cache and, on product selection, clear+refill
    those same shared arrays with whichever group applies — so every existing
    consumer keeps working unchanged, it just sees different contents. ── */
-const PINS_REPO_CONTENTS_BASE = 'https://api.github.com/repos/campingchairph/morphii/contents/assets/pins/';
 const PINS_RAW_BASE = 'https://raw.githubusercontent.com/campingchairph/morphii/main/assets/pins/';
+// GitHub's per-category Contents API (one request per folder) blew through the
+// 60-req/hr unauthenticated rate limit in minutes once there were 4 asset
+// groups x 8 categories = 32 requests on every single page load — the limit
+// is shared by IP across everyone on the same network, so a couple of reloads
+// could lock out the whole office. The recursive Git Trees API lists the
+// ENTIRE repo in ONE request; we filter it down to assets/pins/* client-side
+// instead. Cached in localStorage for PINS_TREE_CACHE_TTL so repeat visits/
+// reloads from the same browser cost zero extra requests until it's stale.
+const PINS_TREE_URL = 'https://api.github.com/repos/campingchairph/morphii/git/trees/main?recursive=1';
+const PINS_TREE_CACHE_KEY = 'morphii_pins_asset_tree_v1';
+const PINS_TREE_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 const ASSET_CATEGORIES = ['stickers','shapes','holders','texts','borders','background','characters','letters'];
 // category folder -> which key of a per-group asset set it feeds (holders shares Shapes' gallery)
 const CATEGORY_TO_SET_KEY = {
@@ -3203,27 +3213,41 @@ function buildLetterGroups(flatList){
 }
 function currentAssetGroup(){ return (state.product && state.product.assetGroup) || 'shared'; }
 
+// One request for the whole repo tree, cached in localStorage — see the
+// comment above PINS_TREE_URL for why this replaced one-fetch-per-folder.
+async function fetchPinsAssetTree(){
+  try {
+    const cached = JSON.parse(localStorage.getItem(PINS_TREE_CACHE_KEY) || 'null');
+    if (cached && Array.isArray(cached.paths) && Date.now() - cached.t < PINS_TREE_CACHE_TTL) return cached.paths;
+  } catch(e){ /* corrupt cache entry — just refetch */ }
+  const res = await fetch(PINS_TREE_URL);
+  if (!res.ok) throw new Error('GitHub tree fetch failed: ' + res.status);
+  const data = await res.json();
+  const paths = (data.tree || [])
+    .filter(it => it.type==='blob' && it.path.startsWith('assets/pins/'))
+    .map(it => it.path);
+  try { localStorage.setItem(PINS_TREE_CACHE_KEY, JSON.stringify({ t: Date.now(), paths })); } catch(e){ /* storage full/disabled — just skip caching */ }
+  return paths;
+}
+
 // basePath is '' for the shared/global folders (assets/pins/<category>/,
 // unchanged from before groups existed) or '<groupId>/' for an isolated
-// product's own folders (assets/pins/<groupId>/<category>/).
-async function fetchAssetGroup(basePath, overrides){
+// product's own folders (assets/pins/<groupId>/<category>/). Builds a group's
+// asset set entirely client-side from the already-fetched repo tree — no
+// network calls here.
+function buildAssetSetFromTree(treePaths, basePath, overrides){
   const set = emptyAssetSet();
-  await Promise.all(ASSET_CATEGORIES.map(async cat => {
-    try {
-      const res = await fetch(PINS_REPO_CONTENTS_BASE + basePath + cat);
-      if (!res.ok) return; // folder missing/empty — that category just stays empty
-      const items = await res.json();
-      const key = CATEGORY_TO_SET_KEY[cat];
-      items
-        .filter(it => it.type==='file' && /\.(png|jpe?g|webp|gif)$/i.test(it.name))
-        .forEach(it => {
-          const url = PINS_RAW_BASE + basePath + cat + '/' + it.name;
-          set[key].push({ label: overrides[url] || assetLabelFromFilename(it.name), src: url, name: it.name });
-        });
-    } catch(e){
-      // offline or GitHub unreachable — that category's presets just stay empty
-    }
-  }));
+  ASSET_CATEGORIES.forEach(cat => {
+    const prefix = 'assets/pins/' + basePath + cat + '/';
+    const key = CATEGORY_TO_SET_KEY[cat];
+    treePaths.forEach(path => {
+      if (!path.startsWith(prefix)) return;
+      const name = path.slice(prefix.length);
+      if (name.includes('/') || !/\.(png|jpe?g|webp|gif)$/i.test(name)) return; // skip nested dirs / non-images
+      const url = PINS_RAW_BASE + basePath + cat + '/' + name;
+      set[key].push({ label: overrides[url] || assetLabelFromFilename(name), src: url, name });
+    });
+  });
   return set;
 }
 
@@ -3244,9 +3268,11 @@ function applyAssetGroup(groupId){
 async function loadPinAssetManifest(){
   let overrides = {};
   try { overrides = await getAssetLabelOverrides(); } catch(e){}
+  let treePaths = [];
+  try { treePaths = await fetchPinsAssetTree(); }
+  catch(e){ /* offline/rate-limited — every category just stays empty, same as before */ }
   const groups = ['shared', ...NEW_PRODUCT_ASSET_GROUPS];
-  const results = await Promise.all(groups.map(g => fetchAssetGroup(g==='shared' ? '' : g+'/', overrides)));
-  groups.forEach((g,i) => { ASSET_GROUP_CACHE[g] = results[i]; });
+  groups.forEach(g => { ASSET_GROUP_CACHE[g] = buildAssetSetFromTree(treePaths, g==='shared' ? '' : g+'/', overrides); });
   applyAssetGroup(currentAssetGroup());
   renderCanvasBgDecor(); // in case the design step is already open when presets finish loading
 }

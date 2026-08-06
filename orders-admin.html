@@ -772,9 +772,33 @@ const ASSET_CATEGORIES = [
   { id:'borders', label:'Borders' },
   { id:'background', label:'Background' },
   { id:'characters', label:'Characters' },
+  { id:'letters', label:'Letters' },
 ];
-const ASSET_REPO_CONTENTS_BASE = 'https://api.github.com/repos/campingchairph/morphii/contents/assets/pins/';
 const ASSET_RAW_BASE = 'https://raw.githubusercontent.com/campingchairph/morphii/main/assets/pins/';
+// Same one-request-for-the-whole-repo approach as create.js (see the comment
+// above PINS_TREE_URL there) — this monitor used to hit the per-folder
+// Contents API on every tab/group click, sharing the same 60-req/hr
+// unauthenticated GitHub limit as every customer designing a pin. Reusing
+// the SAME localStorage cache key means an admin browsing this modal doesn't
+// burn any of that budget if a customer's page already populated it (or
+// vice versa).
+const PINS_TREE_URL = 'https://api.github.com/repos/campingchairph/morphii/git/trees/main?recursive=1';
+const PINS_TREE_CACHE_KEY = 'morphii_pins_asset_tree_v1';
+const PINS_TREE_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+async function fetchPinsAssetTree(){
+  try {
+    const cached = JSON.parse(localStorage.getItem(PINS_TREE_CACHE_KEY) || 'null');
+    if (cached && Array.isArray(cached.paths) && Date.now() - cached.t < PINS_TREE_CACHE_TTL) return cached.paths;
+  } catch(e){ /* corrupt cache entry — just refetch */ }
+  const res = await fetch(PINS_TREE_URL);
+  if (!res.ok) throw new Error('GitHub tree fetch failed: ' + res.status);
+  const data = await res.json();
+  const paths = (data.tree || [])
+    .filter(it => it.type==='blob' && it.path.startsWith('assets/pins/'))
+    .map(it => it.path);
+  try { localStorage.setItem(PINS_TREE_CACHE_KEY, JSON.stringify({ t: Date.now(), paths })); } catch(e){ /* storage full/disabled — just skip caching */ }
+  return paths;
+}
 
 function assetLabelFromFilename(name){
   return name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase());
@@ -821,20 +845,20 @@ async function setAssetCat(id){
 }
 window.setAssetCat = setAssetCat;
 
-// GitHub's Contents API lists whatever is actually in the folder right now —
-// unauthenticated (fine for a public repo, just rate-limited to 60/hr, which
-// is plenty for occasional admin use).
+// Reads from the cached whole-repo tree (see fetchPinsAssetTree above)
+// instead of hitting GitHub per folder — see the comment on PINS_TREE_URL.
 async function loadAssetCatFiles(){
   const list = document.getElementById('assetFilesList');
   list.innerHTML = '<div style="color:var(--ink-dim);font-size:12px;">Loading files from GitHub…</div>';
   const base = assetGroupBasePath();
+  const prefix = 'assets/pins/' + base + currentAssetCat + '/';
   try {
-    const res = await fetch(ASSET_REPO_CONTENTS_BASE + base + currentAssetCat);
-    if (!res.ok) throw new Error('GitHub returned ' + res.status);
-    const items = await res.json();
-    currentAssetFiles = items
-      .filter(it => it.type==='file' && /\.(png|jpe?g|webp|gif)$/i.test(it.name))
-      .map(it => ({ name: it.name, url: ASSET_RAW_BASE + base + currentAssetCat + '/' + it.name }));
+    const treePaths = await fetchPinsAssetTree();
+    currentAssetFiles = treePaths
+      .filter(path => path.startsWith(prefix))
+      .map(path => path.slice(prefix.length))
+      .filter(name => !name.includes('/') && /\.(png|jpe?g|webp|gif)$/i.test(name))
+      .map(name => ({ name, url: ASSET_RAW_BASE + base + currentAssetCat + '/' + name }));
   } catch(e){
     currentAssetFiles = [];
     list.innerHTML = `<div style="color:#ff9b98;font-size:12px;font-weight:700;">Couldn't load files from GitHub: ${escHtml(e.message)}</div>`;
