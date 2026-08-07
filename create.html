@@ -78,20 +78,18 @@
           <svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
         </button>
       </div>
-      <!-- Static info, in normal flow above the pin (not floating) — legend
-           and warnings stay put regardless of what's happening with the
-           tools below, and the pin only ever resizes if one of these rare
-           warnings actually toggles, not on every tool interaction. -->
-      <div class="cr-floating-notes">
-        <div class="cr-legend">
-          <span><i class="cr-legend-swatch cr-legend-cut"></i>Cut line</span>
-          <span><i class="cr-legend-swatch cr-legend-safe"></i>Safe area</span>
-        </div>
-        <div class="cr-privacy-note">This preview is watermarked for privacy — your printed pin will be clean.</div>
-        <div class="cr-privacy-note">Pinch to zoom in for detail work, two fingers to pan around while zoomed, double-tap to reset.</div>
-      </div>
-      <div class="cr-cutline-warning" id="cutlineWarning" style="display:none">
-        ⚠️ Something's hanging past the cut line and won't fully print — drag it back inside the red circle.
+      <!-- Compact icon row, in normal flow above the pin (not floating) — a
+           tap opens a popup instead of showing full text, so this takes
+           almost no vertical space, leaving more room for the dock below.
+           The warning icon stays hidden until something actually overlaps
+           the cut line (see updateCutlineWarning). -->
+      <div class="cr-info-warning-row">
+        <button class="cr-info-icon-btn" onclick="openInfoModal()" title="About this preview">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.7" r="0.6" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="cr-warning-icon-btn" id="cutlineWarningBtn" onclick="openWarningModal()" style="display:none" title="Something's outside the cut line">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l9.5 16.5H2.5L12 3.5z"/><path d="M12 10v4"/><circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none"/></svg>
+        </button>
       </div>
       <div class="cr-next-disabled-note" id="nextDisabledNote" style="display:none">
         Next is off because your background photo came from a link that blocks printing — upload it as a file instead, or remove it.
@@ -310,6 +308,32 @@
     </div>
   </div>
 
+  <!-- INFO POPUP — the cut-line/safe-area legend + watermark note, reached
+       via the small "i" icon above the pin instead of always-on text. -->
+  <div class="cr-modal-overlay" id="infoModalOverlay">
+    <div class="cr-modal" style="max-width:320px">
+      <div class="cr-modal-title">About This Preview</div>
+      <div class="cr-legend">
+        <span><i class="cr-legend-swatch cr-legend-cut"></i>Cut line</span>
+        <span><i class="cr-legend-swatch cr-legend-safe"></i>Safe area</span>
+      </div>
+      <div class="cr-privacy-note" style="margin-top:10px">This preview is watermarked for privacy — your printed pin will be clean.</div>
+      <button class="cr-btn-primary" style="margin-top:16px" onclick="closeInfoModal()">Got it</button>
+    </div>
+  </div>
+
+  <!-- WARNING POPUP — reached via the warning icon above the pin, which
+       stays hidden until something actually overlaps the cut line (see
+       updateCutlineWarning in create.js). Lists which object(s) overlap. -->
+  <div class="cr-modal-overlay" id="warningModalOverlay">
+    <div class="cr-modal" style="max-width:320px">
+      <div class="cr-modal-title">Outside the Cut Line</div>
+      <div class="cr-warning">Something's hanging past the cut line and won't fully print — drag it back inside the red circle.</div>
+      <div class="cr-warning-overlap-list" id="warningOverlapList"></div>
+      <button class="cr-btn-primary" style="margin-top:16px" onclick="closeWarningModal()">Got it</button>
+    </div>
+  </div>
+
 </main>
 
 <!-- Firebase SDK (compat mode — no build step needed) -->
@@ -320,6 +344,6 @@
 <!-- EmailJS (sends the confirmation email client-side, no backend needed) -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="email-config.js"></script>
-<script src="create.js?v=33"></script>
+<script src="create.js?v=34"></script>
 </body>
 </html>

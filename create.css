@@ -260,13 +260,33 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
   accent-color:var(--pill);
 }
 
-/* Legend + privacy note — normal flow, above the pin (not part of
-   .cr-floating-tools), so they stay put regardless of dock/panel state. */
-.cr-floating-notes{
-  background:rgba(255,255,255,0.85);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
-  border-radius:14px;padding:8px 10px;box-shadow:var(--shadow-sm);
-  display:flex;flex-direction:column;gap:4px;flex-shrink:0;
+/* Info/warning icon row — normal flow, above the pin (not part of
+   .cr-floating-tools), so it stays put regardless of dock/panel state.
+   Replaces what used to be always-visible legend/privacy/warning text —
+   now a tap-to-open popup instead, freeing up vertical space for the dock
+   below to show more tool icons at once. */
+.cr-info-warning-row{display:flex;justify-content:center;gap:8px;flex-shrink:0;}
+.cr-info-icon-btn,.cr-warning-icon-btn{
+  width:28px;height:28px;border-radius:50%;flex-shrink:0;
+  background:var(--card);border:1px solid var(--border);color:var(--ink-dim);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow-sm);
 }
+.cr-info-icon-btn svg,.cr-warning-icon-btn svg{width:15px;height:15px;}
+.cr-warning-icon-btn{
+  color:#c23d5e;border-color:rgba(255,111,145,0.35);
+  animation:crWarningFlash 1.8s ease-in-out infinite;
+}
+@keyframes crWarningFlash{
+  0%,100%{background:var(--card);box-shadow:var(--shadow-sm);}
+  50%{background:#ff6f91;border-color:#ff6f91;color:#fff;box-shadow:0 0 10px rgba(255,111,145,0.55);}
+}
+.cr-warning-overlap-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;justify-content:center;}
+.cr-warning-overlap-thumb{
+  width:34px;height:34px;border-radius:8px;overflow:hidden;flex-shrink:0;
+  background:var(--cream-deep);display:flex;align-items:center;justify-content:center;color:var(--ink-dim);
+}
+.cr-warning-overlap-thumb img{width:100%;height:100%;object-fit:cover;}
+.cr-warning-overlap-thumb svg{width:17px;height:17px;}
 
 /* Row of floating action buttons underneath the pin — isolate (full-screen)
    on the left, layers on the right. */
@@ -306,8 +326,7 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
    is baked into the canvas drawing, so it stays visible regardless. */
 .cr-design-app.isolate .cr-design-topbar,
 .cr-design-app.isolate .cr-next-disabled-note,
-.cr-design-app.isolate .cr-cutline-warning,
-.cr-design-app.isolate .cr-floating-notes,
+.cr-design-app.isolate .cr-info-warning-row,
 .cr-design-app.isolate .cr-tool-rise-panel,
 .cr-design-app.isolate .cr-dock{
   display:none;
@@ -317,37 +336,22 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
   font-size:10.5px;font-weight:700;color:#c23d5e;background:var(--coral-light);
   border:1px solid rgba(255,111,145,0.35);border-radius:10px;padding:8px 10px;line-height:1.4;
 }
-.cr-cutline-warning{
-  font-size:10.5px;font-weight:700;color:#c23d5e;background:var(--coral-light);
-  border:1px solid rgba(255,111,145,0.35);border-radius:10px;padding:8px 10px;line-height:1.4;
-  text-align:center;flex-shrink:0;
-}
 
 .cr-privacy-note{font-size:9.5px;color:var(--ink-dim);text-align:center;font-weight:700;line-height:1.4;opacity:0.85;}
 
-/* ── BOTTOM DOCK (GoDaddy-Studio style icon bar) ── */
+/* ── BOTTOM DOCK (GoDaddy-Studio style icon bar) — wraps into rows instead
+   of horizontal-scrolling, so as many tool icons as possible are visible
+   at once without needing to swipe (a max-height + scroll is only a safety
+   net for the rare case of more icons than fit). ── */
 .cr-dock{
   background:var(--card);border:1.5px solid var(--border);border-radius:18px;
   box-shadow:var(--shadow-sm);min-height:64px;display:flex;align-items:stretch;
-  flex-shrink:0;
+  flex-shrink:0;max-height:40vh;overflow-y:auto;
 }
-.cr-add-row{display:flex;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;}
-.cr-add-row::-webkit-scrollbar{display:none;}
+.cr-add-row{display:flex;flex-wrap:wrap;align-content:flex-start;flex:1;min-width:0;}
 
-/* Left/right fade+arrow indicators shared by the add-row and tool-row —
-   dim/inert when the row doesn't overflow, brighten on the side that still
-   has more content, so it's obvious there's more to swipe to. */
-.cr-dock-scroll-wrap{flex:1;min-width:0;display:flex;align-items:stretch;}
-.cr-dock-scroll-arrow{
-  flex-shrink:0;width:24px;display:flex;align-items:center;justify-content:center;
-  border:none;background:none;color:var(--ink-dim);cursor:pointer;padding:0;
-  opacity:0;pointer-events:none;transition:opacity 0.15s ease,color 0.15s ease;
-}
-.cr-dock-scroll-arrow svg{width:19px;height:19px;}
-.cr-dock-scroll-arrow.cr-visible{opacity:0.35;pointer-events:auto;}
-.cr-dock-scroll-arrow.cr-visible.active{opacity:1;color:var(--coral);}
 .cr-dock-btn{
-  flex:1;min-width:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  flex:0 0 25%;min-width:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
   padding:10px 6px;border:none;background:none;color:var(--ink);cursor:pointer;
 }
 .cr-dock-btn:active{opacity:0.6;}
@@ -361,19 +365,16 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 .cr-dock-label{font-size:9.5px;font-weight:800;color:var(--ink-dim);}
 
 /* Tool-row: shown instead of the add-row once something is selected. A fixed
-   close (X) button sits outside the swipeable strip so it's always reachable. */
+   close (X) button sits outside the wrapping grid so it's always reachable. */
 .cr-tool-row-close{
   flex-shrink:0;width:44px;display:flex;align-items:center;justify-content:center;
   border:none;border-right:1px solid var(--border);background:none;color:var(--ink-dim);cursor:pointer;
 }
 .cr-tool-row-close svg{width:16px;height:16px;}
-.cr-tool-row-scroll{
-  flex:1;display:flex;overflow-x:auto;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none;
-}
-.cr-tool-row-scroll::-webkit-scrollbar{display:none;}
+.cr-tool-row-scroll{flex:1;display:flex;flex-wrap:wrap;align-content:flex-start;min-width:0;}
 .cr-tool-btn{
-  flex-shrink:0;min-width:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
-  padding:10px 8px;border:none;background:none;color:var(--ink);cursor:pointer;scroll-snap-align:start;
+  flex:0 0 25%;min-width:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  padding:10px 8px;border:none;background:none;color:var(--ink);cursor:pointer;
 }
 .cr-tool-btn:active{opacity:0.6;}
 .cr-tool-icon{width:22px;height:22px;display:flex;align-items:center;justify-content:center;color:var(--ink-dim);}
@@ -650,7 +651,6 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 }
 .cr-canvas-stage canvas{width:100%;height:100%;display:block;cursor:grab;border-radius:50%;}
 .cr-canvas-stage canvas:active{cursor:grabbing;}
-.cr-canvas-stage.cr-view-snapping{transition:transform 0.25s ease;}
 .cr-legend{display:flex;justify-content:center;gap:18px;font-size:10.5px;font-weight:800;color:var(--ink-dim);}
 .cr-legend-swatch{display:inline-block;width:14px;height:3px;margin-right:6px;vertical-align:middle;border-radius:2px;}
 .cr-legend-cut{background:var(--coral);}

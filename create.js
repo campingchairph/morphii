@@ -612,8 +612,8 @@ function pushGeneratedText(text, opts){
   pushLayer({ kind:'text', id: line.id });
 }
 
-// xFrac/yFrac aren't passed through here on purpose — see the note on
-// ELECTION_TEMPLATES above, the Character slot always renders centered.
+// Starts centered (xFrac/yFrac 0,0) like every other generated element —
+// the customer can drag it afterward same as any other layer.
 function setGeneratedPhoto(dataUrl, scale){
   return new Promise(resolve => {
     const img = new Image();
@@ -966,7 +966,7 @@ function goStep(name){
   window.scrollTo({top:0,behavior:'smooth'});
   if (name==='template'){ renderTemplateGrid(); }
   if (name==='pinTemplates'){ _pinTemplateActiveType = null; renderPinTemplateGrid(); }
-  if (name==='design'){ setupCanvas(); drawPreview(); renderCanvasBgDecor(); updateCanvasBorderRing(); resetCanvasView(); updateAdminUI(); }
+  if (name==='design'){ setupCanvas(); drawPreview(); renderCanvasBgDecor(); updateCanvasBorderRing(); updateAdminUI(); }
   if (name==='submit'){ renderSubmitSummary(); }
 }
 window.goStep = goStep;
@@ -1086,46 +1086,6 @@ window.addEventListener('resize', ()=>{
   if (document.getElementById('step-design').classList.contains('active')) sizeCanvasStage();
 });
 
-/* ── CANVAS VIEW ZOOM/PAN — a pure CSS transform on #canvasStage so the
-   customer can zoom in close for detail work. Doesn't touch any design
-   data or coordinates: pointerFrac() below already reads
-   getBoundingClientRect() fresh on every pointer event, and that always
-   reflects the current on-screen (post-transform) size/position, so
-   dragging/resizing/hit-testing all keep working correctly at any zoom
-   level with no changes needed there. Only active when the existing
-   background-photo pinch/scroll gesture isn't (see bindCanvasInteractions)
-   so the two never compete for the same two-finger gesture. ── */
-let canvasViewZoom = 1, canvasViewPanX = 0, canvasViewPanY = 0;
-const CANVAS_VIEW_ZOOM_MIN = 1, CANVAS_VIEW_ZOOM_MAX = 3;
-
-function applyCanvasViewTransform(){
-  const stage = document.getElementById('canvasStage');
-  if (!stage) return;
-  stage.style.transform = `translate(${canvasViewPanX}px, ${canvasViewPanY}px) scale(${canvasViewZoom})`;
-}
-
-function clampCanvasViewPan(){
-  const stage = document.getElementById('canvasStage');
-  if (!stage) return;
-  const maxPan = (canvasViewZoom - 1) * stage.offsetWidth / 2;
-  canvasViewPanX = Math.max(-maxPan, Math.min(maxPan, canvasViewPanX));
-  canvasViewPanY = Math.max(-maxPan, Math.min(maxPan, canvasViewPanY));
-}
-
-function resetCanvasView(){
-  const stage = document.getElementById('canvasStage');
-  canvasViewZoom = 1; canvasViewPanX = 0; canvasViewPanY = 0;
-  if (!stage) return;
-  stage.classList.add('cr-view-snapping');
-  applyCanvasViewTransform();
-  setTimeout(()=>stage.classList.remove('cr-view-snapping'), 260);
-}
-window.resetCanvasView = resetCanvasView;
-
-function touchMid(touches){
-  return { x:(touches[0].clientX+touches[1].clientX)/2, y:(touches[0].clientY+touches[1].clientY)/2 };
-}
-
 const ICON_EXPAND   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/></svg>';
 const ICON_COLLAPSE  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v3a2 2 0 01-2 2H4M15 3v3a2 2 0 002 2h3M9 21v-3a2 2 0 00-2-2H4M15 21v-3a2 2 0 012-2h3"/></svg>';
 
@@ -1140,7 +1100,6 @@ function toggleIsolateMode(){
   btn.classList.toggle('active', on);
   btn.title = on ? 'Exit full-screen view' : 'Full-screen view';
   btn.innerHTML = on ? ICON_COLLAPSE : ICON_EXPAND;
-  resetCanvasView(); // stage's base size is about to change — old pixel pan/zoom values wouldn't line up
   sizeCanvasStage();
   requestAnimationFrame(sizeCanvasStage);
 }
@@ -1192,8 +1151,6 @@ const ICON_EDIT       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 const ICON_TRASH      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6"/></svg>';
 const ICON_LAYERS     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>';
 const ICON_GRIP       = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
-const ICON_CHEVRON_L  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>';
-const ICON_CHEVRON_R  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
 const ICON_SUN        = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8l1.8-1.8M18 6l1.8-1.8"/></svg>';
 const ICON_MOON       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1110 3.2a6.8 6.8 0 0010 11.3z"/></svg>';
 
@@ -1297,9 +1254,6 @@ function renderDock(){
   if (!dock) return;
   const isToolRow = !!state.selected;
   dock.innerHTML = isToolRow ? toolRowHtml() : addRowHtml();
-  const prefix = isToolRow ? 'toolRow' : 'addRow';
-  const scrollId = isToolRow ? 'toolRowScroll' : 'addRowScroll';
-  requestAnimationFrame(()=>initDockScroll(prefix, scrollId));
   updateCanvasFabButtons();
 }
 
@@ -1326,36 +1280,6 @@ function duplicateSelectedSticker(){
 }
 window.duplicateSelectedSticker = duplicateSelectedSticker;
 
-// Left/right fade+arrow indicators for the horizontally-swipeable dock rows
-// — only lit up when the row actually overflows, so short rows (e.g.
-// Background's icon set) stay uncluttered. The arrows themselves (thick,
-// high-contrast when active) are the only "there's more" signal now.
-function scrollDockRow(scrollId, dir){
-  const row = document.getElementById(scrollId);
-  if (!row) return;
-  row.scrollBy({ left: dir * row.clientWidth * 0.7, behavior:'smooth' });
-}
-window.scrollDockRow = scrollDockRow;
-
-function updateDockScrollIndicators(prefix, scrollId){
-  const row = document.getElementById(scrollId);
-  const left = document.getElementById(prefix+'ArrowLeft');
-  const right = document.getElementById(prefix+'ArrowRight');
-  if (!row || !left || !right) return;
-  const overflow = row.scrollWidth > row.clientWidth + 2;
-  left.classList.toggle('cr-visible', overflow);
-  right.classList.toggle('cr-visible', overflow);
-  left.classList.toggle('active', overflow && row.scrollLeft > 4);
-  right.classList.toggle('active', overflow && row.scrollLeft < row.scrollWidth - row.clientWidth - 4);
-}
-
-function initDockScroll(prefix, scrollId){
-  const row = document.getElementById(scrollId);
-  if (!row) return;
-  row.addEventListener('scroll', ()=>updateDockScrollIndicators(prefix, scrollId));
-  updateDockScrollIndicators(prefix, scrollId);
-}
-
 function addRowHtml(){
   const allItems = [
     { kind:'background', onclick:'quickSelectBackground()', icon: bgChipThumb(), label:'Background', thumb:true },
@@ -1374,11 +1298,7 @@ function addRowHtml(){
       <span class="cr-dock-icon ${it.thumb?'cr-dock-icon-thumb':''}">${it.icon}</span>
       <span class="cr-dock-label">${it.label}</span>
     </button>`).join('');
-  return `<div class="cr-dock-scroll-wrap">
-    <button class="cr-dock-scroll-arrow" id="addRowArrowLeft" onclick="scrollDockRow('addRowScroll',-1)" aria-label="Scroll left">${ICON_CHEVRON_L}</button>
-    <div class="cr-add-row" id="addRowScroll">${btns}</div>
-    <button class="cr-dock-scroll-arrow" id="addRowArrowRight" onclick="scrollDockRow('addRowScroll',1)" aria-label="Scroll right">${ICON_CHEVRON_R}</button>
-  </div>`;
+  return `<div class="cr-add-row">${btns}</div>`;
 }
 
 function toolIconsForSelection(){
@@ -1461,11 +1381,7 @@ function toolRowHtml(){
   }).join('');
   return `
     <button class="cr-tool-row-close" onclick="deselectLayer()" title="Done">${ICON_CLOSE}</button>
-    <div class="cr-dock-scroll-wrap">
-      <button class="cr-dock-scroll-arrow" id="toolRowArrowLeft" onclick="scrollDockRow('toolRowScroll',-1)" aria-label="Scroll left">${ICON_CHEVRON_L}</button>
-      <div class="cr-tool-row-scroll" id="toolRowScroll">${btns}</div>
-      <button class="cr-dock-scroll-arrow" id="toolRowArrowRight" onclick="scrollDockRow('toolRowScroll',1)" aria-label="Scroll right">${ICON_CHEVRON_R}</button>
-    </div>`;
+    <div class="cr-tool-row-scroll">${btns}</div>`;
 }
 
 /* ── RISING TOOL PANEL (compact bottom sheet, one control at a time) ── */
@@ -2265,7 +2181,7 @@ window.removeSticker = removeSticker;
 function setStickerScale(id, val){ setPlacedScale('sticker', id, val); }
 window.setStickerScale = setStickerScale;
 
-/* ── CENTER CHARACTER TOOL PANELS (single, big, always centered) ── */
+/* ── CHARACTER TOOL PANELS (single, big mascot/logo slot — freely draggable) ── */
 function characterToolPanelHtml(tool){
   const c = state.character;
   if (!c){
@@ -2281,7 +2197,7 @@ function characterToolPanelHtml(tool){
       <div class="cr-field-label">Size <span class="cr-slider-val" id="charSizeVal">${sizePct}%</span></div>
       <input type="range" class="cr-range cr-range-mid" min="1" max="199" value="${sizePct}"
         oninput="setCharacterScale(this.value/100); document.getElementById('charSizeVal').textContent=this.value+'%'">
-      <div class="cr-hint">Position is always centered — slide left of center to shrink, right to grow. You can also pinch to resize, and use the slider on the right to rotate.</div>`;
+      <div class="cr-hint">Drag on the pin to reposition, or pinch to resize. Use the slider on the right to rotate.</div>`;
   }
   return '';
 }
@@ -2509,7 +2425,7 @@ function hitTestTopmost(xFrac, yFrac){
       const el = placedArray(d.kind).find(x=>x.id===d.id);
       if (el && hitTestOneSticker(el, xFrac, yFrac)) return { kind:d.kind, el };
     } else if (d.kind==='character'){
-      if (state.character && dist2(xFrac,yFrac,0,0) <= Math.pow(elementRadiusFrac(state.character,'character'),2)){
+      if (state.character && dist2(xFrac,yFrac,state.character.xFrac||0,state.character.yFrac||0) <= Math.pow(elementRadiusFrac(state.character,'character'),2)){
         return { kind:'character', el:state.character };
       }
     } else if (d.kind==='border'){
@@ -2589,9 +2505,8 @@ function bindCanvasInteractions(canvas){
     if (hit){
       const d = hit.kind==='character' ? { kind:'character' } : { kind:hit.kind, id:hit.el.id };
       if (layerKey(state.selected)!==layerKey(d)) selectLayer(d);
-      // Character never gets a 'move' drag (always centered); a locked
-      // element can be selected (to unlock it) but not dragged.
-      if (hit.kind!=='character' && !hit.el.locked) startElementDrag(canvas, e, hit.el);
+      // A locked element can be selected (to unlock it) but not dragged.
+      if (!hit.el.locked) startElementDrag(canvas, e, hit.el);
       return;
     }
 
@@ -2636,38 +2551,23 @@ function bindCanvasInteractions(canvas){
     if (target){
       applyResizeRatioTarget(target, resizeStartScaleFor(target.el, target.kind), delta);
       drawPreview();
-    } else {
-      canvasViewZoom = Math.max(CANVAS_VIEW_ZOOM_MIN, Math.min(CANVAS_VIEW_ZOOM_MAX, canvasViewZoom*delta));
-      clampCanvasViewPan();
-      applyCanvasViewTransform();
     }
+    // else: nothing selected/resizable — no-op (canvas view zoom removed,
+    // it was glitching other objects' geometry math while active).
   }, { passive:false });
 
-  // Two-finger touch drives either the selected element's (or background's)
-  // pinch-to-resize, or the canvas view's zoom+pan otherwise — the two never
-  // fight over the same gesture since resizeTarget() is resolved once at
-  // touchstart and that branch sticks for the whole gesture.
+  // Two-finger touch pinch-resizes whichever element is selected (or the
+  // background photo). There's no canvas-view-zoom fallback anymore — with
+  // nothing to resize, a two-finger touch just does nothing.
   let pinchTarget = null, pinchStartDist = null, pinchStartScale = 1;
-  let viewPinchActive = false, viewPinchStartDist = 1, viewPinchStartZoom = 1;
-  let viewPinchStartMid = null, viewPinchStartPanX = 0, viewPinchStartPanY = 0;
-  let lastTapTime = 0;
 
   canvas.addEventListener('touchstart', e=>{
     if (e.touches.length===2){
       const target = resizeTarget();
+      pinchTarget = target;
       if (target){
-        pinchTarget = target;
         pinchStartDist = touchDist(e.touches);
         pinchStartScale = resizeStartScaleFor(target.el, target.kind);
-        viewPinchActive = false;
-      } else {
-        pinchTarget = null;
-        viewPinchActive = true;
-        viewPinchStartDist = touchDist(e.touches);
-        viewPinchStartZoom = canvasViewZoom;
-        viewPinchStartMid = touchMid(e.touches);
-        viewPinchStartPanX = canvasViewPanX;
-        viewPinchStartPanY = canvasViewPanY;
       }
     }
   }, { passive:true });
@@ -2678,32 +2578,13 @@ function bindCanvasInteractions(canvas){
       const d = touchDist(e.touches);
       applyResizeRatioTarget(pinchTarget, pinchStartScale, d/pinchStartDist);
       drawPreview();
-    } else if (e.touches.length===2 && viewPinchActive){
-      e.preventDefault();
-      const d = touchDist(e.touches);
-      const mid = touchMid(e.touches);
-      canvasViewZoom = Math.max(CANVAS_VIEW_ZOOM_MIN, Math.min(CANVAS_VIEW_ZOOM_MAX, viewPinchStartZoom * (d/viewPinchStartDist)));
-      canvasViewPanX = viewPinchStartPanX + (mid.x - viewPinchStartMid.x);
-      canvasViewPanY = viewPinchStartPanY + (mid.y - viewPinchStartMid.y);
-      clampCanvasViewPan();
-      applyCanvasViewTransform();
     }
   }, { passive:false });
 
   canvas.addEventListener('touchend', e=>{
     pinchTarget = null;
     pinchStartDist = null;
-    viewPinchActive = false;
-    // Double-tap to reset the view zoom — only counts a clean single-finger
-    // tap (not the two fingers of a pinch lifting off together).
-    if (e.touches.length===0 && e.changedTouches && e.changedTouches.length===1){
-      const now = Date.now();
-      if (now - lastTapTime < 320 && canvasViewZoom > 1) resetCanvasView();
-      lastTapTime = now;
-    }
   });
-
-  canvas.addEventListener('dblclick', ()=>{ if (canvasViewZoom > 1) resetCanvasView(); });
 }
 function touchDist(touches){
   const dx = touches[0].clientX-touches[1].clientX, dy = touches[0].clientY-touches[1].clientY;
@@ -2809,7 +2690,7 @@ function drawBorder(ctx, artboardPx){
 function drawOneCharacter(ctx, artboardPx){
   if (!state.character || !state.character.img) return;
   const c = state.character;
-  drawPlacedImage(ctx, artboardPx, c.img, 0, 0, CHARACTER_BASE_R*2*c.scale, c.rotation||0);
+  drawPlacedImage(ctx, artboardPx, c.img, c.xFrac||0, c.yFrac||0, CHARACTER_BASE_R*2*c.scale, c.rotation||0);
 }
 
 function drawPlacedImage(ctx, artboardPx, img, xFrac, yFrac, dFrac, rotation){
@@ -3105,27 +2986,58 @@ function drawPreview(){
 // True if any character/sticker/shape/wordart/text currently extends past
 // the cut line — center position is clamped (see clampElementToCutLine),
 // but resizing after the fact can still push the edge past it.
-function anyElementOverlapsCutLine(){
-  if (!state.paperSize) return false;
+// Every element currently hanging past the cut line, as { kind, el } pairs
+// — used both to decide whether to show the warning icon at all, and to
+// list which specific objects it's complaining about in the popup.
+function overlappingElements(){
+  if (!state.paperSize) return [];
   const cutFrac = state.size / state.paperSize / 2;
   const overlaps = (el, kind) => {
     if (!el) return false;
     const dist = Math.hypot(el.xFrac||0, el.yFrac||0);
     return dist + elementRadiusFrac(el, kind) > cutFrac;
   };
-  if (overlaps(state.character, 'character')) return true;
-  if (state.textLines.some(t => overlaps(t, 'text'))) return true;
-  for (const kind of ['sticker','shape','wordart','letter']){
-    if (placedArray(kind).some(el => overlaps(el, kind))) return true;
-  }
-  return false;
+  const list = [];
+  if (overlaps(state.character, 'character')) list.push({ kind:'character', el: state.character });
+  if (overlaps(state.border, 'border')) list.push({ kind:'border', el: state.border });
+  state.textLines.forEach(t => { if (overlaps(t, 'text')) list.push({ kind:'text', el:t }); });
+  ['sticker','shape','wordart','letter'].forEach(kind => {
+    placedArray(kind).forEach(el => { if (overlaps(el, kind)) list.push({ kind, el }); });
+  });
+  return list;
+}
+function anyElementOverlapsCutLine(){ return overlappingElements().length > 0; }
+
+// The warning icon itself stays hidden until something actually overlaps —
+// see the file note on bindCanvasInteractions for why border/character can
+// overlap now too (both are freely repositionable).
+function updateCutlineWarning(){
+  const btn = document.getElementById('cutlineWarningBtn');
+  if (!btn) return;
+  btn.style.display = anyElementOverlapsCutLine() ? '' : 'none';
 }
 
-function updateCutlineWarning(){
-  const el = document.getElementById('cutlineWarning');
-  if (!el) return;
-  el.style.display = anyElementOverlapsCutLine() ? 'block' : 'none';
+function overlapItemThumb(item){
+  if (item.kind==='text') return ICON_TEXT;
+  if (item.el.img) return `<img src="${item.el.img.src}" alt="">`;
+  return item.kind==='character' ? ICON_CHARACTER : ICON_BORDER;
 }
+
+function openInfoModal(){ document.getElementById('infoModalOverlay').classList.add('show'); }
+function closeInfoModal(){ document.getElementById('infoModalOverlay').classList.remove('show'); }
+window.openInfoModal = openInfoModal;
+window.closeInfoModal = closeInfoModal;
+
+function openWarningModal(){
+  const list = overlappingElements();
+  document.getElementById('warningOverlapList').innerHTML = list.map(item =>
+    `<span class="cr-warning-overlap-thumb" title="${escHtml(layerLabelFor(item.kind==='character'?{kind:'character'}:item.kind==='border'?{kind:'border'}:{kind:item.kind,id:item.el.id}))}">${overlapItemThumb(item)}</span>`
+  ).join('');
+  document.getElementById('warningModalOverlay').classList.add('show');
+}
+function closeWarningModal(){ document.getElementById('warningModalOverlay').classList.remove('show'); }
+window.openWarningModal = openWarningModal;
+window.closeWarningModal = closeWarningModal;
 
 // Watermarked but WITHOUT guides/handles — those are live-editing chrome and
 // shouldn't appear in the submit-step review thumbnail or anywhere else the
