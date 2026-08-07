@@ -102,13 +102,23 @@
           <canvas id="designCanvas"></canvas>
         </div>
 
+        <!-- ELEMENT STRIP — the only way to select something now (tapping the
+             pin directly no longer selects, see bindCanvasInteractions in
+             create.js). One icon per placed element, swipeable left/right.
+             Tapping an unselected icon selects it; tapping the already-
+             selected icon toggles its lock instead (renderElementStrip). -->
+        <div class="cr-element-strip-wrap" id="elementStripWrap" style="display:none">
+          <div class="cr-element-strip-label">Lock / Unlock</div>
+          <div class="cr-element-strip" id="elementStrip"></div>
+        </div>
+
         <!-- ROTATE RAIL — fixed to the right of the pin, shown whenever a
              rotatable element is selected (see updateRotateRail() in
-             create.js). Top to bottom: lock toggle, icon of whatever's
-             selected, then a full -180..180 vertical slider. Not in normal
-             flow, so it never pushes the pin around. -->
+             create.js). Top to bottom: icon of whatever's selected, then a
+             full -180..180 vertical slider. Locking now lives on the
+             element strip above the pin instead (renderElementStrip). Not
+             in normal flow, so it never pushes the pin around. -->
         <div class="cr-rotate-rail" id="rotateRail" style="display:none">
-          <button class="cr-rotate-lock-btn" id="rotateLockBtn" onclick="toggleLockSelected()" title="Lock/unlock this layer"></button>
           <div class="cr-rotate-thumb" id="rotateThumb"></div>
           <div class="cr-rotate-slider-wrap">
             <input type="range" class="cr-rotate-slider" id="rotateSlider" min="-180" max="180" value="0" step="1"
@@ -358,6 +368,6 @@
 <!-- EmailJS (sends the confirmation email client-side, no backend needed) -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="email-config.js"></script>
-<script src="create.js?v=35"></script>
+<script src="create.js?v=36"></script>
 </body>
 </html>

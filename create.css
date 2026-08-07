@@ -157,17 +157,17 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 }
 .cr-icon{width:16px;height:16px;flex-shrink:0;}
 
-/* padding-bottom nudges the flex-centered pin upward within the wrap (it
-   doesn't shrink the pin itself — sizeCanvasStage reads clientHeight, which
-   includes padding — it just biases where centering lands), so less of it
-   sits behind the floating nav menu at the bottom. */
-/* justify-content:flex-start (not center) is deliberate — on iOS Safari the
+/* This is a ROW flex container (no flex-direction set), so align-items is
+   the VERTICAL axis and justify-content is the HORIZONTAL one —
+   align-items:flex-start (not center) is deliberate: on iOS Safari the
    address bar + bottom toolbar can dock over part of the viewport after
    this container's height is measured, so anything vertically centered in
    the full (chrome-inclusive) height ends up looking pushed down into the
    obscured area. Anchoring to the top keeps the pin — and the dock below
-   it — reliably in the visible area regardless of that browser chrome. */
-.cr-canvas-wrap{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:flex-start;padding-top:6px;padding-bottom:72px;}
+   it — reliably in the visible area regardless of that browser chrome.
+   justify-content:center keeps it horizontally centered as normal.
+   padding-bottom reserves room for the floating FAB row at the bottom. */
+.cr-canvas-wrap{position:relative;flex:1;min-height:0;display:flex;align-items:flex-start;justify-content:center;padding-top:6px;padding-bottom:72px;}
 
 /* Decorative sticker backdrop, purely visual — sits behind the canvas
    (z-index:0 vs the canvas's z-index:1). Driven entirely by a JS physics
@@ -246,13 +246,6 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
   --pill:#1E2A20; --pill-text:#FFFFFF;
   --sage-light:#E4ECDA; --coral-light:#FFE3EA;
 }
-.cr-rotate-lock-btn{
-  width:30px;height:30px;border-radius:50%;flex-shrink:0;
-  background:var(--card);border:1px solid var(--border);color:var(--ink);
-  display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow-sm);
-}
-.cr-rotate-lock-btn svg{width:14px;height:14px;}
-.cr-rotate-lock-btn.locked{background:#F4B740;border-color:#F4B740;color:#3A2400;}
 .cr-rotate-thumb{
   width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0;
   background:var(--card);border:1px solid var(--border);box-shadow:var(--shadow-sm);
@@ -287,6 +280,43 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
   width:150px;height:30px;margin:0;transform:rotate(-90deg);
   accent-color:var(--pill);
 }
+
+/* Element strip — sits over the top of the pin, between the rotate/resize
+   rails. Only way to select an element now (canvas taps no longer select,
+   see bindCanvasInteractions in create.js) and doubles as the lock toggle:
+   tap an unselected icon to select it, tap the selected icon again to
+   lock/unlock. Same forced light-mode vars as the rails, same reasoning. */
+.cr-element-strip-wrap{
+  position:absolute; top:4px; left:50%; transform:translateX(-50%);
+  z-index:5; max-width:calc(100% - 96px);
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  --cream:#F5F1DE; --card:#FFFFFF;
+  --ink:#22301F; --ink-dim:#6E7A69; --border:rgba(34,48,31,0.10);
+  --pill:#1E2A20; --pill-text:#FFFFFF;
+}
+.cr-element-strip-label{
+  font-size:10px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.05em;
+  background:rgba(255,255,255,0.85);padding:1px 8px;border-radius:8px;flex-shrink:0;
+}
+.cr-element-strip{
+  display:flex;gap:8px;overflow-x:auto;max-width:100%;padding:2px 3px;
+  scrollbar-width:none;
+}
+.cr-element-strip::-webkit-scrollbar{display:none;}
+.cr-element-strip-btn{
+  position:relative;width:34px;height:34px;border-radius:50%;flex-shrink:0;
+  background:var(--card);border:2px solid var(--border);overflow:hidden;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  box-shadow:var(--shadow-sm);padding:0;color:var(--ink);
+}
+.cr-element-strip-btn.selected{border-color:var(--pill);}
+.cr-element-strip-btn img{width:100%;height:100%;object-fit:contain;}
+.cr-element-strip-btn svg{width:16px;height:16px;}
+.cr-element-strip-lock-overlay{
+  position:absolute;inset:0;background:rgba(0,0,0,0.5);
+  display:flex;align-items:center;justify-content:center;color:#fff;
+}
+.cr-element-strip-lock-overlay svg{width:14px;height:14px;}
 
 /* Info/warning icon row — normal flow, above the pin (not part of
    .cr-floating-tools), so it stays put regardless of dock/panel state.
@@ -494,27 +524,37 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
   transition:transform 0.4s cubic-bezier(.2,.8,.3,1);
 }
 .cr-pin3d.dragging{transition:none;}
-/* A single 0-offset inset shadow darkens the rim uniformly on every side
-   (the center stays clear) — that uniform falloff is what reads as a dome
-   curving away from the viewer. A directional inset (darker on one side,
-   lighter on the other, which is what this used to be) reads as a shallow
-   dent instead, since that's the standard CSS convention for a "pressed
-   in" surface — the opposite of what a glossy embossed button looks like. */
+/* Two 0-offset inset shadows — a tight one right at the rim plus a much
+   broader one fading toward center — darken the edge uniformly on every
+   side (never directionally: a directional inset is the standard CSS
+   convention for a "pressed in" surface, the opposite of embossed). This
+   is the PRIMARY convexity cue since — unlike the highlight below — a dark
+   shadow stays visible no matter what color the design is, including a
+   still-blank white pin. */
 .cr-pin3d-face{
   position:absolute;inset:0;border-radius:50%;
   transform:translateZ(9px);
   box-shadow:0 16px 28px rgba(0,0,0,0.25),
-             inset 0 0 26px rgba(0,0,0,0.32);
+             inset 0 0 16px rgba(0,0,0,0.28),
+             inset 0 0 52px rgba(0,0,0,0.34);
 }
 .cr-pin3d-face canvas{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;display:block;-webkit-user-drag:none;}
-/* Specular highlight only — its position/size is recomputed on every drag
-   in applyPin3dTransform() (create.js), this is just the resting default.
-   soft-light blends it into the design's own colors (a warm glow) instead
-   of sitting on top as a flat white smear. */
+/* Specular highlight (bright, near the light source) plus a soft shadow on
+   the OPPOSITE side of the surface — classic diffuse+specular shading, not
+   a "dent": the previous version dropped the shadow half because paired
+   with the old directional face-shadow it read as a dent, but that was the
+   face shadow's fault (now fixed above), not this technique's. Position is
+   recomputed on every drag in applyPin3dTransform() (create.js); this is
+   just the resting default. soft-light lets the highlight both brighten
+   AND darken depending on the design's own colors, and — importantly —
+   still darkens visibly even where the design is pure white (a highlight
+   alone can't get brighter than white, so the shadow half is what keeps
+   the dome visible on a still-blank pin). */
 .cr-pin3d-shine{
   position:absolute;inset:0;border-radius:50%;pointer-events:none;
   mix-blend-mode:soft-light;
-  background:radial-gradient(circle at 63% 32%, rgba(255,255,255,0.95), rgba(255,255,255,0.55) 12%, rgba(255,255,255,0.12) 30%, rgba(255,255,255,0) 50%);
+  background:radial-gradient(circle at 63% 32%, rgba(255,255,255,0.95), rgba(255,255,255,0.55) 14%, rgba(255,255,255,0.12) 30%, rgba(255,255,255,0) 48%),
+             radial-gradient(circle at 37% 68%, rgba(0,0,0,0.32), rgba(0,0,0,0) 55%);
 }
 .cr-pin3d-rim{
   position:absolute;inset:0;border-radius:50%;pointer-events:none;

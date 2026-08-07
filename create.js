@@ -1255,6 +1255,7 @@ function renderDock(){
   const isToolRow = !!state.selected;
   dock.innerHTML = isToolRow ? toolRowHtml() : addRowHtml();
   updateCanvasFabButtons();
+  renderElementStrip();
 }
 
 // While a sticker is selected, its Duplicate/Add actions move from the dock
@@ -1752,6 +1753,39 @@ function layerLockedFor(d){
   const t = state.textLines.find(x=>x.id===d.id);
   return !!(t && t.locked);
 }
+
+/* ── ELEMENT STRIP (over the top of the pin) — the only way to select an
+   element now; tapping the canvas directly no longer selects anything
+   (see bindCanvasInteractions). Tapping an unselected icon selects it;
+   tapping the already-selected icon toggles its lock instead, so lock
+   and select share one control without either action stepping on the
+   other. Reuses the same descriptors/helpers as the Layers modal so
+   thumbnails, labels and lock state always agree with it. */
+function renderElementStrip(){
+  const wrap = document.getElementById('elementStripWrap');
+  const strip = document.getElementById('elementStrip');
+  if (!wrap || !strip) return;
+  const items = layersVisualList();
+  if (!items.length){ wrap.style.display = 'none'; strip.innerHTML = ''; return; }
+  wrap.style.display = '';
+  strip.innerHTML = items.map(d => {
+    const selected = layerKey(state.selected) === layerKey(d);
+    const locked = layerLockedFor(d);
+    return `
+      <button class="cr-element-strip-btn ${selected?'selected':''}" title="${escHtml(layerLabelFor(d))}"
+        onclick='onElementStripTap(${JSON.stringify(d)})'>
+        ${layerThumbFor(d)}${locked ? `<span class="cr-element-strip-lock-overlay">${ICON_LOCK}</span>` : ''}
+      </button>`;
+  }).join('');
+}
+window.renderElementStrip = renderElementStrip;
+
+function onElementStripTap(d){
+  const descriptor = { kind: d.kind, id: d.id };
+  if (layerKey(state.selected) === layerKey(descriptor)) toggleLock(d.kind, d.id);
+  else selectLayer(descriptor);
+}
+window.onElementStripTap = onElementStripTap;
 
 function renderLayersModal(){
   const list = document.getElementById('layersDragList');
@@ -2371,30 +2405,17 @@ function hitTestOneText(t, xFrac, yFrac){
   const rFrac = rPx / CANVAS_PX;
   return dist2(xFrac,yFrac,t.xFrac||0,t.yFrac||0) <= rFrac*rFrac;
 }
-// Walks state.layerOrder front-to-back so whichever element the user put on
-// top (via the Layers tab) is the one a tap lands on, regardless of kind.
-// Locked elements are still hit-tested (selectable) — see the file note above.
-function hitTestTopmost(xFrac, yFrac){
-  const list = state.layerOrder;
-  for (let i = list.length - 1; i >= 0; i--){
-    const d = list[i];
-    if (d.kind==='text'){
-      const t = state.textLines.find(x=>x.id===d.id);
-      if (t && hitTestOneText(t, xFrac, yFrac)) return { kind:'text', el:t };
-    } else if (d.kind==='sticker' || d.kind==='shape' || d.kind==='wordart' || d.kind==='letter'){
-      const el = placedArray(d.kind).find(x=>x.id===d.id);
-      if (el && hitTestOneSticker(el, xFrac, yFrac)) return { kind:d.kind, el };
-    } else if (d.kind==='character'){
-      if (state.character && dist2(xFrac,yFrac,state.character.xFrac||0,state.character.yFrac||0) <= Math.pow(elementRadiusFrac(state.character,'character'),2)){
-        return { kind:'character', el:state.character };
-      }
-    } else if (d.kind==='border'){
-      if (state.border && dist2(xFrac,yFrac,state.border.xFrac||0,state.border.yFrac||0) <= Math.pow(elementRadiusFrac(state.border,'border'),2)){
-        return { kind:'border', el:state.border };
-      }
-    }
+// Whether a point lands on the ALREADY-selected element — selection itself
+// no longer happens via canvas taps (only via the element strip above the
+// pin), so this is only ever used to decide whether a tap should start a
+// drag on the current selection.
+function hitTestSingleElement(el, kind, xFrac, yFrac){
+  if (kind==='text') return hitTestOneText(el, xFrac, yFrac);
+  if (kind==='sticker' || kind==='shape' || kind==='wordart' || kind==='letter') return hitTestOneSticker(el, xFrac, yFrac);
+  if (kind==='character' || kind==='border'){
+    return dist2(xFrac,yFrac,el.xFrac||0,el.yFrac||0) <= Math.pow(elementRadiusFrac(el,kind),2);
   }
-  return null;
+  return false;
 }
 function dist2(x1,y1,x2,y2){ const dx=x1-x2, dy=y1-y2; return dx*dx+dy*dy; }
 
@@ -2468,25 +2489,24 @@ function bindCanvasInteractions(canvas){
   canvas.addEventListener('pointerdown', e=>{
     const p = pointerFrac(canvas, e);
 
-    // 1. Whichever element is topmost at this point, per the user's layer
-    // order — border included, it's a normal reorderable layer now.
-    const hit = hitTestTopmost(p.x, p.y);
-    if (hit){
-      const d = hit.kind==='character' ? { kind:'character' } : { kind:hit.kind, id:hit.el.id };
-      if (layerKey(state.selected)!==layerKey(d)) selectLayer(d);
-      // A locked element can be selected (to unlock it) but not dragged.
-      if (!hit.el.locked) startElementDrag(canvas, e, hit.el);
+    // Tapping the canvas no longer selects anything — the element strip
+    // above the pin is the only way to select. A tap here can only START A
+    // DRAG on whatever is ALREADY selected, and only if it actually lands
+    // on it (background is the exception: it fills the whole pin, so any
+    // tap while it's selected drags it, same as before).
+    const { el, kind } = selectedElementAndKind();
+    if (kind==='background'){
+      if (state.bg.imageOn && state.bg.img && !state.bg.locked){
+        state.dragging = true;
+        state.dragTarget = 'bg';
+        state.dragStartX = e.clientX; state.dragStartY = e.clientY;
+        state.dragStartOffX = state.bg.offsetXFrac; state.dragStartOffY = state.bg.offsetYFrac;
+        canvas.setPointerCapture(e.pointerId);
+      }
       return;
     }
-
-    // 2. Nothing hit — fall back to the background layer, and drag the photo if there is one (unless locked)
-    if (layerKey(state.selected)!=='background') selectLayer({ kind:'background' });
-    if (state.bg.imageOn && state.bg.img && !state.bg.locked){
-      state.dragging = true;
-      state.dragTarget = 'bg';
-      state.dragStartX = e.clientX; state.dragStartY = e.clientY;
-      state.dragStartOffX = state.bg.offsetXFrac; state.dragStartOffY = state.bg.offsetYFrac;
-      canvas.setPointerCapture(e.pointerId);
+    if (el && kind && !el.locked && hitTestSingleElement(el, kind, p.x, p.y)){
+      startElementDrag(canvas, e, el);
     }
   });
 
@@ -2863,11 +2883,6 @@ function updateRotateRail(){
   if (slider) slider.disabled = !!el.locked;
   const thumb = document.getElementById('rotateThumb');
   if (thumb) thumb.innerHTML = kind==='text' ? ICON_TEXT : (el.img ? `<img src="${el.img.src}" alt="">` : '');
-  const lockBtn = document.getElementById('rotateLockBtn');
-  if (lockBtn){
-    lockBtn.innerHTML = el.locked ? ICON_LOCK : ICON_UNLOCK;
-    lockBtn.classList.toggle('locked', !!el.locked);
-  }
 }
 window.updateRotateRail = updateRotateRail;
 
@@ -2878,13 +2893,6 @@ function setSelectedRotation(deg){
   drawPreview();
 }
 window.setSelectedRotation = setSelectedRotation;
-
-function toggleLockSelected(){
-  const { el, kind } = selectedElementAndKind();
-  if (!el || !kind) return;
-  toggleLock(kind, state.selected.id);
-}
-window.toggleLockSelected = toggleLockSelected;
 
 // Mirrors updateRotateRail — same selectedElementAndKind()-driven show/hide
 // and locked-disables-the-slider behavior, just for size instead of angle.
@@ -3204,14 +3212,18 @@ function applyPin3dTransform(){
   const shine = document.getElementById('pinPreviewShine');
   if (!pin || !shine) return;
   pin.style.transform = `rotateX(${_pin3dRot.x}deg) rotateY(${_pin3dRot.y}deg)`;
-  // A single specular highlight, shifted opposite the tilt so it reads as
-  // a fixed light source reacting to the surface angle. The uniform rim
-  // darkening that sells the dome shape lives in .cr-pin3d-face's own
-  // inset box-shadow instead of a second gradient here — layering a dark
-  // blob on top of that used to read as a dent rather than curvature.
+  // Specular highlight + a soft shadow on the opposite side of the surface,
+  // both shifted with the tilt so they read as a fixed light source
+  // reacting to the surface angle rather than painted on. The uniform rim
+  // darkening that sells the base dome shape lives in .cr-pin3d-face's own
+  // inset box-shadow — see the comment there for why this ALSO needs its
+  // own opposite-side shadow (not just a highlight) to stay visible on a
+  // still-blank white pin.
   const hx = 50 - _pin3dRot.y*1.3, hy = 50 - _pin3dRot.x*1.3;
+  const sx = 50 + _pin3dRot.y*1.3, sy = 50 + _pin3dRot.x*1.3;
   shine.style.background =
-    `radial-gradient(circle at ${hx}% ${hy}%, rgba(255,255,255,0.95), rgba(255,255,255,0.55) 12%, rgba(255,255,255,0.12) 30%, rgba(255,255,255,0) 50%)`;
+    `radial-gradient(circle at ${hx}% ${hy}%, rgba(255,255,255,0.95), rgba(255,255,255,0.55) 14%, rgba(255,255,255,0.12) 30%, rgba(255,255,255,0) 48%),` +
+    `radial-gradient(circle at ${sx}% ${sy}%, rgba(0,0,0,0.32), rgba(0,0,0,0) 55%)`;
 }
 
 function initPin3dDrag(){
