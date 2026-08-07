@@ -940,8 +940,7 @@ const state = {
   // fixed at the very back: color, then image, then border, then everything
   // in this list). Index 0 is the back-most of these, the last is front-most.
   layerOrder: [],           // [{kind:'character'}|{kind:'sticker'|'shape'|'wordart', id}|{kind:'text',id}]
-  dragging:false, dragTarget:null, dragMode:'move', dragStartX:0, dragStartY:0, dragStartOffX:0, dragStartOffY:0,
-  dragStartScale:1, dragStartRotation:0, dragStartDist:0, dragStartAngle:0,
+  dragging:false, dragTarget:null, dragStartX:0, dragStartY:0, dragStartOffX:0, dragStartOffY:0,
   nextTextId: 1,
 };
 
@@ -1180,7 +1179,6 @@ const ICON_UPLOAD      = '<svg class="cr-icon" viewBox="0 0 24 24" fill="none" s
 const ICON_PALETTE    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 100 18c1.1 0 1.5-.7 1.5-1.4 0-.4-.2-.7-.4-1-.2-.3-.4-.6-.4-1 0-.8.6-1.4 1.4-1.4H16a4 4 0 004-4c0-5-3.6-9-8-9z"/><circle cx="7.5" cy="10.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="7.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="16.2" cy="10" r="1.1" fill="currentColor" stroke="none"/></svg>';
 const ICON_OPACITY    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z"/></svg>';
 const ICON_SIZE       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>';
-const ICON_ROTATE     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 1 2.6 5.9"/><path d="M4 17v-5h5"/></svg>';
 const ICON_FONT       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19l5-14 5 14M6.5 14h7"/><path d="M15 19l3-7 3 7M16.3 16.5h3.4"/></svg>';
 const ICON_ARC        = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17a10 8 0 0 1 16 0"/></svg>';
 const ICON_CURVE_STRAIGHT = '<svg viewBox="0 0 40 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="4" y1="12" x2="36" y2="12"/></svg>';
@@ -1399,7 +1397,6 @@ function toolIconsForSelection(){
     return [
       { id:'replace', label:'Replace', icon:ICON_UPLOAD, instant:"promptUpload('character')" },
       { id:'size', label:'Size', icon:ICON_SIZE, panel:true },
-      { id:'rotate', label:'Rotate', icon:ICON_ROTATE, panel:true },
       { id:'lock', label: state.character.locked?'Locked':'Lock', icon: state.character.locked?ICON_LOCK:ICON_UNLOCK, instant:"toggleLock('character')", on: state.character.locked },
       { id:'remove', label:'Remove', icon:ICON_TRASH, instant:'removeCharacter()', danger:true },
     ];
@@ -1407,7 +1404,7 @@ function toolIconsForSelection(){
   if (kind==='border') return [
     { id:'presets', label:'Presets', icon:ICON_PALETTE, panel:true },
     { id:'replace', label:'Upload', icon:ICON_UPLOAD, instant:"promptUpload('border')" },
-    { id:'rotate', label:'Rotate', icon:ICON_ROTATE, panel:true },
+    { id:'lock', label: state.border && state.border.locked?'Locked':'Lock', icon: state.border && state.border.locked?ICON_LOCK:ICON_UNLOCK, instant:"toggleLock('border')", on: state.border && state.border.locked },
     { id:'remove', label:'Remove', icon:ICON_TRASH, instant:'removeBorder()', danger:true },
   ];
   if (kind==='sticker' || kind==='shape' || kind==='wordart' || kind==='letter'){
@@ -1422,7 +1419,6 @@ function toolIconsForSelection(){
       { id:'presets', label:'Presets', icon:ICON_PALETTE, panel:true },
       { id:'replace', label:'Upload', icon:ICON_UPLOAD, instant:`promptUpload('${kind}')` },
       { id:'size', label:'Size', icon:ICON_SIZE, panel:true },
-      { id:'rotate', label:'Rotate', icon:ICON_ROTATE, panel:true },
     ];
     // Built-in vector shapes (not admin PNG presets or uploads) can be
     // recolored on demand — see setShapeColor().
@@ -1445,7 +1441,6 @@ function toolIconsForSelection(){
       { id:'placement', label:'Style', icon:ICON_ARC, panel:true },
       { id:'color', label:'Color', icon:ICON_SWATCH, panel:true },
       { id:'size', label:'Size', icon:ICON_SIZE, panel:true },
-      { id:'rotate', label:'Rotate', icon:ICON_ROTATE, panel:true },
       { id:'shadow', label:'Shadow', icon:ICON_SHADOW, instant:`toggleTextShadow(${t.id},${!t.shadow})`, on:t.shadow },
       { id:'lock', label: t.locked?'Locked':'Lock', icon: t.locked?ICON_LOCK:ICON_UNLOCK, instant:`toggleLock('text',${t.id})`, on: t.locked },
       { id:'remove', label:'Remove', icon:ICON_TRASH, instant:`removeTextLine(${t.id})`, danger:true },
@@ -1577,27 +1572,21 @@ function borderToolPanelHtml(tool){
       `<button class="cr-preset-thumb ${state.border && state.border.src===p.src ? 'active' : ''}" onclick="selectBorderPreset(${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`
     ).join('')}</div>`;
   }
-  if (tool==='rotate'){
-    const rotDeg = Math.round(((state.border && state.border.rotation)||0)*180/Math.PI);
-    return `
-      <div class="cr-field-label">Rotation <span class="cr-slider-val" id="borderRotVal">${rotDeg}°</span></div>
-      <input type="range" class="cr-range cr-range-mid" min="-180" max="180" value="${rotDeg}"
-        oninput="setBorderRotation(this.value); document.getElementById('borderRotVal').textContent=this.value+'°'">
-      <div class="cr-hint">Drag the border on the pin to nudge its position — handy if it's not a perfect circle.</div>`;
-  }
   return '';
 }
 
 function selectBorderPreset(i){
   const preset = BORDER_PRESETS[i];
   if (!preset) return;
+  const isNew = !state.border;
   const prevRotation = state.border ? state.border.rotation : 0;
   const prevScale = state.border ? state.border.scale : 1;
   const img = new Image();
   img.crossOrigin = 'anonymous'; // raw.githubusercontent.com sends CORS headers — needed so the design canvas doesn't get tainted
   img.onload = () => {
-    state.border = { img, src: preset.src, label: preset.label, rotation: prevRotation, scale: prevScale, xFrac: 0, yFrac: 0 };
-    renderDock(); renderToolPanelContent(); drawPreview(); updateCanvasBorderRing();
+    state.border = { img, src: preset.src, label: preset.label, rotation: prevRotation, scale: prevScale, xFrac: 0, yFrac: 0, locked:false };
+    if (isNew) pushLayer({ kind:'border' });
+    renderDock(); renderToolPanelContent(); drawPreview(); updateCanvasBorderRing(); updateRotateRail();
   };
   img.src = preset.src;
 }
@@ -1605,28 +1594,26 @@ window.selectBorderPreset = selectBorderPreset;
 
 function removeBorder(){
   state.border = null;
-  renderDock(); renderToolPanelContent(); drawPreview(); updateCanvasBorderRing();
+  removeLayerFromOrder('border', undefined);
+  updateCanvasBorderRing();
+  if (state.selected && state.selected.kind==='border') deselectLayer();
+  else { renderDock(); drawPreview(); }
 }
 window.removeBorder = removeBorder;
-
-function setBorderRotation(deg){
-  if (!state.border) return;
-  state.border.rotation = (+deg) * Math.PI/180;
-  drawPreview();
-}
-window.setBorderRotation = setBorderRotation;
 
 function onBorderFileChosen(e){
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = ev => {
+    const isNew = !state.border;
     const prevRotation = state.border ? state.border.rotation : 0;
     const prevScale = state.border ? state.border.scale : 1;
     const img = new Image();
     img.onload = () => {
-      state.border = { img, src: ev.target.result, label: null, rotation: prevRotation, scale: prevScale, xFrac: 0, yFrac: 0 };
-      renderDock(); renderToolPanelContent(); drawPreview(); updateCanvasBorderRing();
+      state.border = { img, src: ev.target.result, label: null, rotation: prevRotation, scale: prevScale, xFrac: 0, yFrac: 0, locked:false };
+      if (isNew) pushLayer({ kind:'border' });
+      renderDock(); renderToolPanelContent(); drawPreview(); updateCanvasBorderRing(); updateRotateRail();
     };
     img.src = ev.target.result;
   };
@@ -1826,17 +1813,20 @@ window.closeLayersModal = closeLayersModal;
 const PLACED_ICON = { sticker: ICON_STICKER, shape: ICON_SHAPE, wordart: ICON_WORDART, letter: ICON_LETTER };
 function layerThumbFor(d){
   if (d.kind==='character') return state.character ? `<img src="${state.character.img.src}" alt="">` : ICON_CHARACTER;
+  if (d.kind==='border') return state.border ? `<img src="${state.border.img.src}" alt="">` : ICON_BORDER;
   if (PLACED_META[d.kind]){ const el=placedArray(d.kind).find(x=>x.id===d.id); return el ? `<img src="${el.img.src}" alt="">` : PLACED_ICON[d.kind]; }
   return ICON_TEXT;
 }
 function layerLabelFor(d){
   if (d.kind==='character') return 'Character';
+  if (d.kind==='border') return 'Border';
   if (PLACED_META[d.kind]){ const idx=placedArray(d.kind).findIndex(x=>x.id===d.id); return PLACED_META[d.kind].label+' '+(idx+1); }
   const t = state.textLines.find(x=>x.id===d.id);
   return (t && t.text ? t.text : 'Text').slice(0,18);
 }
 function layerLockedFor(d){
   if (d.kind==='character') return !!(state.character && state.character.locked);
+  if (d.kind==='border') return !!(state.border && state.border.locked);
   if (PLACED_META[d.kind]){ const el=placedArray(d.kind).find(x=>x.id===d.id); return !!(el && el.locked); }
   const t = state.textLines.find(x=>x.id===d.id);
   return !!(t && t.locked);
@@ -1864,7 +1854,6 @@ function renderLayersModal(){
     const css = g.grad4 ? `linear-gradient(135deg,${g.grad4[0]},${g.grad4[3]})` : `linear-gradient(135deg,${g.grad[0]},${g.grad[1]})`;
     fixedRows.push({ label:'Background Color', thumb:`<span style="display:block;width:100%;height:100%;background:${css}"></span>` });
   }
-  if (state.border) fixedRows.push({ label:'Border', thumb:`<img src="${state.border.img.src}" alt="">` });
   fixed.innerHTML = fixedRows.length ? `
     <div class="cr-layers-fixed-label">Always at the back</div>
     ${fixedRows.map(r=>`
@@ -1882,6 +1871,7 @@ window.selectLayerFromModal = function(d){
 
 function removeLayerFromModal(d){
   if (d.kind==='character') removeCharacter();
+  else if (d.kind==='border') removeBorder();
   else if (d.kind==='text') removeTextLine(d.id);
   else if (PLACED_META[d.kind]) removePlaced(d.kind, d.id);
   renderLayersModal();
@@ -2057,10 +2047,7 @@ function placedToolPanelHtml(kind, tool, id){
     return `
       <div class="cr-field-label">Size</div>
       <input type="range" class="cr-range" min="0.4" max="2.5" step="0.1" value="${el.scale}" oninput="setPlacedScale('${kind}',${el.id},this.value)">
-      <div class="cr-hint">Drag the ${noun} on the pin to reposition.</div>`;
-  }
-  if (tool==='rotate'){
-    return `<div class="cr-hint" style="margin-top:2px">Use the blue handle that appears on the pin to rotate this ${noun}.</div>`;
+      <div class="cr-hint">Drag the ${noun} on the pin to reposition, or pinch to resize. Use the slider on the right to rotate.</div>`;
   }
   return '';
 }
@@ -2294,14 +2281,7 @@ function characterToolPanelHtml(tool){
       <div class="cr-field-label">Size <span class="cr-slider-val" id="charSizeVal">${sizePct}%</span></div>
       <input type="range" class="cr-range cr-range-mid" min="1" max="199" value="${sizePct}"
         oninput="setCharacterScale(this.value/100); document.getElementById('charSizeVal').textContent=this.value+'%'">
-      <div class="cr-hint">Position is always centered — slide left of center to shrink, right to grow.</div>`;
-  }
-  if (tool==='rotate'){
-    const rotDeg = Math.round((c.rotation||0)*180/Math.PI);
-    return `
-      <div class="cr-field-label">Rotation <span class="cr-slider-val" id="charRotVal">${rotDeg}°</span></div>
-      <input type="range" class="cr-range cr-range-mid" min="-180" max="180" value="${rotDeg}"
-        oninput="setCharacterRotation(this.value); document.getElementById('charRotVal').textContent=this.value+'°'">`;
+      <div class="cr-hint">Position is always centered — slide left of center to shrink, right to grow. You can also pinch to resize, and use the slider on the right to rotate.</div>`;
   }
   return '';
 }
@@ -2309,11 +2289,13 @@ function characterToolPanelHtml(tool){
 function toggleLock(kind, id){
   const el = kind==='background' ? state.bg
     : kind==='character' ? state.character
+    : kind==='border' ? state.border
     : (kind==='sticker' || kind==='shape' || kind==='wordart' || kind==='letter') ? placedArray(kind).find(x=>x.id===id)
     : state.textLines.find(t=>t.id===id);
   if (!el) return;
   el.locked = !el.locked;
   renderDock();
+  updateRotateRail();
 }
 window.toggleLock = toggleLock;
 window.toggleIsolateMode = toggleIsolateMode;
@@ -2368,13 +2350,6 @@ function setCharacterScale(val){
   drawPreview();
 }
 window.setCharacterScale = setCharacterScale;
-
-function setCharacterRotation(deg){
-  if (!state.character) return;
-  state.character.rotation = (+deg) * Math.PI/180;
-  drawPreview();
-}
-window.setCharacterRotation = setCharacterRotation;
 
 /* ── TEXT PANEL ───────────────────────────────── */
 function addTextLine(){
@@ -2466,17 +2441,14 @@ function textToolPanelHtml(tool, id){
         <div class="cr-field-label">Font Size</div>
         <input type="number" class="cr-text-input" style="margin-bottom:0" min="1" step="1" inputmode="numeric"
           value="${sizePctArc}" oninput="setTextSizeRaw(${t.id},this.value)">
-        <div class="cr-hint">No size limit — type any value. Use the pink handle on the pin to adjust how far out the curve sits, separately from font size.</div>`;
+        <div class="cr-hint">No size limit — type any value, or pinch on the pin to adjust how far out the curve sits, separately from font size.</div>`;
     }
     const sizePct = Math.round(t.size*100);
     return `
       <div class="cr-field-label">Size <span class="cr-slider-val" id="textSizeVal_${t.id}">${sizePct}%</span></div>
       <input type="range" class="cr-range cr-range-mid" min="1" max="199" value="${sizePct}"
         oninput="setTextSizePct(${t.id},this.value); document.getElementById('textSizeVal_${t.id}').textContent=this.value+'%'">
-      <div class="cr-hint" style="margin-top:-2px">Or use the pink handle on the pin to resize freely past this slider's range.</div>`;
-  }
-  if (tool==='rotate'){
-    return `<div class="cr-hint" style="margin-top:2px">Use the blue handle that appears on the pin to rotate this text.</div>`;
+      <div class="cr-hint" style="margin-top:-2px">Or pinch on the pin to resize freely past this slider's range. Use the slider on the right to rotate.</div>`;
   }
   return '';
 }
@@ -2504,19 +2476,10 @@ function setTextSizeRaw(id, pct){
 }
 window.setTextSizeRaw = setTextSizeRaw;
 
-function setTextRotation(id, deg){
-  const t = state.textLines.find(x=>x.id===id);
-  if (!t) return;
-  t.rotation = (+deg) * Math.PI/180;
-  drawPreview();
-}
-window.setTextRotation = setTextRotation;
-
-/* ── CANVAS INTERACTIONS: drag bg, move/resize/rotate stickers+character ── */
-// Locked elements are skipped entirely here — locking means "get out of the
-// way of canvas taps," not just "can't be dragged." A locked element that
-// still intercepted taps could block anything underneath it from ever being
-// reachable (e.g. a large locked text box sitting over a small sticker).
+/* ── CANVAS INTERACTIONS: drag to move, pinch/wheel to resize, the rotate
+   rail to rotate. There are no on-canvas handles — locked elements stay
+   tappable/selectable (so the rail's lock icon can unlock them again) but
+   reject every actual modification (move/resize/rotate) until unlocked. ── */
 function hitTestOneSticker(s, xFrac, yFrac){
   const r = STICKER_BASE_R * s.scale;
   return dist2(xFrac,yFrac,s.xFrac,s.yFrac) <= r*r;
@@ -2534,20 +2497,24 @@ function hitTestOneText(t, xFrac, yFrac){
 }
 // Walks state.layerOrder front-to-back so whichever element the user put on
 // top (via the Layers tab) is the one a tap lands on, regardless of kind.
-// Locked elements are skipped entirely — see the note above bindCanvasInteractions.
+// Locked elements are still hit-tested (selectable) — see the file note above.
 function hitTestTopmost(xFrac, yFrac){
   const list = state.layerOrder;
   for (let i = list.length - 1; i >= 0; i--){
     const d = list[i];
     if (d.kind==='text'){
       const t = state.textLines.find(x=>x.id===d.id);
-      if (t && !t.locked && hitTestOneText(t, xFrac, yFrac)) return { kind:'text', el:t };
+      if (t && hitTestOneText(t, xFrac, yFrac)) return { kind:'text', el:t };
     } else if (d.kind==='sticker' || d.kind==='shape' || d.kind==='wordart' || d.kind==='letter'){
       const el = placedArray(d.kind).find(x=>x.id===d.id);
-      if (el && !el.locked && hitTestOneSticker(el, xFrac, yFrac)) return { kind:d.kind, el };
+      if (el && hitTestOneSticker(el, xFrac, yFrac)) return { kind:d.kind, el };
     } else if (d.kind==='character'){
-      if (state.character && !state.character.locked && dist2(xFrac,yFrac,0,0) <= Math.pow(elementRadiusFrac(state.character,'character'),2)){
+      if (state.character && dist2(xFrac,yFrac,0,0) <= Math.pow(elementRadiusFrac(state.character,'character'),2)){
         return { kind:'character', el:state.character };
+      }
+    } else if (d.kind==='border'){
+      if (state.border && dist2(xFrac,yFrac,state.border.xFrac||0,state.border.yFrac||0) <= Math.pow(elementRadiusFrac(state.border,'border'),2)){
+        return { kind:'border', el:state.border };
       }
     }
   }
@@ -2560,21 +2527,53 @@ function pointerFrac(canvas, e){
   return { x: (e.clientX-rect.left)/rect.width - 0.5, y: (e.clientY-rect.top)/rect.height - 0.5 };
 }
 
-function startElementDrag(canvas, e, mode, el){
-  const p = pointerFrac(canvas, e);
+function startElementDrag(canvas, e, el){
   state.dragging = true;
   state.dragTarget = el;
-  state.dragMode = mode;
-  state.dragIsText = state.textLines.includes(el); // text uses .size (or .arcRadiusMult if curved), stickers/character use .scale
   state.dragStartX = e.clientX; state.dragStartY = e.clientY;
   state.dragStartOffX = el.xFrac; state.dragStartOffY = el.yFrac;
-  state.dragStartScale = state.dragIsText
-    ? (el.placement && el.placement!=='straight' ? (el.arcRadiusMult||0.78) : el.size)
-    : el.scale;
-  state.dragStartRotation = el.rotation || 0;
-  state.dragStartDist = Math.max(0.01, Math.hypot(p.x-el.xFrac, p.y-el.yFrac));
-  state.dragStartAngle = Math.atan2(p.y-el.yFrac, p.x-el.xFrac);
   canvas.setPointerCapture(e.pointerId);
+}
+
+// Whatever should respond to pinch (touch) / wheel (desktop) resize right
+// now — whichever non-background element is selected (and unlocked), else
+// the background photo (if it has one and isn't locked), else nothing (in
+// which case the gesture falls through to canvas view zoom instead).
+function resizeTarget(){
+  const { el, kind } = selectedElementAndKind();
+  if (el && kind && kind!=='background') return el.locked ? null : { el, kind };
+  if (state.bg.imageOn && state.bg.img && !state.bg.locked) return { el: state.bg, kind:'background' };
+  return null;
+}
+// The scale-like field a given kind actually resizes — arc text uses
+// arcRadiusMult (how far the curve sits from center), straight text uses
+// size (font size), everything else uses scale.
+function resizeStartScaleFor(el, kind){
+  if (kind==='text' && el.placement && el.placement!=='straight') return el.arcRadiusMult||0.78;
+  if (kind==='text') return el.size;
+  return el.scale||1;
+}
+// Same per-kind clamp ranges the old on-canvas resize handle used. `ratio`
+// is startScale-relative (pinch, tracked across the whole gesture) or a
+// single-tick multiplier read against the CURRENT value (wheel).
+function applyResizeRatioTarget(target, startScale, ratio){
+  const { el, kind } = target;
+  if (kind==='text' && el.placement && el.placement!=='straight'){
+    el.arcRadiusMult = Math.max(0.2, Math.min(2.5, startScale * ratio));
+  } else if (kind==='text'){
+    el.size = Math.max(0.3, Math.min(5, startScale * ratio));
+    clampTextSize(el);
+    clampElementToCutLine(el);
+  } else if (kind==='border'){
+    // Small tweak range only — this compensates for asset borders that
+    // aren't perfectly circular, not a general resize.
+    el.scale = Math.max(0.7, Math.min(1.3, startScale * ratio));
+  } else if (kind==='background'){
+    el.scale = startScale * ratio;
+    clampBgTransform();
+  } else {
+    el.scale = Math.max(0.3, Math.min(3, startScale * ratio));
+  }
 }
 
 function bindCanvasInteractions(canvas){
@@ -2583,55 +2582,24 @@ function bindCanvasInteractions(canvas){
 
   canvas.addEventListener('pointerdown', e=>{
     const p = pointerFrac(canvas, e);
-    const HANDLE_R = 0.05;
 
-    // 1. Handles of the currently selected element take priority (skipped if locked).
-    // Character is the one exception — always centered, no handles at all.
-    // Border only gets the resize handle (it already has its own Rotate slider).
-    // Curved text (top-arc/bottom-arc) keeps its resize handle too, but it
-    // drives the curve's radius instead of font size — font size is its own
-    // uncapped number field (see textToolPanelHtml), kept independent of it.
-    {
-      const { el, kind } = selectedElementAndKind();
-      if (el && !el.locked && (kind==='sticker' || kind==='shape' || kind==='wordart' || kind==='letter' || kind==='text' || kind==='border')){
-        const hp = handlePositions(el, kind);
-        if (dist2(p.x,p.y,hp.resize.x,hp.resize.y) <= HANDLE_R*HANDLE_R){
-          startElementDrag(canvas, e, 'resize', el); return;
-        }
-        if (kind!=='border' && dist2(p.x,p.y,hp.rotate.x,hp.rotate.y) <= HANDLE_R*HANDLE_R){
-          startElementDrag(canvas, e, 'rotate', el); return;
-        }
-      }
-    }
-
-    // 2. Whichever element is topmost at this point, per the user's layer order.
+    // 1. Whichever element is topmost at this point, per the user's layer
+    // order — border included, it's a normal reorderable layer now.
     const hit = hitTestTopmost(p.x, p.y);
     if (hit){
       const d = hit.kind==='character' ? { kind:'character' } : { kind:hit.kind, id:hit.el.id };
       if (layerKey(state.selected)!==layerKey(d)) selectLayer(d);
-      if (hit.kind!=='character') startElementDrag(canvas, e, 'move', hit.el); // character is always centered — select only, no move-drag
+      // Character never gets a 'move' drag (always centered); a locked
+      // element can be selected (to unlock it) but not dragged.
+      if (hit.kind!=='character' && !hit.el.locked) startElementDrag(canvas, e, hit.el);
       return;
     }
 
-    // 3. Border is a fixed frame overlay, not part of the reorderable stack,
-    // so it's deliberately left out of hitTestTopmost above — it visually
-    // covers nearly the whole pin and would swallow every tap meant for
-    // stickers/text underneath it. Instead: once it's the selected layer
-    // (tapped its dock icon), dragging anywhere on the canvas nudges its
-    // position — same "drag while selected" pattern as the background photo
-    // below. This is what lets an off-center or non-perfectly-circular
-    // border asset be recentered by eye.
-    if (state.selected && state.selected.kind==='border' && state.border && !state.border.locked){
-      startElementDrag(canvas, e, 'move', state.border);
-      return;
-    }
-
-    // 4. Nothing hit — fall back to the background layer, and drag the photo if there is one (unless locked)
+    // 2. Nothing hit — fall back to the background layer, and drag the photo if there is one (unless locked)
     if (layerKey(state.selected)!=='background') selectLayer({ kind:'background' });
     if (state.bg.imageOn && state.bg.img && !state.bg.locked){
       state.dragging = true;
       state.dragTarget = 'bg';
-      state.dragMode = 'move';
       state.dragStartX = e.clientX; state.dragStartY = e.clientY;
       state.dragStartOffX = state.bg.offsetXFrac; state.dragStartOffY = state.bg.offsetYFrac;
       canvas.setPointerCapture(e.pointerId);
@@ -2641,7 +2609,6 @@ function bindCanvasInteractions(canvas){
   canvas.addEventListener('pointermove', e=>{
     if (!state.dragging) return;
     const rect = canvas.getBoundingClientRect();
-    const p = pointerFrac(canvas, e);
 
     if (state.dragTarget==='bg'){
       const dxFrac = (e.clientX - state.dragStartX) / rect.width;
@@ -2649,52 +2616,25 @@ function bindCanvasInteractions(canvas){
       state.bg.offsetXFrac = state.dragStartOffX + dxFrac;
       state.bg.offsetYFrac = state.dragStartOffY + dyFrac;
       clampBgTransform();
-    } else if (state.dragTarget && state.dragMode==='move'){
+    } else if (state.dragTarget){
       const dxFrac = (e.clientX - state.dragStartX) / rect.width;
       const dyFrac = (e.clientY - state.dragStartY) / rect.height;
       state.dragTarget.xFrac = state.dragStartOffX + dxFrac;
       state.dragTarget.yFrac = state.dragStartOffY + dyFrac;
-      // Character never gets a 'move' drag (always centered) — this only
-      // ever runs for sticker/shape/wordart/text/border.
       if (state.dragTarget === state.border) clampBorderOffset();
       else clampElementToCutLine(state.dragTarget);
-    } else if (state.dragTarget && state.dragMode==='resize'){
-      const dist = Math.hypot(p.x-state.dragTarget.xFrac, p.y-state.dragTarget.yFrac);
-      const ratio = dist/state.dragStartDist;
-      if (state.dragIsText && state.dragTarget.placement !== 'straight'){
-        // Curved text: the handle adjusts how far the curve sits from
-        // center, independent of the font-size number field.
-        state.dragTarget.arcRadiusMult = Math.max(0.2, Math.min(2.5, state.dragStartScale * ratio));
-      } else if (state.dragIsText){
-        state.dragTarget.size = Math.max(0.3, Math.min(5, state.dragStartScale * ratio));
-        clampTextSize(state.dragTarget);
-        clampElementToCutLine(state.dragTarget);
-      } else if (state.dragTarget === state.border){
-        // Small tweak range only — this compensates for asset borders that
-        // aren't perfectly circular, not a general resize.
-        state.dragTarget.scale = Math.max(0.7, Math.min(1.3, state.dragStartScale * ratio));
-      } else {
-        state.dragTarget.scale = Math.max(0.3, Math.min(3, state.dragStartScale * ratio));
-      }
-    } else if (state.dragTarget && state.dragMode==='rotate'){
-      const angle = Math.atan2(p.y-state.dragTarget.yFrac, p.x-state.dragTarget.xFrac);
-      state.dragTarget.rotation = state.dragStartRotation + (angle - state.dragStartAngle);
     }
     drawPreview();
   });
   canvas.addEventListener('pointerup', ()=>{ state.dragging=false; state.dragTarget=null; });
   canvas.addEventListener('pointercancel', ()=>{ state.dragging=false; state.dragTarget=null; });
 
-  const stickerOrCharSelected = () => state.selected && ['sticker','shape','wordart','letter','character','text','border'].includes(state.selected.kind);
-
-  const bgPinchApplies = () => state.bg.imageOn && state.bg.img && !state.bg.locked && !stickerOrCharSelected();
-
   canvas.addEventListener('wheel', e=>{
     e.preventDefault();
     const delta = e.deltaY > 0 ? 0.92 : 1.08;
-    if (bgPinchApplies()){
-      state.bg.scale = state.bg.scale*delta;
-      clampBgTransform();
+    const target = resizeTarget();
+    if (target){
+      applyResizeRatioTarget(target, resizeStartScaleFor(target.el, target.kind), delta);
       drawPreview();
     } else {
       canvasViewZoom = Math.max(CANVAS_VIEW_ZOOM_MIN, Math.min(CANVAS_VIEW_ZOOM_MAX, canvasViewZoom*delta));
@@ -2703,22 +2643,25 @@ function bindCanvasInteractions(canvas){
     }
   }, { passive:false });
 
-  // Two-finger touch drives either the background photo's pinch-to-zoom
-  // (when that gesture applies) or the canvas view's zoom+pan (otherwise)
-  // — the two never fight over the same gesture since bgPinchApplies() is
-  // checked once at touchstart and that branch sticks for the whole touch.
-  let pinchStartDist = null, pinchStartScale = 1;
+  // Two-finger touch drives either the selected element's (or background's)
+  // pinch-to-resize, or the canvas view's zoom+pan otherwise — the two never
+  // fight over the same gesture since resizeTarget() is resolved once at
+  // touchstart and that branch sticks for the whole gesture.
+  let pinchTarget = null, pinchStartDist = null, pinchStartScale = 1;
   let viewPinchActive = false, viewPinchStartDist = 1, viewPinchStartZoom = 1;
   let viewPinchStartMid = null, viewPinchStartPanX = 0, viewPinchStartPanY = 0;
   let lastTapTime = 0;
 
   canvas.addEventListener('touchstart', e=>{
     if (e.touches.length===2){
-      if (bgPinchApplies()){
+      const target = resizeTarget();
+      if (target){
+        pinchTarget = target;
         pinchStartDist = touchDist(e.touches);
-        pinchStartScale = state.bg.scale;
+        pinchStartScale = resizeStartScaleFor(target.el, target.kind);
         viewPinchActive = false;
       } else {
+        pinchTarget = null;
         viewPinchActive = true;
         viewPinchStartDist = touchDist(e.touches);
         viewPinchStartZoom = canvasViewZoom;
@@ -2730,11 +2673,10 @@ function bindCanvasInteractions(canvas){
   }, { passive:true });
 
   canvas.addEventListener('touchmove', e=>{
-    if (e.touches.length===2 && pinchStartDist){
+    if (e.touches.length===2 && pinchTarget){
       e.preventDefault();
       const d = touchDist(e.touches);
-      state.bg.scale = pinchStartScale * (d/pinchStartDist);
-      clampBgTransform();
+      applyResizeRatioTarget(pinchTarget, pinchStartScale, d/pinchStartDist);
       drawPreview();
     } else if (e.touches.length===2 && viewPinchActive){
       e.preventDefault();
@@ -2749,6 +2691,7 @@ function bindCanvasInteractions(canvas){
   }, { passive:false });
 
   canvas.addEventListener('touchend', e=>{
+    pinchTarget = null;
     pinchStartDist = null;
     viewPinchActive = false;
     // Double-tap to reset the view zoom — only counts a clean single-finger
@@ -2771,8 +2714,10 @@ function touchDist(touches){
 // clipElements=false (live editor only — see drawPreview) skips the circular
 // clip for the foreground pass so a sticker/text/etc dragged out toward the
 // canvas edge stays visible instead of silently vanishing, making it easy to
-// grab and pull back. Background/border stay clipped either way. Exports and
-// the submit-step review thumbnail always keep the default (clipped) so the
+// grab and pull back. Background stays clipped either way (it's the only
+// layer that's structurally fixed at the back — border is now a normal
+// reorderable layer, see drawForegroundElements). Exports and the
+// submit-step review thumbnail always keep the default (clipped) so the
 // finished-look preview is accurate.
 function drawDesignLayer(ctx, sizePx, opts){
   const clipElements = !opts || opts.clipElements !== false;
@@ -2780,26 +2725,27 @@ function drawDesignLayer(ctx, sizePx, opts){
   ctx.clearRect(0,0,sizePx,sizePx);
 
   // Everything printable is physically round — clip the design layer
-  // (background, border, and — when clipElements — everything else too)
-  // to the pin's circular shape.
+  // (background, and — when clipElements — everything else too) to the
+  // pin's circular shape.
   ctx.save();
   ctx.beginPath();
   ctx.arc(artboardPx/2, artboardPx/2, artboardPx/2, 0, Math.PI*2);
   ctx.clip();
 
-  drawBackground(ctx, artboardPx);  // back-most (color, then image)
-  drawBorder(ctx, artboardPx);      // fixed just above background, below everything else
+  drawBackground(ctx, artboardPx);  // the one truly fixed back-most layer
   if (clipElements) drawForegroundElements(ctx, artboardPx);
 
   ctx.restore();
   if (!clipElements) drawForegroundElements(ctx, artboardPx);
 }
 
-// Everything else draws in the user-defined stacking order (state.layerOrder,
-// back-to-front), managed via the Layers tab.
+// Everything except the background draws in the user-defined stacking order
+// (state.layerOrder, back-to-front), managed via the Layers tab — border
+// included, same as any other element.
 function drawForegroundElements(ctx, artboardPx){
   state.layerOrder.forEach(d => {
     if (d.kind==='character') drawOneCharacter(ctx, artboardPx);
+    else if (d.kind==='border') drawBorder(ctx, artboardPx);
     else if (d.kind==='sticker' || d.kind==='shape' || d.kind==='wordart' || d.kind==='letter') drawOnePlaced(ctx, artboardPx, placedArray(d.kind).find(x=>x.id===d.id));
     else if (d.kind==='text') drawOneTextLine(ctx, artboardPx, state.textLines.find(t=>t.id===d.id));
   });
@@ -3007,24 +2953,16 @@ function drawArcText(ctx, text, cx, cy, radius, bottom){
   });
 }
 
-/* ── SELECTION HANDLES (resize + rotate) — sticker/shape/wordart/text,
-   character (no handles, always centered), border (resize handle only) ── */
+/* ── SELECTION RING — sticker/shape/wordart/letter/text/border. No
+   draggable handles anymore: resize is pinch/wheel (see resizeTarget), and
+   rotate is the vertical rail (see updateRotateRail) — this is purely a
+   "here's what's selected" outline. ── */
 function elementRadiusFrac(el, kind){
   if (kind==='character') return CHARACTER_BASE_R * el.scale;
   if (kind==='sticker' || kind==='shape' || kind==='wordart' || kind==='letter') return STICKER_BASE_R * el.scale;
   if (kind==='text')      return textFootprintFrac(el);
   if (kind==='border')    return (state.size/state.paperSize/2) * (el.scale||1);
   return 0.14;
-}
-function handlePositions(el, kind){
-  const r = elementRadiusFrac(el, kind);
-  const rot = el.rotation || 0;
-  const resizeA = rot + Math.PI/4;
-  const rotateA = rot - Math.PI/2;
-  return {
-    resize: { x: el.xFrac + r*1.15*Math.cos(resizeA), y: el.yFrac + r*1.15*Math.sin(resizeA) },
-    rotate: { x: el.xFrac + r*1.6*Math.cos(rotateA),  y: el.yFrac + r*1.6*Math.sin(rotateA) },
-  };
 }
 function selectedElementAndKind(){
   if (!state.selected) return {};
@@ -3038,35 +2976,65 @@ function selectedElementAndKind(){
 }
 function drawSelectionHandles(ctx, artboardPx){
   const { el, kind } = selectedElementAndKind();
-  const handleKinds = ['sticker','shape','wordart','letter','text','border'];
-  if (!el || !handleKinds.includes(kind)) return;
+  const ringKinds = ['sticker','shape','wordart','letter','text','border'];
+  if (!el || !ringKinds.includes(kind)) return;
   const r = elementRadiusFrac(el, kind) * artboardPx;
   const cx = artboardPx/2 + el.xFrac*artboardPx, cy = artboardPx/2 + el.yFrac*artboardPx;
-  const hp = handlePositions(el, kind);
 
   ctx.save();
-  ctx.strokeStyle = '#8FAE7C'; ctx.lineWidth = 2; ctx.setLineDash([5,4]);
+  ctx.strokeStyle = el.locked ? '#B08D57' : '#8FAE7C';
+  ctx.lineWidth = 2; ctx.setLineDash([5,4]);
   ctx.beginPath(); ctx.arc(cx, cy, r*1.15, 0, Math.PI*2); ctx.stroke();
-  ctx.setLineDash([]);
-
-  // For curved text this handle adjusts curve radius, not font size — see
-  // the resize branch in bindCanvasInteractions.
-  const sx = artboardPx/2 + hp.resize.x*artboardPx, sy = artboardPx/2 + hp.resize.y*artboardPx;
-  drawHandleDot(ctx, sx, sy, '#FF6F91');
-
-  // Border only gets the resize handle — it already has its own Rotate slider.
-  if (kind!=='border'){
-    const rx = artboardPx/2 + hp.rotate.x*artboardPx, ry = artboardPx/2 + hp.rotate.y*artboardPx;
-    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(rx,ry); ctx.strokeStyle='rgba(143,174,124,0.6)'; ctx.lineWidth=1.5; ctx.stroke();
-    drawHandleDot(ctx, rx, ry, '#4D8FE0');
-  }
   ctx.restore();
 }
-function drawHandleDot(ctx, x, y, color){
-  ctx.beginPath(); ctx.arc(x, y, 11, 0, Math.PI*2);
-  ctx.fillStyle = '#ffffff'; ctx.fill();
-  ctx.lineWidth = 2.5; ctx.strokeStyle = color; ctx.stroke();
+
+/* ── ROTATE RAIL — a persistent vertical slider fixed to the right of the
+   pin, shown whenever a rotatable element is selected. Replaces every
+   per-kind Rotate dock tool and the old on-canvas rotate handle. Above the
+   slider: an icon of whatever's selected (so it's unambiguous which object
+   is about to spin), and above that, a lock toggle — locked elements can
+   still be selected (to reach this button and unlock them) but the slider
+   itself is disabled and setSelectedRotation() no-ops until unlocked.
+   Called from drawPreview() so it never needs its own call sites scattered
+   through every mutation function. ── */
+function updateRotateRail(){
+  const rail = document.getElementById('rotateRail');
+  if (!rail) return;
+  const { el, kind } = selectedElementAndKind();
+  const rotatable = ['sticker','shape','wordart','letter','text','character','border'];
+  if (!el || !rotatable.includes(kind)){
+    rail.style.display = 'none';
+    return;
+  }
+  rail.style.display = '';
+  const deg = Math.round((el.rotation||0)*180/Math.PI);
+  const slider = document.getElementById('rotateSlider');
+  if (slider && document.activeElement !== slider){ slider.value = deg; }
+  if (slider) slider.disabled = !!el.locked;
+  const thumb = document.getElementById('rotateThumb');
+  if (thumb) thumb.innerHTML = kind==='text' ? ICON_TEXT : (el.img ? `<img src="${el.img.src}" alt="">` : '');
+  const lockBtn = document.getElementById('rotateLockBtn');
+  if (lockBtn){
+    lockBtn.innerHTML = el.locked ? ICON_LOCK : ICON_UNLOCK;
+    lockBtn.classList.toggle('locked', !!el.locked);
+  }
 }
+window.updateRotateRail = updateRotateRail;
+
+function setSelectedRotation(deg){
+  const { el, kind } = selectedElementAndKind();
+  if (!el || !kind || kind==='background' || el.locked) return;
+  el.rotation = (+deg) * Math.PI/180;
+  drawPreview();
+}
+window.setSelectedRotation = setSelectedRotation;
+
+function toggleLockSelected(){
+  const { el, kind } = selectedElementAndKind();
+  if (!el || !kind) return;
+  toggleLock(kind, state.selected.id);
+}
+window.toggleLockSelected = toggleLockSelected;
 
 // Dims the bleed ring (between the cut line and the paper/artboard edge) so
 // it's visually obvious that area gets trimmed off and isn't part of the
@@ -3131,6 +3099,7 @@ function drawPreview(){
   drawSelectionHandles(ctx, CANVAS_PX);
   drawWatermark(ctx, CANVAS_PX);
   updateCutlineWarning();
+  updateRotateRail();
 }
 
 // True if any character/sticker/shape/wordart/text currently extends past
@@ -3531,9 +3500,12 @@ const CATEGORY_TO_SET_KEY = {
 // Letters assets are named "<groupNumber>_<LETTER>-<variant>.ext" (e.g.
 // 1_A-01.png, 1_B-01.png, 2_A-01.png...) — each number is a distinct design;
 // the trailing -variant number is captured but not used for anything (any
-// digits work, not just "01") — buildLetterGroups() below turns the flat
-// file list into { groupId, thumbSrc (always the "A"), letters }.
-const LETTER_FILENAME_RE = /^(\d+)_([A-Za-z])-\d+\.[^.]+$/i;
+// digits work, not just "01"). The underscore accepts one-or-more (some
+// uploaded files use "2__A-01.png" with a double underscore) so a stray
+// extra underscore doesn't silently drop a file from the picker.
+// buildLetterGroups() below turns the flat file list into
+// { groupId, thumbSrc (always the "A"), letters }.
+const LETTER_FILENAME_RE = /^(\d+)_+([A-Za-z])-\d+\.[^.]+$/i;
 const NEW_PRODUCT_ASSET_GROUPS = ['election','ph-souvenir','wedding'];
 const ASSET_GROUP_CACHE = {}; // groupId -> { stickers, shapes, wordart, borders, background, characters, letters }
 let LETTER_GROUPS = []; // rebuilt in applyAssetGroup() — [{ groupId, thumbSrc, letters:{A:url,...} }]
