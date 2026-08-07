@@ -161,7 +161,13 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
    doesn't shrink the pin itself — sizeCanvasStage reads clientHeight, which
    includes padding — it just biases where centering lands), so less of it
    sits behind the floating nav menu at the bottom. */
-.cr-canvas-wrap{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding-bottom:72px;}
+/* justify-content:flex-start (not center) is deliberate — on iOS Safari the
+   address bar + bottom toolbar can dock over part of the viewport after
+   this container's height is measured, so anything vertically centered in
+   the full (chrome-inclusive) height ends up looking pushed down into the
+   obscured area. Anchoring to the top keeps the pin — and the dock below
+   it — reliably in the visible area regardless of that browser chrome. */
+.cr-canvas-wrap{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:flex-start;padding-top:6px;padding-bottom:72px;}
 
 /* Decorative sticker backdrop, purely visual — sits behind the canvas
    (z-index:0 vs the canvas's z-index:1). Driven entirely by a JS physics
@@ -256,6 +262,28 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 .cr-rotate-thumb svg{width:18px;height:18px;}
 .cr-rotate-slider-wrap{width:30px;height:150px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
 .cr-rotate-slider{
+  width:150px;height:30px;margin:0;transform:rotate(-90deg);
+  accent-color:var(--pill);
+}
+
+/* Resize rail — mirrors the rotate rail, fixed to the LEFT of the pin. Same
+   light-mode var re-declaration, same reasoning (see .cr-floating-tools). */
+.cr-resize-rail{
+  position:absolute; left:6px; top:50%; transform:translateY(-50%);
+  z-index:5; display:flex; flex-direction:column; align-items:center; gap:10px;
+  --cream:#F5F1DE; --cream-deep:#ECE5C6; --card:#FFFFFF;
+  --ink:#22301F; --ink-dim:#6E7A69; --border:rgba(34,48,31,0.10);
+  --pill:#1E2A20; --pill-text:#FFFFFF;
+  --sage-light:#E4ECDA; --coral-light:#FFE3EA;
+}
+.cr-resize-icon{
+  width:30px;height:30px;border-radius:50%;flex-shrink:0;
+  background:var(--card);border:1px solid var(--border);color:var(--ink-dim);
+  display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);
+}
+.cr-resize-icon svg{width:15px;height:15px;}
+.cr-resize-slider-wrap{width:30px;height:150px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.cr-resize-slider{
   width:150px;height:30px;margin:0;transform:rotate(-90deg);
   accent-color:var(--pill);
 }
@@ -466,22 +494,31 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
   transition:transform 0.4s cubic-bezier(.2,.8,.3,1);
 }
 .cr-pin3d.dragging{transition:none;}
+/* A single 0-offset inset shadow darkens the rim uniformly on every side
+   (the center stays clear) — that uniform falloff is what reads as a dome
+   curving away from the viewer. A directional inset (darker on one side,
+   lighter on the other, which is what this used to be) reads as a shallow
+   dent instead, since that's the standard CSS convention for a "pressed
+   in" surface — the opposite of what a glossy embossed button looks like. */
 .cr-pin3d-face{
   position:absolute;inset:0;border-radius:50%;
   transform:translateZ(9px);
   box-shadow:0 16px 28px rgba(0,0,0,0.25),
-             inset 0 -6px 14px rgba(0,0,0,0.25),
-             inset 0 6px 10px rgba(255,255,255,0.35);
+             inset 0 0 26px rgba(0,0,0,0.32);
 }
 .cr-pin3d-face canvas{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;display:block;-webkit-user-drag:none;}
+/* Specular highlight only — its position/size is recomputed on every drag
+   in applyPin3dTransform() (create.js), this is just the resting default.
+   soft-light blends it into the design's own colors (a warm glow) instead
+   of sitting on top as a flat white smear. */
 .cr-pin3d-shine{
   position:absolute;inset:0;border-radius:50%;pointer-events:none;
-  background:radial-gradient(circle at 32% 28%, rgba(255,255,255,0.85), rgba(255,255,255,0.15) 35%, rgba(255,255,255,0) 55%),
-             radial-gradient(circle at 70% 80%, rgba(0,0,0,0.18), rgba(0,0,0,0) 45%);
+  mix-blend-mode:soft-light;
+  background:radial-gradient(circle at 63% 32%, rgba(255,255,255,0.95), rgba(255,255,255,0.55) 12%, rgba(255,255,255,0.12) 30%, rgba(255,255,255,0) 50%);
 }
 .cr-pin3d-rim{
   position:absolute;inset:0;border-radius:50%;pointer-events:none;
-  box-shadow:inset 0 0 0 3px rgba(255,255,255,0.5), inset 0 0 0 6px rgba(0,0,0,0.08);
+  box-shadow:inset 0 0 0 3px rgba(255,255,255,0.55), inset 0 0 0 7px rgba(0,0,0,0.12);
 }
 .cr-pin3d-back{
   position:absolute;inset:0;border-radius:50%;

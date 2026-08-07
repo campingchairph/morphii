@@ -116,6 +116,20 @@
           </div>
         </div>
 
+        <!-- RESIZE RAIL — mirrors the rotate rail on the left: pinch/wheel
+             still work, but a slider is easier to find and gives a much
+             wider range (see RESIZE_SCALE_MIN/MAX in create.js) than trying
+             to pinch precisely on a small phone screen. -->
+        <div class="cr-resize-rail" id="resizeRail" style="display:none">
+          <div class="cr-resize-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+          </div>
+          <div class="cr-resize-slider-wrap">
+            <input type="range" class="cr-resize-slider" id="resizeSlider" min="10" max="1000" value="100" step="5"
+              oninput="setSelectedScalePercent(this.value)" title="Resize">
+          </div>
+        </div>
+
         <!-- Floating layer buttons + nav menu — on top of the pin instead of
              pushing it. None of this is in normal flow, so opening/closing a
              tool panel can never resize .cr-canvas-wrap (which is what used
@@ -344,6 +358,6 @@
 <!-- EmailJS (sends the confirmation email client-side, no backend needed) -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="email-config.js"></script>
-<script src="create.js?v=34"></script>
+<script src="create.js?v=35"></script>
 </body>
 </html>

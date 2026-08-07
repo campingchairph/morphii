@@ -1316,7 +1316,6 @@ function toolIconsForSelection(){
     ];
     return [
       { id:'replace', label:'Replace', icon:ICON_UPLOAD, instant:"promptUpload('character')" },
-      { id:'size', label:'Size', icon:ICON_SIZE, panel:true },
       { id:'lock', label: state.character.locked?'Locked':'Lock', icon: state.character.locked?ICON_LOCK:ICON_UNLOCK, instant:"toggleLock('character')", on: state.character.locked },
       { id:'remove', label:'Remove', icon:ICON_TRASH, instant:'removeCharacter()', danger:true },
     ];
@@ -1338,7 +1337,6 @@ function toolIconsForSelection(){
     const icons = [
       { id:'presets', label:'Presets', icon:ICON_PALETTE, panel:true },
       { id:'replace', label:'Upload', icon:ICON_UPLOAD, instant:`promptUpload('${kind}')` },
-      { id:'size', label:'Size', icon:ICON_SIZE, panel:true },
     ];
     // Built-in vector shapes (not admin PNG presets or uploads) can be
     // recolored on demand — see setShapeColor().
@@ -1355,16 +1353,23 @@ function toolIconsForSelection(){
   if (kind==='text'){
     const t = state.textLines.find(x=>x.id===state.selected.id);
     if (!t) return [];
-    return [
+    const icons = [
       { id:'edit', label:'Edit', icon:ICON_EDIT, panel:true },
       { id:'font', label:'Font', icon:ICON_FONT, panel:true },
       { id:'placement', label:'Style', icon:ICON_ARC, panel:true },
       { id:'color', label:'Color', icon:ICON_SWATCH, panel:true },
-      { id:'size', label:'Size', icon:ICON_SIZE, panel:true },
+    ];
+    // Straight text's size is just .size, fully covered by the resize rail
+    // + pinch/wheel now — only curved text still needs a dock control,
+    // since its actual font size is a separate field from the curve-radius
+    // pinch/rail adjusts (see textToolPanelHtml's 'size' branch).
+    if (t.placement !== 'straight') icons.push({ id:'size', label:'Font Size', icon:ICON_SIZE, panel:true });
+    icons.push(
       { id:'shadow', label:'Shadow', icon:ICON_SHADOW, instant:`toggleTextShadow(${t.id},${!t.shadow})`, on:t.shadow },
       { id:'lock', label: t.locked?'Locked':'Lock', icon: t.locked?ICON_LOCK:ICON_UNLOCK, instant:`toggleLock('text',${t.id})`, on: t.locked },
       { id:'remove', label:'Remove', icon:ICON_TRASH, instant:`removeTextLine(${t.id})`, danger:true },
-    ];
+    );
+    return icons;
   }
   return [];
 }
@@ -1959,12 +1964,6 @@ function placedToolPanelHtml(kind, tool, id){
       </label>
     </div>`;
   }
-  if (tool==='size'){
-    return `
-      <div class="cr-field-label">Size</div>
-      <input type="range" class="cr-range" min="0.4" max="2.5" step="0.1" value="${el.scale}" oninput="setPlacedScale('${kind}',${el.id},this.value)">
-      <div class="cr-hint">Drag the ${noun} on the pin to reposition, or pinch to resize. Use the slider on the right to rotate.</div>`;
-  }
   return '';
 }
 
@@ -2160,14 +2159,6 @@ function removePlaced(kind, id){
 }
 window.removePlaced = removePlaced;
 
-function setPlacedScale(kind, id, val){
-  const el = placedArray(kind).find(x=>x.id===id);
-  if (!el) return;
-  el.scale = +val;
-  drawPreview();
-}
-window.setPlacedScale = setPlacedScale;
-
 // Thin sticker-specific names kept so existing call sites (tool icons,
 // panel HTML built before this refactor) don't need to change.
 function duplicateSticker(id){ duplicatePlaced('sticker', id); }
@@ -2178,8 +2169,6 @@ function onStickerFileChosen(e){ onPlacedFileChosen('sticker', e); }
 window.onStickerFileChosen = onStickerFileChosen;
 function removeSticker(id){ removePlaced('sticker', id); }
 window.removeSticker = removeSticker;
-function setStickerScale(id, val){ setPlacedScale('sticker', id, val); }
-window.setStickerScale = setStickerScale;
 
 /* ── CHARACTER TOOL PANELS (single, big mascot/logo slot — freely draggable) ── */
 function characterToolPanelHtml(tool){
@@ -2190,14 +2179,6 @@ function characterToolPanelHtml(tool){
     return `<div class="cr-preset-grid">${CHARACTER_PRESETS.map((p,i)=>
       `<button class="cr-preset-thumb" onclick="setCharacterFromPreset(${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`
     ).join('')}</div>`;
-  }
-  if (tool==='size'){
-    const sizePct = Math.round(c.scale*100);
-    return `
-      <div class="cr-field-label">Size <span class="cr-slider-val" id="charSizeVal">${sizePct}%</span></div>
-      <input type="range" class="cr-range cr-range-mid" min="1" max="199" value="${sizePct}"
-        oninput="setCharacterScale(this.value/100); document.getElementById('charSizeVal').textContent=this.value+'%'">
-      <div class="cr-hint">Drag on the pin to reposition, or pinch to resize. Use the slider on the right to rotate.</div>`;
   }
   return '';
 }
@@ -2212,6 +2193,7 @@ function toggleLock(kind, id){
   el.locked = !el.locked;
   renderDock();
   updateRotateRail();
+  updateResizeRail();
 }
 window.toggleLock = toggleLock;
 window.toggleIsolateMode = toggleIsolateMode;
@@ -2259,13 +2241,6 @@ function removeCharacter(){
   else { renderDock(); drawPreview(); }
 }
 window.removeCharacter = removeCharacter;
-
-function setCharacterScale(val){
-  if (!state.character) return;
-  state.character.scale = +val;
-  drawPreview();
-}
-window.setCharacterScale = setCharacterScale;
 
 /* ── TEXT PANEL ───────────────────────────────── */
 function addTextLine(){
@@ -2350,34 +2325,19 @@ function textToolPanelHtml(tool, id){
       </label>
     </div>`;
   }
-  if (tool==='size'){
-    if (t.placement !== 'straight'){
-      const sizePctArc = Math.round(t.size*100);
-      return `
-        <div class="cr-field-label">Font Size</div>
-        <input type="number" class="cr-text-input" style="margin-bottom:0" min="1" step="1" inputmode="numeric"
-          value="${sizePctArc}" oninput="setTextSizeRaw(${t.id},this.value)">
-        <div class="cr-hint">No size limit — type any value, or pinch on the pin to adjust how far out the curve sits, separately from font size.</div>`;
-    }
-    const sizePct = Math.round(t.size*100);
+  // Only reachable for curved text now (see toolIconsForSelection) — its
+  // actual font size is a separate field from the curve radius that
+  // pinch/wheel/the resize rail adjust, so it still needs its own control.
+  if (tool==='size' && t.placement !== 'straight'){
+    const sizePctArc = Math.round(t.size*100);
     return `
-      <div class="cr-field-label">Size <span class="cr-slider-val" id="textSizeVal_${t.id}">${sizePct}%</span></div>
-      <input type="range" class="cr-range cr-range-mid" min="1" max="199" value="${sizePct}"
-        oninput="setTextSizePct(${t.id},this.value); document.getElementById('textSizeVal_${t.id}').textContent=this.value+'%'">
-      <div class="cr-hint" style="margin-top:-2px">Or pinch on the pin to resize freely past this slider's range. Use the slider on the right to rotate.</div>`;
+      <div class="cr-field-label">Font Size</div>
+      <input type="number" class="cr-text-input" style="margin-bottom:0" min="1" step="1" inputmode="numeric"
+        value="${sizePctArc}" oninput="setTextSizeRaw(${t.id},this.value)">
+      <div class="cr-hint">No size limit — type any value. Pinch on the pin (or the slider on the left) adjusts how far out the curve sits, separately from font size.</div>`;
   }
   return '';
 }
-
-function setTextSizePct(id, pct){
-  const t = state.textLines.find(x=>x.id===id);
-  if (!t) return;
-  t.size = (+pct)/100;
-  clampTextSize(t);
-  clampElementToCutLine(t);
-  drawPreview();
-}
-window.setTextSizePct = setTextSizePct;
 
 // Curved text's font-size field — deliberately uncapped (no clampTextSize
 // call), since clampTextSize already no-ops for non-straight placements.
@@ -2469,16 +2429,25 @@ function resizeStartScaleFor(el, kind){
   if (kind==='text') return el.size;
   return el.scale||1;
 }
-// Same per-kind clamp ranges the old on-canvas resize handle used. `ratio`
-// is startScale-relative (pinch, tracked across the whole gesture) or a
-// single-tick multiplier read against the CURRENT value (wheel).
+// General resize ceiling — customers were hitting the old 3x/5x caps on
+// stickers/text wanting to blow something up much bigger, so this is
+// deliberately generous (10x is already several times the whole pin).
+// Border keeps its own much smaller range (see below) and arc text's
+// curve-radius keeps its own — neither is really "how big does this look."
+const RESIZE_SCALE_MIN = 0.1, RESIZE_SCALE_MAX = 10;
+
+// Same per-kind fields the old on-canvas resize handle used, now shared by
+// pinch, wheel, AND the resize rail slider. `ratio` is startScale-relative
+// (pinch: tracked across the whole gesture; slider: startScale is always 1
+// so ratio IS the absolute target) or a single-tick multiplier read against
+// the CURRENT value (wheel).
 function applyResizeRatioTarget(target, startScale, ratio){
   const { el, kind } = target;
   if (kind==='text' && el.placement && el.placement!=='straight'){
     el.arcRadiusMult = Math.max(0.2, Math.min(2.5, startScale * ratio));
   } else if (kind==='text'){
-    el.size = Math.max(0.3, Math.min(5, startScale * ratio));
-    clampTextSize(el);
+    el.size = Math.max(RESIZE_SCALE_MIN, Math.min(RESIZE_SCALE_MAX, startScale * ratio));
+    clampTextSize(el); // separately re-shrinks to fit the safe area if needed — a print-legibility guard, not a size cap
     clampElementToCutLine(el);
   } else if (kind==='border'){
     // Small tweak range only — this compensates for asset borders that
@@ -2488,7 +2457,7 @@ function applyResizeRatioTarget(target, startScale, ratio){
     el.scale = startScale * ratio;
     clampBgTransform();
   } else {
-    el.scale = Math.max(0.3, Math.min(3, startScale * ratio));
+    el.scale = Math.max(RESIZE_SCALE_MIN, Math.min(RESIZE_SCALE_MAX, startScale * ratio));
   }
 }
 
@@ -2917,6 +2886,41 @@ function toggleLockSelected(){
 }
 window.toggleLockSelected = toggleLockSelected;
 
+// Mirrors updateRotateRail — same selectedElementAndKind()-driven show/hide
+// and locked-disables-the-slider behavior, just for size instead of angle.
+// Border keeps its own tiny range (see applyResizeRatioTarget); everything
+// else gets the full RESIZE_SCALE_MIN..MAX span.
+function updateResizeRail(){
+  const rail = document.getElementById('resizeRail');
+  if (!rail) return;
+  const { el, kind } = selectedElementAndKind();
+  const resizableKinds = ['sticker','shape','wordart','letter','text','character','border'];
+  if (!el || !resizableKinds.includes(kind)){
+    rail.style.display = 'none';
+    return;
+  }
+  rail.style.display = '';
+  const range = kind==='border' ? { min:70, max:130 } : { min:RESIZE_SCALE_MIN*100, max:RESIZE_SCALE_MAX*100 };
+  const slider = document.getElementById('resizeSlider');
+  if (slider){
+    slider.min = range.min; slider.max = range.max;
+    if (document.activeElement !== slider){
+      const pct = Math.round(resizeStartScaleFor(el, kind) * 100);
+      slider.value = Math.max(range.min, Math.min(range.max, pct));
+    }
+    slider.disabled = !!el.locked;
+  }
+}
+window.updateResizeRail = updateResizeRail;
+
+function setSelectedScalePercent(pct){
+  const { el, kind } = selectedElementAndKind();
+  if (!el || !kind || kind==='background' || el.locked) return;
+  applyResizeRatioTarget({ el, kind }, 1, (+pct)/100);
+  drawPreview();
+}
+window.setSelectedScalePercent = setSelectedScalePercent;
+
 // Dims the bleed ring (between the cut line and the paper/artboard edge) so
 // it's visually obvious that area gets trimmed off and isn't part of the
 // finished, visible pin — live-editing chrome only, not in exports.
@@ -2981,6 +2985,7 @@ function drawPreview(){
   drawWatermark(ctx, CANVAS_PX);
   updateCutlineWarning();
   updateRotateRail();
+  updateResizeRail();
 }
 
 // True if any character/sticker/shape/wordart/text currently extends past
@@ -3199,11 +3204,14 @@ function applyPin3dTransform(){
   const shine = document.getElementById('pinPreviewShine');
   if (!pin || !shine) return;
   pin.style.transform = `rotateX(${_pin3dRot.x}deg) rotateY(${_pin3dRot.y}deg)`;
+  // A single specular highlight, shifted opposite the tilt so it reads as
+  // a fixed light source reacting to the surface angle. The uniform rim
+  // darkening that sells the dome shape lives in .cr-pin3d-face's own
+  // inset box-shadow instead of a second gradient here — layering a dark
+  // blob on top of that used to read as a dent rather than curvature.
   const hx = 50 - _pin3dRot.y*1.3, hy = 50 - _pin3dRot.x*1.3;
-  const sx = 50 + _pin3dRot.y*1.3, sy = 50 + _pin3dRot.x*1.3;
   shine.style.background =
-    `radial-gradient(circle at ${hx}% ${hy}%, rgba(255,255,255,0.85), rgba(255,255,255,0.15) 35%, rgba(255,255,255,0) 55%),` +
-    `radial-gradient(circle at ${sx}% ${sy}%, rgba(0,0,0,0.18), rgba(0,0,0,0) 45%)`;
+    `radial-gradient(circle at ${hx}% ${hy}%, rgba(255,255,255,0.95), rgba(255,255,255,0.55) 12%, rgba(255,255,255,0.12) 30%, rgba(255,255,255,0) 50%)`;
 }
 
 function initPin3dDrag(){
