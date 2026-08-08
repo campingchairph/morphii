@@ -671,6 +671,21 @@ const CANVAS_PX   = 480;   // fixed on-screen render resolution
 const EXPORT_PPMM = 11.8;  // export resolution for the clean (admin-facing) design, px per mm (~300 DPI)
 const FONTS = ['Luckiest Guy','Shrikhand','Carter One','Ceviche One','Kavoon','Cherry Bomb One','Lobster','Spicy Rice','Chicle'];
 
+// A font's @font-face rule existing (its stylesheet <link> loaded) doesn't
+// mean the actual font FILE has been fetched — that only happens once
+// something renders with it. Canvas text drawn before the file is ready
+// silently falls back and never repaints itself later on its own (unlike
+// DOM text), so anywhere a font gets applied to canvas text should route
+// through this first: it forces the fetch and calls back once the font is
+// actually usable, not just linked.
+function ensureFontLoaded(fontName, then){
+  if (!document.fonts || typeof document.fonts.load !== 'function'){ if (then) then(); return; }
+  Promise.all([
+    document.fonts.load(`400 32px "${fontName}"`),
+    document.fonts.load(`700 32px "${fontName}"`),
+  ]).catch(()=>{}).then(()=>{ if (then) then(); });
+}
+
 // Same gradient presets as the kiosk avatar builder (morphii.js CATS.bg.items),
 // copied verbatim so both tools offer identical background options.
 const GRADIENTS = [
@@ -1450,7 +1465,7 @@ function bgToolPanelHtml(tool){
       }).join('')}</div>
       <div class="cr-field-label" style="margin-top:10px">Or a blank color</div>
       <label class="cr-color-swatch cr-color-swatch-picker ${isSolid?'active':''}" style="width:40px;height:40px" title="Custom solid color">
-        <input type="color" value="${safeBgColor}" oninput="setBgSolidColor(this.value)">
+        <input type="color" value="${safeBgColor}" oninput="setBgSolidColorLive(this.value)" onchange="setBgSolidColor(this.value)">
         ${ICON_PICKER_WHEEL}
       </label>
       ${state.bg.color ? `<label class="cr-checkbox-row"><input type="checkbox" ${state.bg.colorOn?'checked':''} onchange="toggleColorLayer(this.checked)">Show this color</label>` : ''}
@@ -1474,6 +1489,19 @@ function selectGradient(i){
   updateSubmitAvailability();
 }
 window.selectGradient = selectGradient;
+
+// Live (oninput, fires continuously while dragging the native color
+// picker's spectrum/sliders) vs commit (onchange, fires once when the
+// picker closes) — live must NOT touch the DOM the picker itself lives in,
+// or the picker gets torn down and closed mid-drag. Commit does the fuller
+// re-render so the surrounding UI (dock thumbnail, swatch active state)
+// catches up once the customer is done picking, not on every tick.
+function setBgSolidColorLive(hex){
+  state.bg.color = { grad:[hex,hex], label:'Custom' };
+  state.bg.colorOn = true;
+  drawPreview();
+}
+window.setBgSolidColorLive = setBgSolidColorLive;
 
 function setBgSolidColor(hex){
   state.bg.color = { grad:[hex,hex], label:'Custom' };
@@ -1992,7 +2020,7 @@ function placedToolPanelHtml(kind, tool, id){
         `<button class="cr-color-swatch ${cur===c.toLowerCase()?'active':''}" style="background:${c}" onclick="setShapeColor(${el.id},'${c}')" title="${c}"></button>`
       ).join('')}
       <label class="cr-color-swatch cr-color-swatch-picker" title="Custom color">
-        <input type="color" value="${safeColor}" oninput="setShapeColor(${el.id},this.value)">
+        <input type="color" value="${safeColor}" oninput="setShapeColorLive(${el.id},this.value)" onchange="setShapeColor(${el.id},this.value)">
         ${ICON_PICKER_WHEEL}
       </label>
     </div>`;
@@ -2093,6 +2121,18 @@ function swapToVectorShape(kind, id, shapeId){
   img.src = rasterizeVectorShape(shapeId, color);
 }
 window.swapToVectorShape = swapToVectorShape;
+
+// Live (oninput, while dragging the native picker's spectrum/sliders) vs
+// commit (onchange, once it closes) — see setBgSolidColorLive for why live
+// must not re-render the panel the picker itself lives in.
+function setShapeColorLive(id, hex){
+  const el = state.shapes.find(x=>x.id===id);
+  if (!el || !el.vectorShapeId) return;
+  const img = new Image();
+  img.onload = () => { el.img = img; el.color = hex; drawPreview(); };
+  img.src = rasterizeVectorShape(el.vectorShapeId, hex);
+}
+window.setShapeColorLive = setShapeColorLive;
 
 function setShapeColor(id, hex){
   const el = state.shapes.find(x=>x.id===id);
@@ -2307,8 +2347,26 @@ function updateTextLine(id, field, value){
   }
   if (field==='font' || field==='placement' || field==='color') renderToolPanelContent();
   drawPreview();
+  // A font can be linked (its @font-face rule exists) without its actual
+  // file being fetched yet — that only happens once something renders with
+  // it. drawPreview() above may have just drawn the canvas on a fallback
+  // font; unlike DOM text, canvas never repaints itself once the real font
+  // shows up later, so without this the new font silently doesn't apply
+  // until some unrelated action happens to call drawPreview() again.
+  if (field==='font') ensureFontLoaded(value, drawPreview);
 }
 window.updateTextLine = updateTextLine;
+
+// Live (oninput, while dragging the native picker's spectrum/sliders) vs
+// commit (onchange, once it closes) — see setBgSolidColorLive for why live
+// must not re-render the panel the picker itself lives in.
+function setTextColorLive(id, hex){
+  const line = state.textLines.find(t=>t.id===id);
+  if (!line) return;
+  line.color = hex;
+  drawPreview();
+}
+window.setTextColorLive = setTextColorLive;
 
 function toggleTextShadow(id, on){
   const line = state.textLines.find(t=>t.id===id);
@@ -2342,7 +2400,7 @@ function textToolPanelHtml(tool, id){
         `<button class="cr-color-swatch ${cur===c.toLowerCase()?'active':''}" style="background:${c}" onclick="updateTextLine(${t.id},'color','${c}')" title="${c}"></button>`
       ).join('')}
       <label class="cr-color-swatch cr-color-swatch-picker" title="Custom color">
-        <input type="color" value="${safeColor}" oninput="updateTextLine(${t.id},'color',this.value)">
+        <input type="color" value="${safeColor}" oninput="setTextColorLive(${t.id},this.value)" onchange="updateTextLine(${t.id},'color',this.value)">
         ${ICON_PICKER_WHEEL}
       </label>
     </div>`;
@@ -3708,6 +3766,10 @@ async function loadCustomFonts(){
         link.rel = 'stylesheet';
         link.href = f.url;
         link.dataset.fontUrl = f.url;
+        // The @font-face rule the picker relies on doesn't exist until this
+        // stylesheet itself finishes loading — warm the actual font file
+        // right after, so it's already cached by the time a customer picks it.
+        link.onload = () => ensureFontLoaded(f.name);
         document.head.appendChild(link);
       }
       FONTS.push(f.name);
