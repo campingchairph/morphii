@@ -582,6 +582,45 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 .cr-modal-title{font-family:'Baloo 2',cursive;font-size:17px;margin-bottom:10px;}
 .cr-modal-body{font-size:13px;color:var(--ink-dim);font-weight:700;line-height:1.6;margin-bottom:18px;}
 
+/* ── TEXT EDIT — fullscreen, above everything (z-index higher than the
+   regular .cr-modal-overlay's 120). Font-size on the input is deliberately
+   large — anything under 16px triggers iOS Safari's auto-zoom on focus. ── */
+.cr-text-edit-overlay{
+  position:fixed;inset:0;z-index:200;background:#0b0b0b;
+  display:none;flex-direction:column;
+}
+.cr-text-edit-overlay.show{display:flex;}
+.cr-text-edit-topbar{
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+  padding:calc(env(safe-area-inset-top,0px) + 14px) 18px 6px;
+}
+.cr-text-edit-icon-btn{
+  width:34px;height:34px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,0.14);color:#fff;border:none;cursor:pointer;padding:0;
+}
+.cr-text-edit-icon-btn svg{width:17px;height:17px;}
+.cr-text-edit-confirm{background:#fff;color:#111;}
+.cr-text-edit-center{
+  flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:24px;
+}
+.cr-text-edit-input{
+  width:100%;max-width:520px;background:transparent;border:none;outline:none;
+  color:#fff;text-align:center;font-size:40px;font-family:'Cormorant Garamond',serif;
+  caret-color:#fff;
+}
+.cr-text-edit-input::placeholder{color:rgba(255,255,255,0.35);}
+.cr-text-edit-fonts{
+  display:flex;gap:14px;overflow-x:auto;flex-shrink:0;scrollbar-width:none;
+  padding:14px 18px calc(env(safe-area-inset-bottom,0px) + 16px);
+}
+.cr-text-edit-fonts::-webkit-scrollbar{display:none;}
+.cr-text-edit-font-btn{
+  flex-shrink:0;background:none;border:none;cursor:pointer;white-space:nowrap;
+  color:rgba(255,255,255,0.55);font-size:15px;padding:8px 4px;
+}
+.cr-text-edit-font-btn.active{color:#fff;font-weight:700;}
+
 /* ── PNG / TRANSPARENCY INFOGRAPHIC ── */
 .cr-png-infographic{display:flex;align-items:center;justify-content:center;gap:10px;margin:4px 0;}
 .cr-png-card{display:flex;flex-direction:column;align-items:center;gap:6px;}
@@ -673,14 +712,8 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
   position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0;
 }
 
-/* ── FONT / CURVE / COLOR GRID PICKERS (text tool) ── */
-.cr-font-grid{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;}
-.cr-font-swatch{
-  width:100%;padding:12px 14px;border-radius:11px;border:1.5px solid var(--border);background:var(--card);
-  color:var(--ink);font-size:17px;text-align:left;cursor:pointer;
-}
-.cr-font-swatch.active{border-color:var(--coral);border-width:2px;}
-
+/* ── CURVE / COLOR GRID PICKERS (text tool) — font picking moved into the
+   fullscreen text-edit overlay, see .cr-text-edit-fonts ── */
 .cr-curve-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
 .cr-curve-swatch{
   aspect-ratio:1/0.85;border-radius:11px;border:1.5px solid var(--border);background:var(--card);
@@ -720,7 +753,7 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
      non-square 80%, warping the circular pin into an oval), so this stays
      100% and only acts as a safety ceiling. */
   position:relative;z-index:1;max-width:100%;max-height:100%;
-  margin-top:123px; /* clears the element strip above, with a gap = 2x its icon size */
+  margin-top:95px; /* clears the element strip above, with a gap = 1x its icon size */
   background:transparent;touch-action:none;
   /* drop-shadow (not box-shadow) hugs the actual circular pin shape drawn on
      the canvas, instead of casting a square shadow behind it. */

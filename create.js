@@ -1355,8 +1355,7 @@ function toolIconsForSelection(){
     const t = state.textLines.find(x=>x.id===state.selected.id);
     if (!t) return [];
     const icons = [
-      { id:'edit', label:'Edit', icon:ICON_EDIT, panel:true },
-      { id:'font', label:'Font', icon:ICON_FONT, panel:true },
+      { id:'edit', label:'Edit', icon:ICON_EDIT, instant:`openTextEditModal(${t.id})` },
       { id:'placement', label:'Style', icon:ICON_ARC, panel:true },
       { id:'color', label:'Color', icon:ICON_SWATCH, panel:true },
     ];
@@ -2282,7 +2281,7 @@ function addTextLine(){
   state.textLines.push(line);
   pushLayer({ kind:'text', id: line.id });
   selectLayer({ kind:'text', id: line.id });
-  openToolPanel('edit');
+  openTextEditModal(line.id);
 }
 window.addTextLine = addTextLine;
 
@@ -2323,17 +2322,6 @@ window.toggleTextShadow = toggleTextShadow;
 function textToolPanelHtml(tool, id){
   const t = state.textLines.find(x=>x.id===id);
   if (!t) return '';
-  if (tool==='edit'){
-    return `
-      <input type="text" class="cr-text-input" value="${escHtml(t.text)}" maxlength="24"
-        oninput="updateTextLine(${t.id},'text',this.value)" placeholder="Your text">
-      <div class="cr-hint">Drag the text directly on the pin to reposition it.</div>`;
-  }
-  if (tool==='font'){
-    return `<div class="cr-font-grid">${FONTS.map((f,i)=>
-      `<button class="cr-font-swatch ${t.font===f?'active':''}" style="font-family:'${escHtml(f)}'" onclick="updateTextLine(${t.id},'font',FONTS[${i}])">${escHtml(f)}</button>`
-    ).join('')}</div>`;
-  }
   if (tool==='placement'){
     const options = [
       { v:'straight',   label:'Straight',    icon:ICON_CURVE_STRAIGHT },
@@ -2385,6 +2373,73 @@ function setTextSizeRaw(id, pct){
   drawPreview();
 }
 window.setTextSizeRaw = setTextSizeRaw;
+
+/* ── TEXT EDIT (fullscreen) — content + font live here; everything else
+   (placement/color/size/shadow/lock/remove) stays in the dock rising panel.
+   Cancel restores the text that was there when the modal opened; Done just
+   keeps whatever's live (typing already updates state.textLines directly,
+   same as the old inline field did). ── */
+let _textEditId = null, _textEditSnapshot = null;
+
+function openTextEditModal(id){
+  const t = state.textLines.find(x=>x.id===id);
+  if (!t) return;
+  _textEditId = id;
+  _textEditSnapshot = t.text;
+  const input = document.getElementById('textEditInput');
+  input.value = t.text;
+  input.style.fontFamily = `'${t.font}'`;
+  renderTextEditFonts();
+  document.getElementById('textEditOverlay').classList.add('show');
+  setTimeout(()=>{ input.focus(); input.select(); }, 50);
+}
+window.openTextEditModal = openTextEditModal;
+
+function onTextEditInput(val){
+  if (_textEditId==null) return;
+  updateTextLine(_textEditId, 'text', val);
+}
+window.onTextEditInput = onTextEditInput;
+
+function renderTextEditFonts(){
+  const wrap = document.getElementById('textEditFonts');
+  const t = state.textLines.find(x=>x.id===_textEditId);
+  if (!wrap || !t) return;
+  wrap.innerHTML = FONTS.map(f=>`
+    <button class="cr-text-edit-font-btn ${t.font===f?'active':''}" style="font-family:'${escHtml(f)}'" onclick="setTextEditFont('${escHtml(f)}')">${escHtml(f)}</button>
+  `).join('');
+}
+
+function setTextEditFont(font){
+  if (_textEditId==null) return;
+  updateTextLine(_textEditId, 'font', font);
+  const input = document.getElementById('textEditInput');
+  if (input) input.style.fontFamily = `'${font}'`;
+  renderTextEditFonts();
+}
+window.setTextEditFont = setTextEditFont;
+
+function confirmTextEdit(){
+  const t = state.textLines.find(x=>x.id===_textEditId);
+  if (t && !t.text.trim()) updateTextLine(t.id, 'text', 'Your Text'); // don't leave an empty text line behind
+  closeTextEditModal();
+}
+window.confirmTextEdit = confirmTextEdit;
+
+function cancelTextEdit(){
+  if (_textEditId!=null) updateTextLine(_textEditId, 'text', _textEditSnapshot);
+  closeTextEditModal();
+}
+window.cancelTextEdit = cancelTextEdit;
+
+function closeTextEditModal(){
+  const input = document.getElementById('textEditInput');
+  if (input) input.blur();
+  document.getElementById('textEditOverlay').classList.remove('show');
+  _textEditId = null; _textEditSnapshot = null;
+  renderDock();
+}
+window.closeTextEditModal = closeTextEditModal;
 
 /* ── CANVAS INTERACTIONS: drag to move, pinch/wheel to resize, the rotate
    rail to rotate. There are no on-canvas handles — locked elements stay
@@ -3067,9 +3122,13 @@ function renderFinishedPinFace(canvas, opts){
 // Bulges the design toward the viewer like it's printed on a domed acrylic
 // pin surface, instead of just a flat circle with a lighting overlay on
 // top. Destination pixels near the center sample source pixels from
-// further out (power<1), which reads as the middle of the image pushing
-// forward while the rim stays anchored — a one-time pixel remap, done
-// once when the preview opens, not per animation frame.
+// CLOSER to the center too (power>1), so a small patch of the original
+// center gets stretched to fill more space — that's what reads as the
+// middle pushing out at the viewer, rim staying anchored (r=1 always
+// maps to r=1 either way). power<1 is the opposite: it pulls source
+// pixels from further out toward the center, which reads as a funnel
+// sucking the image inward instead of a dome bulging outward — a
+// one-time pixel remap, done once when the preview opens, not per frame.
 function applyDomeWarp(canvas, strength){
   strength = strength==null ? 0.22 : strength;
   const px = canvas.width;
@@ -3078,7 +3137,7 @@ function applyDomeWarp(canvas, strength){
   const dst = ctx.createImageData(px, px);
   const s = src.data, d = dst.data;
   const cx = px/2, cy = px/2, R = px/2;
-  const power = 1 - strength;
+  const power = 1 + strength;
   for (let y=0; y<px; y++){
     for (let x=0; x<px; x++){
       const nx = (x-cx)/R, ny = (y-cy)/R;

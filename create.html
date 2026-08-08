@@ -228,6 +228,29 @@
       </div>
     </div>
 
+    <!-- TEXT EDIT — fullscreen, opened by the text tool's Edit icon (and
+         automatically when a new text line is added). Typing the content
+         and picking a font both happen here; placement/color/size/shadow
+         stay in the normal dock rising panel. The input's font-size is
+         deliberately large (see CSS) — anything under 16px makes iOS Safari
+         auto-zoom the whole page when the field gets focus, which is the
+         "screen zooms in" behavior this replaces. -->
+    <div class="cr-text-edit-overlay" id="textEditOverlay">
+      <div class="cr-text-edit-topbar">
+        <button class="cr-text-edit-icon-btn" onclick="cancelTextEdit()" title="Cancel">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+        <button class="cr-text-edit-icon-btn cr-text-edit-confirm" onclick="confirmTextEdit()" title="Done">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>
+        </button>
+      </div>
+      <div class="cr-text-edit-center">
+        <input type="text" id="textEditInput" class="cr-text-edit-input" maxlength="24"
+          oninput="onTextEditInput(this.value)" placeholder="Your text" autocapitalize="words" autocomplete="off" autocorrect="off">
+      </div>
+      <div class="cr-text-edit-fonts" id="textEditFonts"></div>
+    </div>
+
     <!-- 3D PRINT PREVIEW — a CSS-3D-tilted render of just the finished
          (trimmed) pin face, so the customer can see roughly how it'll look
          once printed rather than the flat editing canvas. -->
@@ -368,6 +391,6 @@
 <!-- EmailJS (sends the confirmation email client-side, no backend needed) -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="email-config.js"></script>
-<script src="create.js?v=36"></script>
+<script src="create.js?v=37"></script>
 </body>
 </html>
