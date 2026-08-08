@@ -45,15 +45,16 @@ backgrounds should be square images.
 
 ### Letters — filename convention
 
-Letters files must be named `<designNumber>_<LETTER>-<variant>.png` (e.g.
-`1_A-01.png`, `1_B-01.png`, `2_A-01.png`, `2_B-01.png`...). The number
-groups a full alphabet into one "design set" (font/style); the letter is
-which character it is; the trailing `-01` is required but its value doesn't
-matter (any digits work). In the
-picker, customers first see one thumbnail per design set (always that set's
-`A`), then tap one to see its full available alphabet and pick the letter
-they actually want. A design set doesn't need to cover the whole alphabet —
-whatever letters exist for that number are what shows up.
+Letters files just need to **start with** `<designNumber>_<LETTER>` (e.g.
+`1_A.png`, `1__A-01.png`, `2_A-anything.png` — one or two underscores both
+work). The number groups a full alphabet into one "design set" (font/style);
+the letter is which character it is; whatever comes after that (a variant
+tag like `-01`, extra text, or nothing at all) is ignored, so there's no
+required suffix format. In the picker, customers first see one thumbnail per
+design set (always that set's `A`), then tap one to see its full available
+alphabet and pick the letter they actually want. A design set doesn't need
+to cover the whole alphabet — whatever letters exist for that number are
+what shows up.
 
 ## Isolated pin types
 

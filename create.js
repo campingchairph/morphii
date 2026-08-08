@@ -3424,15 +3424,15 @@ const CATEGORY_TO_SET_KEY = {
   stickers:'stickers', shapes:'shapes', holders:'shapes', texts:'wordart',
   borders:'borders', background:'background', characters:'characters', letters:'letters',
 };
-// Letters assets are named "<groupNumber>_<LETTER>-<variant>.ext" (e.g.
-// 1_A-01.png, 1_B-01.png, 2_A-01.png...) — each number is a distinct design;
-// the trailing -variant number is captured but not used for anything (any
-// digits work, not just "01"). The underscore accepts one-or-more (some
-// uploaded files use "2__A-01.png" with a double underscore) so a stray
-// extra underscore doesn't silently drop a file from the picker.
-// buildLetterGroups() below turns the flat file list into
-// { groupId, thumbSrc (always the "A"), letters }.
-const LETTER_FILENAME_RE = /^(\d+)_+([A-Za-z])-\d+\.[^.]+$/i;
+// Letters assets only need to START with "<groupNumber>_<LETTER>" (e.g.
+// "1__A") — each number is a distinct design, the letter is which character
+// it is, and anything after that (an "-01" variant tag, "-anything", or
+// nothing at all) is ignored, so it never has to match a specific suffix
+// convention. The underscore accepts one-or-more (some uploaded files use
+// "2__A-01.png" with a double underscore) so a stray extra underscore
+// doesn't silently drop a file from the picker. buildLetterGroups() below
+// turns the flat file list into { groupId, thumbSrc (always the "A"), letters }.
+const LETTER_FILENAME_RE = /^(\d+)_+([A-Za-z]).*\.[^.]+$/i;
 const NEW_PRODUCT_ASSET_GROUPS = ['election','ph-souvenir','wedding'];
 const ASSET_GROUP_CACHE = {}; // groupId -> { stickers, shapes, wordart, borders, background, characters, letters }
 let LETTER_GROUPS = []; // rebuilt in applyAssetGroup() — [{ groupId, thumbSrc, letters:{A:url,...} }]
