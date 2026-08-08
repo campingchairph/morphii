@@ -2390,40 +2390,6 @@ window.setTextSizeRaw = setTextSizeRaw;
    rail to rotate. There are no on-canvas handles — locked elements stay
    tappable/selectable (so the rail's lock icon can unlock them again) but
    reject every actual modification (move/resize/rotate) until unlocked. ── */
-function hitTestOneSticker(s, xFrac, yFrac){
-  const r = STICKER_BASE_R * s.scale;
-  return dist2(xFrac,yFrac,s.xFrac,s.yFrac) <= r*r;
-}
-function hitTestOneText(t, xFrac, yFrac){
-  const ctx = document.getElementById('designCanvas').getContext('2d');
-  const scalePxPerMM = CANVAS_PX / artboardDiameter();
-  const cutRadiusPx = (state.size/2) * scalePxPerMM;
-  ctx.font = `bold ${28*t.size}px "${t.font}", 'Nunito', sans-serif`;
-  const width = ctx.measureText(t.text || 'Text').width;
-  const height = 28*t.size*1.15;
-  const rPx = t.placement==='straight' ? Math.hypot(width/2, height/2) : (cutRadiusPx*(t.arcRadiusMult||0.78)) + height/2;
-  const rFrac = rPx / CANVAS_PX;
-  return dist2(xFrac,yFrac,t.xFrac||0,t.yFrac||0) <= rFrac*rFrac;
-}
-// Whether a point lands on the ALREADY-selected element — selection itself
-// no longer happens via canvas taps (only via the element strip above the
-// pin), so this is only ever used to decide whether a tap should start a
-// drag on the current selection.
-function hitTestSingleElement(el, kind, xFrac, yFrac){
-  if (kind==='text') return hitTestOneText(el, xFrac, yFrac);
-  if (kind==='sticker' || kind==='shape' || kind==='wordart' || kind==='letter') return hitTestOneSticker(el, xFrac, yFrac);
-  if (kind==='character' || kind==='border'){
-    return dist2(xFrac,yFrac,el.xFrac||0,el.yFrac||0) <= Math.pow(elementRadiusFrac(el,kind),2);
-  }
-  return false;
-}
-function dist2(x1,y1,x2,y2){ const dx=x1-x2, dy=y1-y2; return dx*dx+dy*dy; }
-
-function pointerFrac(canvas, e){
-  const rect = canvas.getBoundingClientRect();
-  return { x: (e.clientX-rect.left)/rect.width - 0.5, y: (e.clientY-rect.top)/rect.height - 0.5 };
-}
-
 function startElementDrag(canvas, e, el){
   state.dragging = true;
   state.dragTarget = el;
@@ -2487,13 +2453,13 @@ function bindCanvasInteractions(canvas){
   canvas.addEventListener('dragstart', e=>e.preventDefault());
 
   canvas.addEventListener('pointerdown', e=>{
-    const p = pointerFrac(canvas, e);
-
     // Tapping the canvas no longer selects anything — the element strip
-    // above the pin is the only way to select. A tap here can only START A
-    // DRAG on whatever is ALREADY selected, and only if it actually lands
-    // on it (background is the exception: it fills the whole pin, so any
-    // tap while it's selected drags it, same as before).
+    // above the pin is the only way to select. A tap anywhere on the canvas
+    // drags whatever is ALREADY selected, even if the finger isn't directly
+    // over it (the move below is delta-based, so the object keeps its
+    // offset from the finger instead of snapping under it) — this way a
+    // finger dragging a small object around never has to sit on top of it
+    // and block the customer's view of it.
     const { el, kind } = selectedElementAndKind();
     if (kind==='background'){
       if (state.bg.imageOn && state.bg.img && !state.bg.locked){
@@ -2505,7 +2471,7 @@ function bindCanvasInteractions(canvas){
       }
       return;
     }
-    if (el && kind && !el.locked && hitTestSingleElement(el, kind, p.x, p.y)){
+    if (el && kind && !el.locked){
       startElementDrag(canvas, e, el);
     }
   });
@@ -2552,6 +2518,13 @@ function bindCanvasInteractions(canvas){
 
   canvas.addEventListener('touchstart', e=>{
     if (e.touches.length===2){
+      // The first finger down already fired its own pointerdown and may
+      // have started a position-drag (see pointerdown above — it no longer
+      // requires landing on the object, so this fires on ~every pinch).
+      // Once a second finger joins, that's a pinch, not a drag — stop the
+      // drag so the two don't fight over xFrac/yFrac and scale in the same
+      // frame, which is what was causing the resize to flicker/jump around.
+      state.dragging = false; state.dragTarget = null;
       const target = resizeTarget();
       pinchTarget = target;
       if (target){
