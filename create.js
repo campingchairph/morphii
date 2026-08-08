@@ -3119,42 +3119,6 @@ function renderFinishedPinFace(canvas, opts){
   ctx.restore();
 }
 
-// Bulges the design toward the viewer like it's printed on a domed acrylic
-// pin surface, instead of just a flat circle with a lighting overlay on
-// top. Destination pixels near the center sample source pixels from
-// CLOSER to the center too (power>1), so a small patch of the original
-// center gets stretched to fill more space — that's what reads as the
-// middle pushing out at the viewer, rim staying anchored (r=1 always
-// maps to r=1 either way). power<1 is the opposite: it pulls source
-// pixels from further out toward the center, which reads as a funnel
-// sucking the image inward instead of a dome bulging outward — a
-// one-time pixel remap, done once when the preview opens, not per frame.
-function applyDomeWarp(canvas, strength){
-  strength = strength==null ? 0.22 : strength;
-  const px = canvas.width;
-  const ctx = canvas.getContext('2d');
-  const src = ctx.getImageData(0, 0, px, px);
-  const dst = ctx.createImageData(px, px);
-  const s = src.data, d = dst.data;
-  const cx = px/2, cy = px/2, R = px/2;
-  const power = 1 + strength;
-  for (let y=0; y<px; y++){
-    for (let x=0; x<px; x++){
-      const nx = (x-cx)/R, ny = (y-cy)/R;
-      const r = Math.sqrt(nx*nx + ny*ny);
-      const di = (y*px+x)*4;
-      if (r > 1){ d[di+3] = 0; continue; }
-      const scale = r===0 ? 1 : Math.pow(r, power)/r;
-      const sx = Math.round(cx + nx*scale*R);
-      const sy = Math.round(cy + ny*scale*R);
-      if (sx<0 || sx>=px || sy<0 || sy>=px){ d[di+3] = 0; continue; }
-      const si = (sy*px+sx)*4;
-      d[di]=s[si]; d[di+1]=s[si+1]; d[di+2]=s[si+2]; d[di+3]=s[si+3];
-    }
-  }
-  ctx.putImageData(dst, 0, 0);
-}
-
 /* ── 3D PRINT PREVIEW — CSS-3D tilt, no WebGL/3D library needed. The pin
    element itself carries the rotateX/rotateY transform; the shine overlay's
    gradient center shifts opposite the tilt so the highlight reads as a
@@ -3223,7 +3187,6 @@ function openPinPreview(){
   const canvas = document.getElementById('pinPreviewCanvas');
   canvas.width = 500; canvas.height = 500;
   renderFinishedPinFace(canvas, { watermarkOpacity: 0.4 });
-  applyDomeWarp(canvas, 0.22);
   document.getElementById('pinPreviewTitle').textContent =
     state.product ? `${state.product.label} · ${state.size}mm Preview` : 'Print Preview';
   buildPin3dEdgeWall(samplePinEdgeColor(canvas));
