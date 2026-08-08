@@ -2447,8 +2447,12 @@ function openTextEditModal(id){
   const input = document.getElementById('textEditInput');
   input.value = t.text;
   input.style.fontFamily = `'${t.font}'`;
-  renderTextEditFonts();
+  // The overlay must actually be visible (display:flex, not :none) BEFORE
+  // the carousel measures row widths for its spacers — a hidden element
+  // reports clientWidth 0, which made the spacers collapse to nothing and
+  // left the first/last font in each row permanently uncenterable.
   document.getElementById('textEditOverlay').classList.add('show');
+  renderTextEditFonts();
   setTimeout(()=>{ input.focus(); input.select(); }, 50);
 }
 window.openTextEditModal = openTextEditModal;
@@ -2495,9 +2499,12 @@ function initFontCarousel(currentFont){
   for (let r=0; r<FONT_ROW_COUNT; r++){
     const row = document.getElementById('fontRow'+r);
     if (!row) continue;
-    // Spacers wide enough that even the first/last item can still reach
-    // true center — without them a swipe could never center an edge item.
-    const spacerW = Math.max(0, row.parentElement.clientWidth/2 - 30);
+    // Spacer must be a FULL half-viewport-width on each end, not half-minus-
+    // a-guessed-item-width — anything narrower caps how far the row can
+    // scroll, so the first/last item's center can never actually reach the
+    // row's center (scrollLeft can't go negative, and max-scroll runs out
+    // on the other end), which made them permanently unselectable.
+    const spacerW = row.clientWidth / 2;
     row.querySelectorAll('.cr-font-carousel-spacer').forEach(s => s.style.flex = `0 0 ${spacerW}px`);
   }
   const activeRow = FONTS.indexOf(currentFont) % FONT_ROW_COUNT;
@@ -2535,18 +2542,27 @@ function applyFontRowScale(rowIndex, forceUniform){
   }
   const rowRect = row.getBoundingClientRect();
   const rowCenterX = rowRect.left + rowRect.width/2;
+  // Two passes: first find whichever item is nearest center (that's always
+  // the selection, regardless of its own width — a wide item's own half-
+  // width offsets it from true pixel-center even when fully scrolled to an
+  // edge, so picking by distance alone rather than a fixed threshold is
+  // what keeps first/last items reliably selectable), then apply styling
+  // so the "centered" highlight always matches whatever actually got picked.
   let nearestEl = null, nearestDist = Infinity;
+  const dists = [];
   items.forEach(el => {
     const r = el.getBoundingClientRect();
     const dist = Math.abs((r.left + r.width/2) - rowCenterX);
-    // Center item biggest, immediate neighbors noticeably bigger than the
-    // rest but clearly smaller than center, falling off to normal size
-    // within about two items either side — never below normal, never
-    // unbounded above.
-    const scale = Math.max(1, 1.35 - dist/420);
-    el.style.transform = `scale(${scale})`;
-    el.classList.toggle('centered', dist < 18);
+    dists.push({ el, dist });
     if (dist < nearestDist){ nearestDist = dist; nearestEl = el; }
+  });
+  dists.forEach(({ el, dist }) => {
+    // Center item ~2x the base size (matches a ~10pt -> ~20pt jump),
+    // immediate neighbors a noticeably smaller step up, falling off to
+    // normal size within about two items either side — never below
+    // normal, never unbounded above.
+    el.style.transform = `scale(${Math.max(1, 2 - dist/190)})`;
+    el.classList.toggle('centered', el === nearestEl);
   });
   if (!nearestEl) return;
   const font = nearestEl.dataset.font;

@@ -624,7 +624,7 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 .cr-font-carousel-row{
   display:flex;align-items:center;overflow-x:auto;overflow-y:hidden;
   scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;
-  padding:16px 0;
+  padding:24px 0; /* extra clearance so the ~2x-scaled centered item never clips vertically */
   mask-image:linear-gradient(to right, transparent, black 12%, black 88%, transparent);
   -webkit-mask-image:linear-gradient(to right, transparent, black 12%, black 88%, transparent);
 }
@@ -632,7 +632,7 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 .cr-font-carousel-spacer{flex-shrink:0;}
 .cr-font-carousel-item{
   flex-shrink:0;background:none;border:none;cursor:pointer;white-space:nowrap;
-  color:rgba(255,255,255,0.5);font-size:16px;padding:4px 10px;margin:0 2px;
+  color:rgba(255,255,255,0.5);font-size:18px;padding:4px 10px;margin:0 2px;
   transform:scale(1);transform-origin:center;transition:color 0.15s linear;
 }
 .cr-font-carousel-item.centered{color:#fff;}
