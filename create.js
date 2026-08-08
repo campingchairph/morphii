@@ -2459,21 +2459,118 @@ function onTextEditInput(val){
 }
 window.onTextEditInput = onTextEditInput;
 
+/* ── FONT CAROUSEL — 3 independently-swipeable rows. Whichever row the
+   customer swipes becomes "active": the item nearest that row's center
+   scales up live as they drag, and IS the current selection — no separate
+   confirm step. Swiping a different row resets the previous one back to
+   uniform size. Rebuilt from scratch every time the text-edit modal opens
+   (renderTextEditFonts), so row membership always reflects the current
+   FONTS list (admin-added fonts included). ── */
+const FONT_ROW_COUNT = 3;
+let _fontCarouselActiveRow = null;
+let _fontCarouselNearest = {};   // rowIndex -> font name currently centered in it
+let _fontCarouselRaf = {};       // rowIndex -> pending requestAnimationFrame id
+
 function renderTextEditFonts(){
   const wrap = document.getElementById('textEditFonts');
   const t = state.textLines.find(x=>x.id===_textEditId);
   if (!wrap || !t) return;
-  wrap.innerHTML = FONTS.map(f=>`
-    <button class="cr-text-edit-font-btn ${t.font===f?'active':''}" style="font-family:'${escHtml(f)}'" onclick="setTextEditFont('${escHtml(f)}')">${escHtml(f)}</button>
-  `).join('');
+  const rows = Array.from({ length: FONT_ROW_COUNT }, () => []);
+  FONTS.forEach((f,i) => rows[i % FONT_ROW_COUNT].push(f));
+  wrap.innerHTML = rows.map((list, r) => `
+    <div class="cr-font-carousel-row" id="fontRow${r}" onscroll="onFontRowScroll(${r})">
+      <div class="cr-font-carousel-spacer"></div>
+      ${list.map(f => `
+        <button type="button" class="cr-font-carousel-item" data-font="${escHtml(f)}"
+          style="font-family:'${escHtml(f)}'" onclick="tapFontCarouselItem('${escHtml(f)}',${r})">${escHtml(f)}</button>
+      `).join('')}
+      <div class="cr-font-carousel-spacer"></div>
+    </div>`).join('');
+  _fontCarouselActiveRow = null;
+  _fontCarouselNearest = {};
+  initFontCarousel(t.font);
 }
+
+function initFontCarousel(currentFont){
+  for (let r=0; r<FONT_ROW_COUNT; r++){
+    const row = document.getElementById('fontRow'+r);
+    if (!row) continue;
+    // Spacers wide enough that even the first/last item can still reach
+    // true center — without them a swipe could never center an edge item.
+    const spacerW = Math.max(0, row.parentElement.clientWidth/2 - 30);
+    row.querySelectorAll('.cr-font-carousel-spacer').forEach(s => s.style.flex = `0 0 ${spacerW}px`);
+  }
+  const activeRow = FONTS.indexOf(currentFont) % FONT_ROW_COUNT;
+  const activeBtn = document.querySelector(`#fontRow${activeRow} [data-font="${cssEscapeAttr(currentFont)}"]`);
+  if (activeBtn) activeBtn.scrollIntoView({ behavior:'auto', inline:'center', block:'nearest' });
+  _fontCarouselActiveRow = activeRow;
+  for (let r=0; r<FONT_ROW_COUNT; r++) applyFontRowScale(r, r!==activeRow);
+}
+
+// CSS.escape isn't available in every target browser — this only needs to
+// be safe inside a double-quoted attribute selector, not fully general.
+function cssEscapeAttr(s){ return String(s).replace(/["\\]/g, '\\$&'); }
+
+function onFontRowScroll(rowIndex){
+  if (_fontCarouselActiveRow !== rowIndex){
+    const prevRow = _fontCarouselActiveRow;
+    _fontCarouselActiveRow = rowIndex;
+    if (prevRow!=null) applyFontRowScale(prevRow, true); // the row swiped away from goes back to uniform size
+  }
+  if (_fontCarouselRaf[rowIndex]) cancelAnimationFrame(_fontCarouselRaf[rowIndex]);
+  _fontCarouselRaf[rowIndex] = requestAnimationFrame(() => applyFontRowScale(rowIndex, false));
+}
+window.onFontRowScroll = onFontRowScroll;
+
+// forceUniform=true: every item at scale 1, no selection change — used for
+// rows the customer isn't actively swiping right now.
+function applyFontRowScale(rowIndex, forceUniform){
+  const row = document.getElementById('fontRow'+rowIndex);
+  if (!row) return;
+  const items = row.querySelectorAll('.cr-font-carousel-item');
+  if (!items.length) return;
+  if (forceUniform){
+    items.forEach(el => { el.style.transform = 'scale(1)'; el.classList.remove('centered'); });
+    return;
+  }
+  const rowRect = row.getBoundingClientRect();
+  const rowCenterX = rowRect.left + rowRect.width/2;
+  let nearestEl = null, nearestDist = Infinity;
+  items.forEach(el => {
+    const r = el.getBoundingClientRect();
+    const dist = Math.abs((r.left + r.width/2) - rowCenterX);
+    // Center item biggest, immediate neighbors noticeably bigger than the
+    // rest but clearly smaller than center, falling off to normal size
+    // within about two items either side — never below normal, never
+    // unbounded above.
+    const scale = Math.max(1, 1.35 - dist/420);
+    el.style.transform = `scale(${scale})`;
+    el.classList.toggle('centered', dist < 18);
+    if (dist < nearestDist){ nearestDist = dist; nearestEl = el; }
+  });
+  if (!nearestEl) return;
+  const font = nearestEl.dataset.font;
+  if (_fontCarouselNearest[rowIndex] !== font){
+    _fontCarouselNearest[rowIndex] = font;
+    setTextEditFont(font);
+  }
+}
+
+// A direct tap scrolls that item into center (smooth) rather than selecting
+// it immediately — centering IS selecting, so this just does the scroll and
+// lets the resulting scroll event apply the font, same as a swipe would.
+function tapFontCarouselItem(font, rowIndex){
+  const row = document.getElementById('fontRow'+rowIndex);
+  const btn = row && row.querySelector(`[data-font="${cssEscapeAttr(font)}"]`);
+  if (btn) btn.scrollIntoView({ behavior:'smooth', inline:'center', block:'nearest' });
+}
+window.tapFontCarouselItem = tapFontCarouselItem;
 
 function setTextEditFont(font){
   if (_textEditId==null) return;
   updateTextLine(_textEditId, 'font', font);
   const input = document.getElementById('textEditInput');
   if (input) input.style.fontFamily = `'${font}'`;
-  renderTextEditFonts();
 }
 window.setTextEditFont = setTextEditFont;
 

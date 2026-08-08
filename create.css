@@ -610,16 +610,32 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
   caret-color:#fff;
 }
 .cr-text-edit-input::placeholder{color:rgba(255,255,255,0.35);}
-.cr-text-edit-fonts{
-  display:flex;gap:14px;overflow-x:auto;flex-shrink:0;scrollbar-width:none;
-  padding:14px 18px calc(env(safe-area-inset-bottom,0px) + 16px);
+/* Font picker — 3 independently-swipeable rows (see initFontCarousel in
+   create.js). Whichever row the customer swipes becomes "active"; the item
+   nearest that row's center scales up live as they drag (JS-driven, since
+   scroll-driven CSS animations aren't reliably supported yet), settling
+   there via scroll-snap on release. Swiping a different row resets the
+   previous one back to uniform size. The mask-image fades each row toward
+   the screen edges so items don't just hard-cut off mid-swipe. */
+.cr-font-carousel{
+  display:flex;flex-direction:column;gap:2px;flex-shrink:0;
+  padding:8px 0 calc(env(safe-area-inset-bottom,0px) + 10px);
 }
-.cr-text-edit-fonts::-webkit-scrollbar{display:none;}
-.cr-text-edit-font-btn{
+.cr-font-carousel-row{
+  display:flex;align-items:center;overflow-x:auto;overflow-y:hidden;
+  scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+  padding:16px 0;
+  mask-image:linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+  -webkit-mask-image:linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+}
+.cr-font-carousel-row::-webkit-scrollbar{display:none;}
+.cr-font-carousel-spacer{flex-shrink:0;}
+.cr-font-carousel-item{
   flex-shrink:0;background:none;border:none;cursor:pointer;white-space:nowrap;
-  color:rgba(255,255,255,0.55);font-size:15px;padding:8px 4px;
+  color:rgba(255,255,255,0.5);font-size:16px;padding:4px 10px;margin:0 2px;
+  transform:scale(1);transform-origin:center;transition:color 0.15s linear;
 }
-.cr-text-edit-font-btn.active{color:#fff;font-weight:700;}
+.cr-font-carousel-item.centered{color:#fff;}
 
 /* ── PNG / TRANSPARENCY INFOGRAPHIC ── */
 .cr-png-infographic{display:flex;align-items:center;justify-content:center;gap:10px;margin:4px 0;}
@@ -715,7 +731,7 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 }
 
 /* ── CURVE / COLOR GRID PICKERS (text tool) — font picking moved into the
-   fullscreen text-edit overlay, see .cr-text-edit-fonts ── */
+   fullscreen text-edit overlay, see .cr-font-carousel ── */
 .cr-curve-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
 .cr-curve-swatch{
   aspect-ratio:1/0.85;border-radius:11px;border:1.5px solid var(--border);background:var(--card);
