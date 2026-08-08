@@ -81,6 +81,8 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 .adm-btn.reject.active{background:#ff9b98;color:#0B2E4E;}
 .adm-btn.printed{border-color:var(--yellow);color:var(--yellow);}
 .adm-btn.printed.active{background:var(--yellow);color:#0B2E4E;}
+.adm-btn.danger{flex:0 0 auto;min-width:0;padding:4px 8px;border-color:#ff9b98;color:#ff9b98;}
+.adm-btn.danger:hover{background:#ff9b98;color:#0B2E4E;}
 .adm-empty{text-align:center;padding:60px 20px;color:var(--ink-dim);font-weight:700;}
 
 .adm-card-select{
@@ -636,6 +638,7 @@ function renderOrders(){
           <button class="adm-btn approve ${o.status==='approved'?'active':''}" onclick="setStatus('${o.id}','approved')">Approve</button>
           <button class="adm-btn reject ${o.status==='rejected'?'active':''}" onclick="setStatus('${o.id}','rejected')">Reject</button>
           <button class="adm-btn printed ${o.printed?'active':''}" onclick="togglePrinted('${o.id}')">${o.printed?'✓ Printed':'🖨 Queue'}</button>
+          <button class="adm-btn danger" onclick="event.stopPropagation();deleteOrder('${o.id}')" title="Delete this order">🗑</button>
         </div>
       </div>
     </div>`;
@@ -666,6 +669,12 @@ function setStatus(id, status){
   DB.collection('morphii_orders').doc(id).update({ status }).catch(err => alert('Error: '+err.message));
 }
 window.setStatus = setStatus;
+
+function deleteOrder(id){
+  if (!confirm('Delete this order? This cannot be undone.')) return;
+  DB.collection('morphii_orders').doc(id).delete().catch(err => alert('Error: '+err.message));
+}
+window.deleteOrder = deleteOrder;
 
 function openLightbox(id){
   const o = allOrders.find(x=>x.id===id);
