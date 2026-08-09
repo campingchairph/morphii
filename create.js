@@ -658,25 +658,16 @@ window.applyElectionTemplate = applyElectionTemplate;
 // chart. Paper size is a fixed property of each size now, not a customer
 // choice (see the removed Print Settings step).
 //
-// 25/32/58mm (our three actually-in-use sizes) are the metric labels for
-// the button press industry's standard 1" / 1.25" / 2.25" sizes. paperMM
-// for those three now matches Tecre's own official cut-line spec exactly
-// (Tecre is a real button-maker machine manufacturer — these are the exact
-// numbers printed on their graphic layout templates, not an estimate):
-//   1"    button -> 1.313" cut line  (tecre.com/sft629/100-button-maker-machine-layout.pdf)
-//   1.25" button -> 1.629" cut line  (tecre.com/sft629/125-button-maker-machine-layout.pdf)
-//   2.25" button -> 2.625" cut line  (tecre.com/sft629/225-button-maker-machine-layout.pdf)
-// scaled proportionally onto our metric mm values (e.g. 25 * 1.313 = 32.8).
-// The previous numbers here were ~5-6% oversized versus the real spec —
-// not unsafe (more bleed, not less), just not "true to size" for test
-// prints. 37/44/75mm aren't in active use and don't map to a standard
-// imperial press size, so left as before — flag if/when those go live.
+// 25/32/58mm paperMM are the actual spec from our supplier (gap between
+// pin and bleed edge, each side): 25mm->32mm (3.5mm gap), 32mm->41mm
+// (4.5mm gap), 58mm->72.4mm (7.195mm gap). 37/44/75mm aren't in active
+// use — left as before, flag if/when those go live.
 const SIZES = [
-  { mm:25, paperMM:32.8, tag:'Smallest', catalogState:'enabled' },
-  { mm:32, paperMM:41.7, tag:'Compact',  catalogState:'enabled' },
+  { mm:25, paperMM:32,   tag:'Smallest', catalogState:'enabled' },
+  { mm:32, paperMM:41,   tag:'Compact',  catalogState:'enabled' },
   { mm:37, paperMM:48.8, tag:'Popular',  catalogState:'enabled' },
   { mm:44, paperMM:56.4, tag:'Standard', catalogState:'enabled' }, // ⚠ estimated (not legible on the chart) — confirm and update
-  { mm:58, paperMM:67.7, tag:'Large',    catalogState:'enabled' },
+  { mm:58, paperMM:72.4, tag:'Large',    catalogState:'enabled' },
   { mm:75, paperMM:86.3, tag:'XL',       catalogState:'enabled' },
 ];
 

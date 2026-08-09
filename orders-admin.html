@@ -102,12 +102,17 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 .adm-lightbox img{max-width:90vw;max-height:90vh;border-radius:12px;}
 
 /* ── FLOATING LAYOUT & PRINT BUTTON ── */
-.adm-layout-fab{
+.adm-selection-fabs{
   display:none;position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:40;
-  padding:13px 26px;border-radius:50px;border:none;background:var(--yellow);color:#0B2E4E;
-  font-family:'Fredoka One',cursive;font-size:15px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,0.4);
+  gap:10px;
 }
-.adm-layout-fab.show{display:block;}
+.adm-selection-fabs.show{display:flex;}
+.adm-layout-fab{
+  padding:13px 22px;border-radius:50px;border:none;background:var(--yellow);color:#0B2E4E;
+  font-family:'Fredoka One',cursive;font-size:14px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,0.4);
+  white-space:nowrap;
+}
+.adm-layout-fab.danger{background:#ff9b98;}
 
 /* ── PRINT LAYOUT MODAL (ported from the kiosk) ── */
 #printModal, #fontsModal, #assetsModal, #catalogModal, #financeModal{
@@ -270,7 +275,10 @@ h1,.logo{font-family:'Fredoka One',cursive;}
   <img id="lightboxImg" src="" alt="Design full view">
 </div>
 
-<button class="adm-layout-fab" id="layoutFab" onclick="openPrintModal()">🖨 Layout &amp; Print (<span id="layoutFabCount">0</span>)</button>
+<div class="adm-selection-fabs" id="selectionFabs">
+  <button class="adm-layout-fab" id="layoutFab" onclick="openPrintModal()">🖨 Layout &amp; Print (<span id="layoutFabCount">0</span>)</button>
+  <button class="adm-layout-fab danger" id="deleteSelectedFab" onclick="deleteSelectedOrders()">🗑 Delete (<span id="deleteFabCount">0</span>)</button>
+</div>
 
 <!-- ══ PRINT MODAL (ported from the kiosk's print layout system) ══ -->
 <div id="printModal">
@@ -638,6 +646,7 @@ function renderOrders(){
           <button class="adm-btn approve ${o.status==='approved'?'active':''}" onclick="setStatus('${o.id}','approved')">Approve</button>
           <button class="adm-btn reject ${o.status==='rejected'?'active':''}" onclick="setStatus('${o.id}','rejected')">Reject</button>
           <button class="adm-btn printed ${o.printed?'active':''}" onclick="togglePrinted('${o.id}')">${o.printed?'✓ Printed':'🖨 Queue'}</button>
+          <button class="adm-btn" onclick="event.stopPropagation();downloadDesign('${o.id}')" title="Download high-res PNG">⬇</button>
           <button class="adm-btn danger" onclick="event.stopPropagation();deleteOrder('${o.id}')" title="Delete this order">🗑</button>
         </div>
       </div>
@@ -653,10 +662,20 @@ function toggleSelect(id){
 window.toggleSelect = toggleSelect;
 
 function updateLayoutFab(){
-  const fab = document.getElementById('layoutFab');
   document.getElementById('layoutFabCount').textContent = selectedOrders.size;
-  fab.classList.toggle('show', selectedOrders.size > 0);
+  document.getElementById('deleteFabCount').textContent = selectedOrders.size;
+  document.getElementById('selectionFabs').classList.toggle('show', selectedOrders.size > 0);
 }
+
+function deleteSelectedOrders(){
+  const ids = Array.from(selectedOrders);
+  if (!ids.length) return;
+  if (!confirm(`Delete ${ids.length} order${ids.length>1?'s':''}? This cannot be undone.`)) return;
+  const batch = DB.batch();
+  ids.forEach(id => batch.delete(DB.collection('morphii_orders').doc(id)));
+  batch.commit().catch(err => alert('Error: '+err.message));
+}
+window.deleteSelectedOrders = deleteSelectedOrders;
 
 function togglePrinted(id){
   const o = allOrders.find(x=>x.id===id);
@@ -675,6 +694,21 @@ function deleteOrder(id){
   DB.collection('morphii_orders').doc(id).delete().catch(err => alert('Error: '+err.message));
 }
 window.deleteOrder = deleteOrder;
+
+// designDataUrl is already the clean (no watermark), full-resolution
+// export (~300 DPI, see EXPORT_PPMM in create.js) generated at submit
+// time — no re-rendering needed, just push it out as a file.
+function downloadDesign(id){
+  const o = allOrders.find(x=>x.id===id);
+  if (!o || !o.designDataUrl) { alert('No design image on this order.'); return; }
+  const a = document.createElement('a');
+  a.href = o.designDataUrl;
+  a.download = `${o.saveCode || id}-${o.size}mm.png`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+window.downloadDesign = downloadDesign;
 
 function openLightbox(id){
   const o = allOrders.find(x=>x.id===id);
