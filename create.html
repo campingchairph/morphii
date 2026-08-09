@@ -381,6 +381,19 @@
     </div>
   </div>
 
+  <!-- PASTE FEATURE HINT — shown once (see maybeShowPasteHint in create.js)
+       the first time a customer reaches the design step, so they discover
+       the clipboard-paste FAB without having to stumble onto it. -->
+  <div class="cr-modal-overlay" id="pasteHintOverlay">
+    <div class="cr-modal" style="max-width:320px">
+      <div class="cr-modal-title">📋 Paste a Photo as a Sticker</div>
+      <div class="cr-modal-body">
+        Got a photo of yourself (or anything else) already copied on your phone or computer? Just tap the paste icon <b>📋</b> near the bottom of the pin — it drops that photo straight onto your design as a sticker you can move, resize, and rotate.
+      </div>
+      <button class="cr-btn-primary" style="margin-top:16px" onclick="closePasteHintModal()">Got it</button>
+    </div>
+  </div>
+
 </main>
 
 <!-- Firebase SDK (compat mode — no build step needed) -->

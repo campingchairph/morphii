@@ -50,8 +50,8 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 }
 .adm-status-select option{color:#000;}
 
-.adm-search-row{margin-bottom:14px;}
-.adm-search-wrap{position:relative;max-width:360px;}
+.adm-search-row{margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.adm-search-wrap{position:relative;max-width:360px;flex:1;min-width:220px;}
 .adm-search-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--ink-dim);pointer-events:none;}
 .adm-search-input{
   width:100%;padding:10px 12px 10px 34px;border-radius:20px;border:1.5px solid var(--border);
@@ -102,25 +102,34 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 .adm-lightbox img{max-width:90vw;max-height:90vh;border-radius:12px;}
 
 /* ── FLOATING LAYOUT & PRINT BUTTON ── */
-.adm-selection-fabs{
-  display:none;position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:40;
-  gap:10px;
-}
-.adm-selection-fabs.show{display:flex;}
 .adm-layout-fab{
-  padding:13px 22px;border-radius:50px;border:none;background:var(--yellow);color:#0B2E4E;
-  font-family:'Fredoka One',cursive;font-size:14px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,0.4);
-  white-space:nowrap;
+  display:none;position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:40;
+  padding:13px 26px;border-radius:50px;border:none;background:var(--yellow);color:#0B2E4E;
+  font-family:'Fredoka One',cursive;font-size:15px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,0.4);
 }
-.adm-layout-fab.danger{background:#ff9b98;}
+.adm-layout-fab.show{display:block;}
+/* Delete-selected lives up in the search row instead, deliberately far from
+   this FAB — it used to sit right beside it and risked an accidental
+   delete when reaching for print. */
+.adm-delete-selected-btn{
+  border:1.5px solid #ff9b98;color:#ff9b98;background:transparent;
+  border-radius:10px;padding:9px 14px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;
+}
+.adm-delete-selected-btn:hover{background:#ff9b98;color:#0B2E4E;}
 
 /* ── PRINT LAYOUT MODAL (ported from the kiosk) ── */
-#printModal, #fontsModal, #assetsModal, #catalogModal, #financeModal{
+#printModal, #fontsModal, #assetsModal, #catalogModal, #financeModal, #helpModal{
   display:none;position:fixed;inset:0;z-index:200;
   background:rgba(7,25,41,0.92);backdrop-filter:blur(8px);
   flex-direction:column;align-items:center;overflow-y:auto;padding:24px;
 }
-#printModal.open, #fontsModal.open, #assetsModal.open, #catalogModal.open, #financeModal.open{display:flex;}
+#printModal.open, #fontsModal.open, #assetsModal.open, #catalogModal.open, #financeModal.open, #helpModal.open{display:flex;}
+.help-modal-inner{background:var(--navy);border-radius:16px;max-width:640px;width:100%;padding:24px 26px;margin:20px 0;color:white;border:2px solid var(--border);}
+.help-section{margin-bottom:20px;}
+.help-section h3{font-size:14px;margin:0 0 8px;color:var(--yellow);}
+.help-section p, .help-section li{font-size:12.5px;line-height:1.6;color:rgba(255,255,255,0.85);margin:0 0 4px;}
+.help-section ul{margin:0;padding-left:18px;}
+.help-close-btn{margin-top:8px;width:100%;padding:11px;border-radius:10px;border:none;background:var(--yellow);color:#0B2E4E;font-weight:800;cursor:pointer;}
 
 /* ── FINANCE MODAL ── */
 .fin-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
@@ -241,6 +250,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
   <div class="adm-header">
     <div class="logo">morphii<span>.</span> Order Admin</div>
     <div style="display:flex;align-items:center;gap:12px">
+      <button class="adm-signout" onclick="openHelpModal()">❓ Help</button>
       <button class="adm-signout" onclick="openFinanceModal()">💰 Finance</button>
       <button class="adm-signout" onclick="openCatalogModal()">📦 Catalog</button>
       <button class="adm-signout" onclick="openAssetsModal()">🖼 Assets</button>
@@ -256,6 +266,12 @@ h1,.logo{font-family:'Fredoka One',cursive;}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
         <input type="text" class="adm-search-input" id="admSearch" placeholder="Search by code, email, or name…" oninput="setSearch(this.value)">
       </div>
+      <!-- Deliberately kept up here, away from the "Layout & Print" FAB at
+           the bottom — it used to sit right next to it, which risked an
+           accidental delete when reaching for print. -->
+      <button class="adm-delete-selected-btn" id="deleteSelectedBtn" onclick="deleteSelectedOrders()" style="display:none">
+        🗑 Delete Selected (<span id="deleteFabCount">0</span>)
+      </button>
     </div>
     <div class="adm-filter-row">
       <div class="adm-tabs" id="admTabs"></div>
@@ -266,6 +282,17 @@ h1,.logo{font-family:'Fredoka One',cursive;}
         <option value="rejected">Rejected</option>
         <option value="printed">Printed</option>
       </select>
+      <select class="adm-status-select" id="admDateSelect" onchange="setDateFilter(this.value)">
+        <option value="all">All Time</option>
+        <option value="today">Today</option>
+        <option value="7">Last 7 Days</option>
+        <option value="30">Last 30 Days</option>
+        <option value="month">This Month</option>
+      </select>
+      <select class="adm-status-select" id="admSortSelect" onchange="setSortOrder(this.value)">
+        <option value="new">Newest First</option>
+        <option value="old">Oldest First</option>
+      </select>
     </div>
     <div class="adm-grid" id="ordersGrid"></div>
   </div>
@@ -275,10 +302,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
   <img id="lightboxImg" src="" alt="Design full view">
 </div>
 
-<div class="adm-selection-fabs" id="selectionFabs">
-  <button class="adm-layout-fab" id="layoutFab" onclick="openPrintModal()">🖨 Layout &amp; Print (<span id="layoutFabCount">0</span>)</button>
-  <button class="adm-layout-fab danger" id="deleteSelectedFab" onclick="deleteSelectedOrders()">🗑 Delete (<span id="deleteFabCount">0</span>)</button>
-</div>
+<button class="adm-layout-fab" id="layoutFab" onclick="openPrintModal()">🖨 Layout &amp; Print (<span id="layoutFabCount">0</span>)</button>
 
 <!-- ══ PRINT MODAL (ported from the kiosk's print layout system) ══ -->
 <div id="printModal">
@@ -310,6 +334,54 @@ h1,.logo{font-family:'Fredoka One',cursive;}
         <div class="pmi-pin-list" id="pmiPinList"></div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ══ HELP / GETTING STARTED MODAL — written for someone taking over admin
+     duties with no prior context on how this app works. ══ -->
+<div id="helpModal">
+  <div class="help-modal-inner">
+    <div class="pmi-header" style="margin-bottom:4px">
+      <div class="pmi-title">❓ Getting Started</div>
+      <button class="pmi-close" onclick="closeHelpModal()">✕</button>
+    </div>
+    <div class="help-section">
+      <h3>What this page is</h3>
+      <p>Every design a customer finishes in the pin builder shows up here as an order. This page is where you review, approve, and print them.</p>
+    </div>
+    <div class="help-section">
+      <h3>The usual flow for one order</h3>
+      <ul>
+        <li><b>Pending</b> — a new submission, not reviewed yet.</li>
+        <li><b>Approve</b> or <b>Reject</b> it based on whether the design is print-ready (readable, nothing offensive, fits the cut line).</li>
+        <li>Once approved, check its box and send it to <b>🖨 Layout &amp; Print</b> — that opens a tool that auto-arranges it (and any others you've checked) onto a paper sheet at the correct physical size, ready to download as a print-ready PDF.</li>
+        <li>After it's physically printed, tap <b>🖨 Queue → ✓ Printed</b> on the card so it's marked done.</li>
+      </ul>
+    </div>
+    <div class="help-section">
+      <h3>What each card button does</h3>
+      <ul>
+        <li><b>Approve / Reject</b> — sets the order's status.</li>
+        <li><b>🖨 Queue / ✓ Printed</b> — toggles whether this order has been physically printed.</li>
+        <li><b>⬇</b> — downloads a clean, full-resolution copy of the design (no watermark) as a PNG.</li>
+        <li><b>🗑</b> — permanently deletes that one order. There's no undo.</li>
+        <li>Tapping the checkbox in a card's corner selects it for a batch action (Layout &amp; Print, or Delete — see the "Delete" button near the top once you've selected orders).</li>
+      </ul>
+    </div>
+    <div class="help-section">
+      <h3>Finding orders</h3>
+      <p>Use the search bar (code, email, or name), the product tabs, the status dropdown, and the date range dropdown together — they all combine. The sort dropdown flips between newest-first and oldest-first.</p>
+    </div>
+    <div class="help-section">
+      <h3>The other buttons up top</h3>
+      <ul>
+        <li><b>💰 Finance</b> — track costs, set pricing per product/size, and see margin/ROI, unrelated to individual orders.</li>
+        <li><b>📦 Catalog</b> — turn a product or size on/off shop-wide, e.g. when you're out of stock, no code changes needed.</li>
+        <li><b>🖼 Assets</b> — see every sticker/border/background/etc. available in the builder and rename how it's labeled.</li>
+        <li><b>🔤 Fonts</b> — add a Google Font by pasting its link; it's instantly available to customers in the text tool.</li>
+      </ul>
+    </div>
+    <button class="help-close-btn" onclick="closeHelpModal()">Got it</button>
   </div>
 </div>
 
@@ -613,12 +685,45 @@ function setStatusFilter(status){
 }
 window.setStatusFilter = setStatusFilter;
 
+let currentDateFilter = 'all';
+function setDateFilter(v){
+  currentDateFilter = v;
+  renderOrders();
+}
+window.setDateFilter = setDateFilter;
+
+let currentSortOrder = 'new';
+function setSortOrder(v){
+  currentSortOrder = v;
+  renderOrders();
+}
+window.setSortOrder = setSortOrder;
+
+// Cutoff for the selected date filter, in ms since epoch — orders older
+// than this are excluded. null means no cutoff (All Time).
+function dateFilterCutoffMs(){
+  const now = new Date();
+  if (currentDateFilter === 'today'){
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  }
+  if (currentDateFilter === '7') return now.getTime() - 7*24*60*60*1000;
+  if (currentDateFilter === '30') return now.getTime() - 30*24*60*60*1000;
+  if (currentDateFilter === 'month'){
+    return new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  }
+  return null;
+}
+
 function renderOrders(){
   const grid = document.getElementById('ordersGrid');
   let list = currentTypeFilter==='all' ? allOrders : allOrders.filter(o=>o.product===currentTypeFilter);
   list = currentStatusFilter==='all' ? list
     : currentStatusFilter==='printed' ? list.filter(o=>o.printed)
     : list.filter(o=>o.status===currentStatusFilter);
+  const dateCutoff = dateFilterCutoffMs();
+  if (dateCutoff != null){
+    list = list.filter(o => o.createdAt && o.createdAt.toDate && o.createdAt.toDate().getTime() >= dateCutoff);
+  }
   if (searchQuery){
     list = list.filter(o =>
       (o.saveCode||'').toLowerCase().includes(searchQuery) ||
@@ -626,6 +731,9 @@ function renderOrders(){
       (o.customerName||'').toLowerCase().includes(searchQuery)
     );
   }
+  // allOrders already arrives newest-first (the Firestore query is ordered
+  // that way) — only actually re-sort when the admin wants the opposite.
+  if (currentSortOrder === 'old') list = list.slice().reverse();
   if (!list.length){
     grid.innerHTML = `<div class="adm-empty">${searchQuery ? 'No orders match your search.' : 'No orders here yet.'}</div>`;
     return;
@@ -669,7 +777,8 @@ window.toggleSelect = toggleSelect;
 function updateLayoutFab(){
   document.getElementById('layoutFabCount').textContent = selectedOrders.size;
   document.getElementById('deleteFabCount').textContent = selectedOrders.size;
-  document.getElementById('selectionFabs').classList.toggle('show', selectedOrders.size > 0);
+  document.getElementById('layoutFab').classList.toggle('show', selectedOrders.size > 0);
+  document.getElementById('deleteSelectedBtn').style.display = selectedOrders.size > 0 ? '' : 'none';
 }
 
 function deleteSelectedOrders(){
@@ -731,6 +840,15 @@ function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&l
    Admin pastes a font stylesheet link (Google Fonts embed URL, or any
    @font-face CSS link); create.js reads the same doc to offer these as
    text font choices in the pin designer. ── */
+function openHelpModal(){
+  document.getElementById('helpModal').classList.add('open');
+}
+window.openHelpModal = openHelpModal;
+function closeHelpModal(){
+  document.getElementById('helpModal').classList.remove('open');
+}
+window.closeHelpModal = closeHelpModal;
+
 let customFonts = [];
 
 async function openFontsModal(){
