@@ -302,7 +302,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
           <canvas id="paperCanvas"></canvas>
         </div>
         <div style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-top:6px;" id="packInfo"></div>
-        <button class="print-action-btn" onclick="doPrint()">🖨 Send to Printer</button>
+        <button class="print-action-btn" onclick="doPrint()">⬇ Download Print PDF</button>
       </div>
       <div class="pmi-sidebar">
         <div class="pmi-sidebar-title">Pin Queue</div>
@@ -510,6 +510,11 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
+<!-- jsPDF — used by doPrint() to write the exact page size directly into the
+     PDF file itself, so the export is correct regardless of any browser
+     print-dialog "Scale" setting (which is what was causing the 3% mismatch
+     when going through window.print() -> Save as PDF). -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 let allOrders = [];
 let ordersUnsub = null;
@@ -1580,18 +1585,21 @@ function buildPrintCanvas(){
   return off;
 }
 
+// Writes the page size directly into the PDF (jsPDF's `format` is in real
+// mm, honored exactly) instead of going through window.print() -> a
+// browser print dialog, whose own "Scale" setting doesn't always default to
+// 100% — that mismatch was why the previous PDF export needed 103% to
+// actually come out true-to-size on paper. A PDF authored this way is
+// correct on its own; opening it in any PDF reader and printing at
+// "Actual Size" (the normal default there) reproduces it exactly.
 function doPrint(){
   const paper = PAPER_SIZES[document.getElementById('paperSize').value];
   const printCanvas = buildPrintCanvas();
-  const win = window.open('', '_blank');
-  const img = printCanvas.toDataURL('image/png');
-  win.document.write(`<!DOCTYPE html><html><head><title>Morphii Print</title>
-    <style>*{margin:0;padding:0;}body{background:white;}
-    img{width:${paper.w}mm;height:${paper.h}mm;display:block;}
-    @media print{@page{size:${paper.w}mm ${paper.h}mm;margin:0;}img{width:100%;height:100%;}}
-    </style></head><body>
-    <img src="${img}" onload="setTimeout(()=>{window.print();window.close();},200)">
-    </body></html>`);
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit:'mm', format:[paper.w, paper.h] });
+  pdf.addImage(printCanvas.toDataURL('image/png'), 'PNG', 0, 0, paper.w, paper.h);
+  pdf.save(`morphii-print-${new Date().toISOString().slice(0,10)}.pdf`);
+
   // A design can appear as several copies (print quantity), but a Firestore
   // batch can only write to each document once — dedupe by order id.
   const batch = DB.batch();
