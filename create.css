@@ -631,8 +631,12 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 .cr-font-carousel-row::-webkit-scrollbar{display:none;}
 .cr-font-carousel-spacer{flex-shrink:0;}
 .cr-font-carousel-item{
+  /* Smaller base size + real margin between items — scale() doesn't push
+     neighbors out of the way, so the centered item (which scales up to
+     ~2x, see applyFontRowScale in create.js) needs real breathing room on
+     both sides or it visually overlaps whatever's next to it. */
   flex-shrink:0;background:none;border:none;cursor:pointer;white-space:nowrap;
-  color:rgba(255,255,255,0.5);font-size:18px;padding:4px 10px;margin:0 2px;
+  color:rgba(255,255,255,0.5);font-size:13px;padding:4px 6px;margin:0 22px;
   transform:scale(1);transform-origin:center;transition:color 0.15s linear;
 }
 .cr-font-carousel-item.centered{color:#fff;}

@@ -1157,7 +1157,7 @@ const ICON_CLOSE      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 const ICON_UPLOAD      = '<svg class="cr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M4 21h16"/></svg>';
 const ICON_PALETTE    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 100 18c1.1 0 1.5-.7 1.5-1.4 0-.4-.2-.7-.4-1-.2-.3-.4-.6-.4-1 0-.8.6-1.4 1.4-1.4H16a4 4 0 004-4c0-5-3.6-9-8-9z"/><circle cx="7.5" cy="10.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="7.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="16.2" cy="10" r="1.1" fill="currentColor" stroke="none"/></svg>';
 const ICON_OPACITY    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z"/></svg>';
-const ICON_SIZE       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>';
+const ICON_SIZE       = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none" font-family="Arial, sans-serif" font-weight="700"><text x="1" y="18" font-size="11">A</text><text x="10" y="20" font-size="18">A</text></svg>';
 const ICON_FONT       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19l5-14 5 14M6.5 14h7"/><path d="M15 19l3-7 3 7M16.3 16.5h3.4"/></svg>';
 const ICON_ARC        = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17a10 8 0 0 1 16 0"/></svg>';
 const ICON_CURVE_STRAIGHT = '<svg viewBox="0 0 40 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="4" y1="12" x2="36" y2="12"/></svg>';
@@ -2562,11 +2562,14 @@ function applyFontRowScale(rowIndex, forceUniform){
     if (dist < nearestDist){ nearestDist = dist; nearestEl = el; }
   });
   dists.forEach(({ el, dist }) => {
-    // Center item ~2x the base size (matches a ~10pt -> ~20pt jump),
-    // immediate neighbors a noticeably smaller step up, falling off to
-    // normal size within about two items either side — never below
-    // normal, never unbounded above.
-    el.style.transform = `scale(${Math.max(1, 2 - dist/190)})`;
+    // Center item bigger than the rest, immediate neighbors a smaller step
+    // up, falling off to normal size within about two items either side —
+    // never below normal, never unbounded above. Kept modest (not the
+    // earlier ~2x) because scale() doesn't push neighbors out of the way,
+    // so an oversized center item on a long font name would overlap them
+    // regardless of margin; this range plus the item margin above is
+    // enough headroom for even the longest built-in font names.
+    el.style.transform = `scale(${Math.max(1, 1.55 - dist/150)})`;
     el.classList.toggle('centered', el === nearestEl);
   });
   if (!nearestEl) return;
@@ -2977,7 +2980,14 @@ function drawOneTextLine(ctx, artboardPx, t){
   const scalePxPerMM = artboardPx / artboardDiameter();
   const cutRadiusPx = (state.size/2) * scalePxPerMM;
   ctx.save();
-  ctx.font = `bold ${28*t.size}px "${t.font}", 'Nunito', sans-serif`;
+  // The "28" base is calibrated against CANVAS_PX (the live editor's fixed
+  // 480px reference) — everything else in this function already scales
+  // with artboardPx (which varies by pin size at export/print time: e.g.
+  // ~854px for a 58mm bleed vs ~378px for 25mm), but this line didn't, so
+  // text came out relatively smaller or bigger than what was shown live
+  // depending on which size was exported. Scaling by artboardPx/CANVAS_PX
+  // matches everything else and keeps text true to what was designed.
+  ctx.font = `bold ${28*t.size*(artboardPx/CANVAS_PX)}px "${t.font}", 'Nunito', sans-serif`;
   ctx.fillStyle = t.color;
   if (t.shadow){
     ctx.shadowColor = 'rgba(0,0,0,0.45)';
