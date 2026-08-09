@@ -1325,7 +1325,21 @@ const MARGIN_MM = 10;
 const PREVIEW_W = 420;   // on-screen editing canvas only — never sent to the printer
 const PRINT_PPMM = 11.8; // actual output resolution used to build the print image, px per mm (~300 DPI)
 
-let layoutPins = []; // {order, cx, cy, rad, dPx, active, img}
+// Bleed (full print) diameter per finished/cut size — mirrors SIZES.paperMM
+// in create.js. Kept as a manual local copy (this page doesn't load
+// create.js) so packPins() below has something to fall back on for orders
+// placed before `paperSize` was being stored on the order doc; new orders
+// always carry their own paperSize and that's used instead, see bleedMMFor.
+const BLEED_MM_BY_SIZE = { 25:32, 32:41, 37:48.8, 44:56.4, 58:72.4, 75:86.3 };
+function bleedMMFor(order){
+  const stored = parseFloat(order.paperSize);
+  if (stored > 0) return stored;
+  const bySize = BLEED_MM_BY_SIZE[order.size];
+  if (bySize) return bySize;
+  return (parseFloat(order.size)||37) * 1.25; // unmapped size — rough fallback only
+}
+
+let layoutPins = []; // {order, cx, cy, rad, cutRad, dPx, active, img}
 let dragIdx = -1, dragOffX = 0, dragOffY = 0;
 let printScale = 1, printMg = 0;
 let orderQty = {};      // order id -> how many copies to pack
@@ -1366,11 +1380,19 @@ function packPins(){
   let shelfX=printMg, shelfY=printMg, shelfH=0;
   layoutPins = [];
   for (const order of items){
-    const d = (parseFloat(order.size)||37) * printScale;
-    const rad = d/2 - 2;
+    // The design image (designDataUrl) is rendered clean at the FULL bleed
+    // diameter, not the cut diameter — packing/drawing at the cut size (the
+    // old behavior) squeezed that bleed margin away and packed pins closer
+    // together than their actual paper footprint. d/rad now reflect the
+    // real bleed circle; cutD/cutRad are kept separately just to draw a
+    // cut-line guide in the on-screen preview (see renderPaperCanvas).
+    const d = bleedMMFor(order) * printScale;
+    const cutD = (parseFloat(order.size)||37) * printScale;
+    const rad = d/2;
+    const cutRad = cutD/2;
     if (shelfX+d > printMg+(usableW*printScale) && shelfX>printMg){ shelfY+=shelfH+gapPx; shelfX=printMg; shelfH=0; }
     if (shelfY+d > printMg+(usableH*printScale)) break;
-    layoutPins.push({ order, cx:shelfX+d/2, cy:shelfY+d/2, rad, dPx:d, active:true, img:null });
+    layoutPins.push({ order, cx:shelfX+d/2, cy:shelfY+d/2, rad, cutRad, dPx:d, active:true, img:null });
     shelfX += d+gapPx; shelfH = Math.max(shelfH, d);
   }
   layoutPins.forEach(p => {
@@ -1419,6 +1441,14 @@ function renderPaperCanvas(){
     ctx.save();
     ctx.beginPath(); ctx.arc(p.cx,p.cy,p.rad+1,0,Math.PI*2);
     ctx.strokeStyle = 'rgba(0,0,0,0.12)'; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.restore();
+    // Preview-only cut-line guide (where the actual button press cuts,
+    // inside the full-bleed paper circle) — never drawn into the real
+    // print output (buildPrintCanvas), which stays clean.
+    ctx.save();
+    ctx.beginPath(); ctx.arc(p.cx,p.cy,p.cutRad,0,Math.PI*2);
+    ctx.setLineDash([3,2]); ctx.strokeStyle = 'rgba(255,59,48,0.65)'; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.setLineDash([]);
     ctx.restore();
     const bx = p.cx+p.rad*0.62, by = p.cy-p.rad*0.62;
     ctx.save();
