@@ -986,22 +986,19 @@ function goStep(name){
   window.scrollTo({top:0,behavior:'smooth'});
   if (name==='template'){ renderTemplateGrid(); }
   if (name==='pinTemplates'){ _pinTemplateActiveType = null; renderPinTemplateGrid(); }
-  if (name==='design'){ setupCanvas(); drawPreview(); renderCanvasBgDecor(); updateCanvasBorderRing(); updateAdminUI(); maybeShowPasteHint(); }
+  if (name==='design'){ setupCanvas(); drawPreview(); renderCanvasBgDecor(); updateCanvasBorderRing(); updateAdminUI(); showPasteHint(); }
   if (name==='submit'){ renderSubmitSummary(); }
 }
 window.goStep = goStep;
 
-// Shows the paste-feature explainer once per browser (localStorage-tracked),
-// the first time a customer actually reaches the design step — not on
-// every visit, and not before there's a pin on screen to point at.
-const PASTE_HINT_SEEN_KEY = 'morphii_seen_paste_hint';
-function maybeShowPasteHint(){
-  if (localStorage.getItem(PASTE_HINT_SEEN_KEY)) return;
+// Shows the paste-feature explainer every time a customer reaches the
+// design step — deliberately NOT a one-time/localStorage-tracked thing,
+// so it stays visible to people even if they missed or forgot it before.
+function showPasteHint(){
   document.getElementById('pasteHintOverlay').classList.add('show');
 }
 function closePasteHintModal(){
   document.getElementById('pasteHintOverlay').classList.remove('show');
-  try { localStorage.setItem(PASTE_HINT_SEEN_KEY, '1'); } catch(e){ /* storage disabled — just won't persist the dismissal */ }
 }
 window.closePasteHintModal = closePasteHintModal;
 
