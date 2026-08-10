@@ -226,6 +226,55 @@ async function deletePinTemplate(id) {
   return DB.collection('morphii_pin_templates').doc(id).delete();
 }
 
+/* ── GITHUB TOKEN (morphii_secrets/github doc) ──
+   { token: "github_pat_..." }
+   Lets the admin's "Add Sticker" tool (orders-admin.html) push a pasted PNG
+   straight to assets/pins/ via the GitHub Contents API — no manual git push.
+   This token can WRITE to the repo if it leaks, so it lives in its own
+   collection (never morphii_config, which is public-read) with admin-only
+   read AND write. Use a fine-grained token — github.com/settings/personal-
+   access-tokens/new — repository access: only this repo, permissions:
+   "Contents: Read and write". Never a classic token with full account
+   access; a leaked fine-grained token scoped this way can only touch this
+   one repo's file contents. */
+async function getGithubToken() {
+  if (!DB) return '';
+  try {
+    const doc = await DB.collection('morphii_secrets').doc('github').get();
+    return (doc.exists && doc.data().token) || '';
+  } catch (e) { return ''; }
+}
+async function saveGithubToken(token) {
+  if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
+  return DB.collection('morphii_secrets').doc('github').set({ token });
+}
+
+/* ── GITHUB CONTENTS API PUSH ──
+   Creates or updates one file on `main` via the Contents API. Updates need
+   the existing file's blob sha, so this checks for that first — omitting it
+   only matters when overwriting; a brand-new path 404s on the GET, which is
+   expected and just means sha stays undefined. */
+async function pushFileToGithub(repoPath, base64Content, commitMessage) {
+  const token = await getGithubToken();
+  if (!token) throw new Error('No GitHub token configured — paste one in first.');
+  const apiUrl = `https://api.github.com/repos/campingchairph/morphii/contents/${repoPath}`;
+  let sha;
+  try {
+    const existing = await fetch(apiUrl, { headers: { Authorization: `Bearer ${token}` } });
+    if (existing.ok) sha = (await existing.json()).sha;
+  } catch (e) { /* network hiccup on the pre-check — fall through, PUT below will surface the real error */ }
+  const res = await fetch(apiUrl, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: commitMessage, content: base64Content, branch: 'main', ...(sha ? { sha } : {}) }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `GitHub push failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 /* ── Firestore Security Rules ──────────────────
    Publish these in Firebase Console → Firestore → Rules:
 
@@ -253,6 +302,10 @@ async function deletePinTemplate(id) {
        match /morphii_pin_templates/{templateId} {
          allow read: if true;
          allow create, update, delete: if request.auth != null
+           && request.auth.token.email in ['buboyseph@gmail.com'];
+       }
+       match /morphii_secrets/{docId} {
+         allow read, write: if request.auth != null
            && request.auth.token.email in ['buboyseph@gmail.com'];
        }
      }
