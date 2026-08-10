@@ -457,9 +457,10 @@ h1,.logo{font-family:'Fredoka One',cursive;}
         <input type="text" id="stickerNewCategoryInput" placeholder="New category name" style="display:none;flex:1;min-width:160px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:white;font-size:12px">
       </div>
 
-      <div id="stickerPasteZone" tabindex="0" style="border:2px dashed var(--border);border-radius:12px;min-height:220px;display:flex;align-items:center;justify-content:center;cursor:text;margin-bottom:10px;padding:10px">
-        <div id="stickerPasteHint" style="color:var(--ink-dim);font-size:12px;text-align:center">Click here, then paste an image<br>(Ctrl+V)</div>
-        <canvas id="stickerPasteCanvas" style="display:none;max-width:100%;max-height:280px"></canvas>
+      <div id="stickerPasteZone" tabindex="0" style="border:2px dashed var(--border);border-radius:12px;min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;cursor:text;margin-bottom:10px;padding:10px">
+        <div id="stickerPasteHint" style="color:var(--ink-dim);font-size:12px;text-align:center">Copy a transparent PNG, then tap Paste below<br>(or Ctrl+V on desktop)</div>
+        <canvas id="stickerPasteCanvas" style="display:none;max-width:100%;max-height:220px"></canvas>
+        <button type="button" class="print-action-btn" onclick="pasteStickerFromClipboard()">📋 Paste</button>
       </div>
 
       <input type="text" id="stickerNameInput" placeholder="Sticker name (e.g. Cute Cat)" oninput="updatePushStickerBtnState()" style="margin-bottom:10px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:white;font-size:13px">
@@ -1203,7 +1204,11 @@ function sanitizeFileSlug(name){
 
 // Draws the pasted image onto the visible canvas at its native resolution
 // (capped) so the pushed file stays full quality — CSS just scales the
-// on-screen box down, the pixel buffer keeps the real size.
+// on-screen box down, the pixel buffer keeps the real size. A freshly
+// resized canvas is fully transparent by default and 2D contexts are
+// alpha:true unless told otherwise, so drawImage alone preserves whatever
+// alpha channel the source had — clearRect + the explicit {alpha:true} here
+// are just making that guarantee visible in the code, not changing behavior.
 function handlePastedStickerImage(blob){
   const img = new Image();
   img.onload = () => {
@@ -1212,7 +1217,9 @@ function handlePastedStickerImage(blob){
     const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
     const canvas = document.getElementById('stickerPasteCanvas');
     canvas.width = w; canvas.height = h;
-    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    const ctx = canvas.getContext('2d', { alpha: true });
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
     canvas.style.display = '';
     document.getElementById('stickerPasteHint').style.display = 'none';
     _stickerHasImage = true;
@@ -1222,6 +1229,17 @@ function handlePastedStickerImage(blob){
   img.src = URL.createObjectURL(blob);
 }
 
+// Only PNG/WEBP/GIF clipboard entries can actually carry transparency —
+// JPEG has no alpha channel at all, so a "sticker" copied as JPEG will
+// always paste in with a solid background no matter what the code does.
+// Warn instead of silently pasting something that'll look wrong on the pin.
+function ingestStickerBlob(blob){
+  if (blob.type === 'image/jpeg' || blob.type === 'image/jpg'){
+    if (!confirm("This image is a JPEG, which can't have a transparent background — it'll paste in with a solid background block. Use it anyway?")) return;
+  }
+  handlePastedStickerImage(blob);
+}
+
 document.addEventListener('paste', (e) => {
   const modal = document.getElementById('addStickerModal');
   if (!modal || !modal.classList.contains('open')) return;
@@ -1229,8 +1247,33 @@ document.addEventListener('paste', (e) => {
   const imgItem = Array.from(items).find(it => it.type.startsWith('image/'));
   if (!imgItem) return;
   e.preventDefault();
-  handlePastedStickerImage(imgItem.getAsFile());
+  ingestStickerBlob(imgItem.getAsFile());
 });
+
+// Desktop Ctrl+V fires the 'paste' event above, but mobile browsers have no
+// keyboard shortcut for it — this button uses the async Clipboard API
+// instead, which works from a tap (a user-gesture requirement the API
+// enforces) on iOS Safari and Android Chrome alike.
+async function pasteStickerFromClipboard(){
+  if (!navigator.clipboard || !navigator.clipboard.read){
+    alert("This browser doesn't support the Paste button. Long-press inside the box below and choose Paste instead.");
+    return;
+  }
+  try {
+    const items = await navigator.clipboard.read();
+    for (const item of items){
+      const imgType = item.types.find(t => t.startsWith('image/'));
+      if (!imgType) continue;
+      const blob = await item.getType(imgType);
+      ingestStickerBlob(blob);
+      return;
+    }
+    alert('No image found on the clipboard — copy an image first.');
+  } catch (e){
+    alert("Couldn't read the clipboard: " + e.message + '\nMake sure you copied an image and allowed clipboard access when prompted.');
+  }
+}
+window.pasteStickerFromClipboard = pasteStickerFromClipboard;
 
 async function refreshGithubTokenStatus(){
   _cachedGithubToken = await getGithubToken();
