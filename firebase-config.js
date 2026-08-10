@@ -239,10 +239,13 @@ async function deletePinTemplate(id) {
    one repo's file contents. */
 async function getGithubToken() {
   if (!DB) return '';
-  try {
-    const doc = await DB.collection('morphii_secrets').doc('github').get();
-    return (doc.exists && doc.data().token) || '';
-  } catch (e) { return ''; }
+  // Deliberately NOT swallowing errors here (unlike the other getters in
+  // this file) — a permission-denied on this specific collection usually
+  // means the morphii_secrets security rule (see the bottom of this file)
+  // was never published in the Firebase Console, and that's silent/
+  // confusing to debug unless the caller can see and surface it.
+  const doc = await DB.collection('morphii_secrets').doc('github').get();
+  return (doc.exists && doc.data().token) || '';
 }
 async function saveGithubToken(token) {
   if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
