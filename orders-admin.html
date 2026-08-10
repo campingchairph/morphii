@@ -423,6 +423,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
         <option value="election">Election Pins</option>
         <option value="ph-souvenir">Philippine Souvenir Pins</option>
         <option value="wedding">Wedding Pins</option>
+        <option value="in-loving-memory">In Loving Memory</option>
       </select>
       <div class="adm-tabs" id="assetCatTabs" style="margin-bottom:14px"></div>
       <div id="assetFilesList" style="display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto"></div>
@@ -1088,6 +1089,7 @@ const CATALOG_PRODUCTS = [
   { id:'election',       label:'Election Pins',           icon:'🗳️' },
   { id:'ph-souvenir',    label:'Philippine Souvenir Pins', icon:'🇵🇭' },
   { id:'wedding',        label:'Wedding Pins',            icon:'💍' },
+  { id:'in-loving-memory', label:'In Loving Memory',      icon:'🕊️' },
   { id:'patch',          label:'Patches',                 icon:'🧵' },
   { id:'keychain',       label:'Keychains',                icon:'🔑' },
   { id:'ai-marker',      label:'AI Ball Marker Generator', icon:'🤖' },
@@ -1099,7 +1101,7 @@ const CATALOG_PRODUCTS = [
 // until the admin has ever saved an explicit override for a given id.
 const CATALOG_PRODUCT_DEFAULTS = {
   'lapel-pin':true, 'challenge-coin':true, 'medal':true, 'golf-marker':true,
-  'election':true, 'ph-souvenir':true, 'wedding':true,
+  'election':true, 'ph-souvenir':true, 'wedding':true, 'in-loving-memory':true,
   'patch':false, 'keychain':false, 'ai-marker':false, 'lanyard':false, 'belt-buckle':false, 'luggage-tag':false,
 };
 const CATALOG_SIZES = [

@@ -30,7 +30,7 @@ override saves to Firestore (`morphii_config/assetLabels`, a simple
 
 | Folder | Shows up as | Notes |
 |---|---|---|
-| `stickers/` | Sticker | Freely placed, resizable/rotatable; upload or choose from library |
+| `stickers/` | Sticker | Freely placed, resizable/rotatable; upload or choose from library. Organize into subfolders by type — see below |
 | `shapes/` | Shapes | Decorative shape graphics; upload or choose from library |
 | `holders/` | Shapes | Banners/badges meant to sit *behind* text — shares the same "Shapes" gallery as `shapes/` in-app |
 | `texts/` | Word Art | Premade, non-editable text graphics (e.g. "BEST MOM") — distinct from the typed Text tool; upload or choose from library |
@@ -56,27 +56,43 @@ alphabet and pick the letter they actually want. A design set doesn't need
 to cover the whole alphabet — whatever letters exist for that number are
 what shows up.
 
+### Stickers — subfolders as categories
+
+Drop stickers straight into `stickers/` and they show up ungrouped under
+"Other". To organize them, push into **one level** of subfolder instead —
+`stickers/animals/cat.png`, `stickers/animals/dog.png`,
+`stickers/food/pizza.png`, etc. Each subfolder becomes a category in the
+picker: customers first see one thumbnail per category (whichever file
+happens to be first in that folder), then tap in to see everything inside
+it — same two-step browsing as Letters above. An empty subfolder (or one
+that doesn't exist yet) just doesn't show up; nothing to configure. Deeper
+nesting (a subfolder inside a subfolder) isn't supported.
+
 ## Isolated pin types
 
-**Election Pins**, **Philippine Souvenir Pins**, and **Wedding Pins** don't
-draw from the shared folders above at all — each has its own separate set,
-under a subfolder named for the product:
+**Election Pins**, **Philippine Souvenir Pins**, **Wedding Pins**, and
+**In Loving Memory** (funeral memorabilia) pins don't draw from the shared
+folders above at all — each has its own separate set, under a subfolder
+named for the product:
 
 ```
-assets/pins/election/{stickers,shapes,holders,texts,borders,background,characters}/
-assets/pins/ph-souvenir/{stickers,shapes,holders,texts,borders,background,characters}/
-assets/pins/wedding/{stickers,shapes,holders,texts,borders,background,characters}/
+assets/pins/election/{stickers,shapes,holders,texts,borders,background,characters,letters}/
+assets/pins/ph-souvenir/{stickers,shapes,holders,texts,borders,background,characters,letters}/
+assets/pins/wedding/{stickers,shapes,holders,texts,borders,background,characters,letters}/
+assets/pins/in-loving-memory/{stickers,shapes,holders,texts,borders,background,characters,letters}/
 ```
 
 Same category names, same rules (transparent PNG, square borders/
 backgrounds, etc.) — just push into the matching product's subfolder instead
-of the top-level one. A file in `assets/pins/election/stickers/` only shows
-up as a Sticker option when a customer is designing an Election pin; it
-never appears for Lapel Pins, Wedding Pins, or any other product, and vice
-versa. These folders start out empty (with a `.gitkeep` placeholder so git
-tracks them) — nothing shows in the picker for these three products until
-real files are pushed in. Customers can still upload their own image
-regardless of what's in the library.
+of the top-level one. Stickers subfolders support one level of category
+nesting here too (e.g. `assets/pins/in-loving-memory/stickers/doves/`), same
+as the shared library above. A file in `assets/pins/election/stickers/` only
+shows up as a Sticker option when a customer is designing an Election pin;
+it never appears for Lapel Pins, Wedding Pins, or any other product, and
+vice versa. These folders start out empty (with a `.gitkeep` placeholder so
+git tracks them) — nothing shows in the picker for these products until real
+files are pushed in. Customers can still upload their own image regardless
+of what's in the library.
 
 ## Where the data actually lives
 

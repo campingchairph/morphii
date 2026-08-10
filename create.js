@@ -26,6 +26,7 @@ const PRODUCTS = [
   { id:'ph-souvenir',  label:'Philippine Souvenir Pins', icon:'🇵🇭', catalogState:'enabled',
     tools:['background','border','character','sticker','text'], assetGroup:'ph-souvenir' },
   { id:'wedding',      label:'Wedding Pins',            icon:'💍', catalogState:'enabled', assetGroup:'wedding' },
+  { id:'in-loving-memory', label:'In Loving Memory',    icon:'🕊️', catalogState:'enabled', assetGroup:'in-loving-memory' },
   { id:'patch',        label:'Patches',                 icon:'🧵', catalogState:'disabled' },
   { id:'keychain',     label:'Keychains',                icon:'🔑', catalogState:'disabled' },
   { id:'ai-marker',    label:'AI Ball Marker Generator', icon:'🤖', catalogState:'disabled' },
@@ -1216,6 +1217,7 @@ function selectLayer(descriptor){
   if (changingElement){
     _activeTool = null; // close any open tool panel for the previous element
     _letterPickerGroupId = null; // reset the Letters picker back to the group-grid level
+    _stickerPickerGroupId = null; // reset the Stickers picker back to the category-grid level
   }
   renderDock();
   renderToolPanelContent();
@@ -1997,16 +1999,67 @@ function letterPickerHtml(el){
   return letterGroupGridHtml(groupId => `openLetterGroup('${groupId}')`);
 }
 
+// Two-level Stickers picker — same shape as the Letters one above, but
+// grouped by subfolder (assets/pins/stickers/<category>/*) instead of by
+// filename convention. Stickers still live in one flat STICKER_PRESETS
+// array underneath (decorAssetPool, etc. depend on that), so picking one
+// here just resolves its index in that flat array and hands off to the
+// existing addPlacedFromPreset/swapPlacedImage — no separate add/swap path.
+let _stickerPickerGroupId = null;
+
+function openStickerGroup(groupId){
+  _stickerPickerGroupId = groupId;
+  renderToolPanelContent();
+}
+window.openStickerGroup = openStickerGroup;
+
+function closeStickerGroup(){
+  _stickerPickerGroupId = null;
+  renderToolPanelContent();
+}
+window.closeStickerGroup = closeStickerGroup;
+
+function stickerGroupGridHtml(onClickFor){
+  if (!STICKER_GROUPS.length) return `<div class="cr-empty-hint">😢 No stickers here yet — check back soon, or use Upload above.</div>`;
+  return `<div class="cr-preset-grid">${STICKER_GROUPS.map(g=>
+    `<button class="cr-preset-thumb" onclick="${onClickFor(g.groupId)}" title="${escHtml(g.label)}"><img src="${g.thumbSrc}" alt="${escHtml(g.label)}"></button>`
+  ).join('')}</div>`;
+}
+
+function stickerItemsGridHtml(groupId, activeSrc, onClickFor){
+  const group = STICKER_GROUPS.find(g=>g.groupId===groupId);
+  if (!group) return '';
+  return `
+    <button class="cr-back-link" onclick="closeStickerGroup()">&larr; Back to categories</button>
+    <div class="cr-preset-grid">${group.items.map(it=>{
+      const flatIndex = STICKER_PRESETS.indexOf(it);
+      return `<button class="cr-preset-thumb ${activeSrc===it.src?'active':''}" onclick="${onClickFor(flatIndex)}" title="${escHtml(it.label)}"><img src="${it.src}" alt="${escHtml(it.label)}"></button>`;
+    }).join('')}</div>`;
+}
+
+function stickerPickerHtml(el){
+  if (_stickerPickerGroupId){
+    const activeSrc = el ? el.img.src : null;
+    const onClickFor = el
+      ? (flatIndex) => `swapPlacedImage('sticker',${el.id},${flatIndex})`
+      : (flatIndex) => `addPlacedFromPreset('sticker',${flatIndex})`;
+    return stickerItemsGridHtml(_stickerPickerGroupId, activeSrc, onClickFor);
+  }
+  return stickerGroupGridHtml(groupId => `openStickerGroup('${groupId}')`);
+}
+
 function placedToolPanelHtml(kind, tool, id){
   const noun = PLACED_META[kind].label.toLowerCase();
   const isShape = kind==='shape';
   const isLetter = kind==='letter';
+  const isSticker = kind==='sticker';
 
   // Pending — nothing created yet. Presets grid creates a new element when
   // tapped; there's nothing to show for any other tool in this state.
   if (id == null){
     if (tool!=='presets') return '';
     if (isLetter) return letterPickerHtml(null);
+    if (isSticker) return stickerPickerHtml(null);
     const presets = placedPresets(kind);
     if (!isShape && !presets.length) return `<div class="cr-empty-hint">😢 No ${noun}s here yet — check back soon, or use Upload above.</div>`;
     return `
@@ -3630,9 +3683,10 @@ const CATEGORY_TO_SET_KEY = {
 // doesn't silently drop a file from the picker. buildLetterGroups() below
 // turns the flat file list into { groupId, thumbSrc (always the "A"), letters }.
 const LETTER_FILENAME_RE = /^(\d+)_+([A-Za-z]).*\.[^.]+$/i;
-const NEW_PRODUCT_ASSET_GROUPS = ['election','ph-souvenir','wedding'];
+const NEW_PRODUCT_ASSET_GROUPS = ['election','ph-souvenir','wedding','in-loving-memory'];
 const ASSET_GROUP_CACHE = {}; // groupId -> { stickers, shapes, wordart, borders, background, characters, letters }
 let LETTER_GROUPS = []; // rebuilt in applyAssetGroup() — [{ groupId, thumbSrc, letters:{A:url,...} }]
+let STICKER_GROUPS = []; // rebuilt in applyAssetGroup() — [{ groupId, label, thumbSrc, items:[{label,src,name}] }]
 
 function assetLabelFromFilename(name){
   return name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase());
@@ -3691,13 +3745,48 @@ function buildAssetSetFromTree(treePaths, basePath, overrides){
     const key = CATEGORY_TO_SET_KEY[cat];
     treePaths.forEach(path => {
       if (!path.startsWith(prefix)) return;
-      const name = path.slice(prefix.length);
-      if (name.includes('/') || !/\.(png|jpe?g|webp|gif)$/i.test(name)) return; // skip nested dirs / non-images
-      const url = PINS_RAW_BASE + basePath + cat + '/' + name;
-      set[key].push({ label: overrides[url] || assetLabelFromFilename(name), src: url, name });
+      const rest = path.slice(prefix.length);
+      // Stickers get ONE level of subfolder as a category, e.g.
+      // "animals/cat.png" -> group "animals". A file still directly in
+      // stickers/ (no subfolder) is kept too, just ungrouped — see
+      // buildStickerGroups(). Every other category stays flat as before.
+      if (cat === 'stickers'){
+        const parts = rest.split('/');
+        if (parts.length > 2) return; // deeper nesting than one subfolder isn't supported
+        const name = parts[parts.length - 1];
+        if (!/\.(png|jpe?g|webp|gif)$/i.test(name)) return;
+        const group = parts.length === 2 ? parts[0] : null;
+        const url = PINS_RAW_BASE + basePath + cat + '/' + rest;
+        set[key].push({ label: overrides[url] || assetLabelFromFilename(name), src: url, name, group });
+        return;
+      }
+      if (rest.includes('/') || !/\.(png|jpe?g|webp|gif)$/i.test(rest)) return; // skip nested dirs / non-images
+      const url = PINS_RAW_BASE + basePath + cat + '/' + rest;
+      set[key].push({ label: overrides[url] || assetLabelFromFilename(rest), src: url, name: rest });
     });
   });
   return set;
+}
+
+// Turns the flat (but group-tagged) sticker list into
+// { groupId, label, thumbSrc (first sticker found in that folder), items }
+// records, one per subfolder — an empty subfolder never appears here since
+// git doesn't track empty directories, so there's nothing to filter out
+// explicitly. Ungrouped stickers (still directly in stickers/, no
+// subfolder) land in a catch-all "Other" group instead of disappearing.
+function buildStickerGroups(flatList){
+  const byGroup = {};
+  const ungrouped = [];
+  flatList.forEach(it => {
+    if (!it.group){ ungrouped.push(it); return; }
+    if (!byGroup[it.group]) byGroup[it.group] = [];
+    byGroup[it.group].push(it);
+  });
+  const groups = Object.keys(byGroup).sort((a,b)=>a.localeCompare(b)).map(groupId => ({
+    groupId, label: assetLabelFromFilename(groupId), thumbSrc: byGroup[groupId][0].src, items: byGroup[groupId],
+  }));
+  if (ungrouped.length) groups.push({ groupId:'__uncategorized', label:'Other', thumbSrc: ungrouped[0].src, items: ungrouped });
+  return groups;
 }
 
 // Clears and refills the shared preset arrays from whichever group's cached
@@ -3712,6 +3801,7 @@ function applyAssetGroup(groupId){
   BACKGROUND_PRESETS.length = 0; BACKGROUND_PRESETS.push(...set.background);
   CHARACTER_PRESETS.length = 0;  CHARACTER_PRESETS.push(...set.characters);
   LETTER_GROUPS = buildLetterGroups(set.letters);
+  STICKER_GROUPS = buildStickerGroups(set.stickers);
 }
 
 async function loadPinAssetManifest(){
