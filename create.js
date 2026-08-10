@@ -987,7 +987,18 @@ function goStep(name){
   window.scrollTo({top:0,behavior:'smooth'});
   if (name==='template'){ renderTemplateGrid(); }
   if (name==='pinTemplates'){ _pinTemplateActiveType = null; renderPinTemplateGrid(); }
-  if (name==='design'){ setupCanvas(); drawPreview(); renderCanvasBgDecor(); updateCanvasBorderRing(); updateAdminUI(); showPasteHint(); }
+  if (name==='design'){
+    setupCanvas(); drawPreview();
+    // In Loving Memory is a funeral/memorial product — the bouncy floating
+    // stickers and spinning border ring read as playful, which isn't
+    // appropriate here, so this product gets a calm static photo behind
+    // the pin instead (see isMemorialProduct() and the "memorial-bg" class
+    // in create.css, plus the early-return guards inside
+    // renderCanvasBgDecor/updateCanvasBorderRing themselves).
+    const wrap = document.querySelector('.cr-canvas-wrap');
+    if (wrap) wrap.classList.toggle('memorial-bg', isMemorialProduct());
+    renderCanvasBgDecor(); updateCanvasBorderRing(); updateAdminUI(); showPasteHint();
+  }
   if (name==='submit'){ renderSubmitSummary(); }
 }
 window.goStep = goStep;
@@ -3822,6 +3833,8 @@ async function loadPinAssetManifest(){
 // The floating background pool is whatever the customer has actually added
 // to their pin (stickers/shapes/word art/character) — falls back to random
 // library presets before they've added anything, so the backdrop isn't empty.
+function isMemorialProduct(){ return !!(state.product && state.product.id==='in-loving-memory'); }
+
 function decorAssetPool(){
   const srcs = [];
   ['sticker','shape','wordart','letter'].forEach(kind => {
@@ -3849,6 +3862,7 @@ function renderCanvasBgDecor(){
   const stage = document.getElementById('canvasStage');
   if (!wrap || !stage) return;
   stopBgPhysics();
+  if (isMemorialProduct()){ wrap.innerHTML = ''; return; }
   const pool = decorAssetPool();
   if (!pool.length){ wrap.innerHTML = ''; return; }
 
@@ -3974,7 +3988,7 @@ function tickBgPhysics(t){
 function updateCanvasBorderRing(){
   const ring = document.getElementById('canvasBorderRing');
   if (!ring) return;
-  if (!state.border || !state.border.src){
+  if (isMemorialProduct() || !state.border || !state.border.src){
     ring.style.display = 'none';
     return;
   }

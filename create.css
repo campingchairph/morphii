@@ -169,6 +169,18 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
    padding-bottom reserves room for the floating FAB row at the bottom. */
 .cr-canvas-wrap{position:relative;flex:1;min-height:0;display:flex;align-items:flex-start;justify-content:center;padding-top:6px;padding-bottom:72px;}
 
+/* In Loving Memory (funeral/memorial pins) swaps the bouncy sticker
+   backdrop + spinning border ring for a calm static photo instead — see
+   isMemorialProduct() in create.js. background-position:left keeps the
+   photo's leaf cluster (its focal point) anchored on the left across any
+   container width, instead of getting cropped out on narrower screens. */
+.cr-canvas-wrap.memorial-bg{
+  background-image:url('assets/ui/in-loving-memory-bg.png');
+  background-size:cover;
+  background-position:left center;
+  background-repeat:no-repeat;
+}
+
 /* Decorative sticker backdrop, purely visual — sits behind the canvas
    (z-index:0 vs the canvas's z-index:1). Driven entirely by a JS physics
    loop (renderCanvasBgDecor/tickBgPhysics) — each sticker is a "bubble"
