@@ -3,30 +3,42 @@
    ═══════════════════════════════════════════════ */
 
 // `tools` restricts which dock add-row icons a product offers (kind ids:
-// background/border/character/sticker/shape/wordart/text) — omit it (as on
-// every product below except the three new ones) for the full unrestricted
-// set every product had before this existed.
+// background/border/character/sticker/shape/wordart/letter/text/isolate).
+// `character` only ever appears in `in-loving-memory`'s list — every other
+// product folds character images into the regular `sticker` tool instead
+// (see STICKER_PRESETS/CHARACTER_PRESETS handling in applyAssetGroup(),
+// and the product-conditional labels in addRowHtml()/stickerNoun() below).
+// `isolate` is the full-screen/isolate-mode toggle (same action as the
+// #isolateBtn FAB) — added to every product's dock so the icon grid is a
+// consistent 8 icons (2 rows of 4, see .cr-dock-btn in create.css) even
+// after character merges away.
 // catalogState is one of 'enabled' (available), 'disabled' (visible, greyed
 // out, "Coming Soon" badge — for stuff not built yet), or 'hidden' (not
 // rendered in the grid at all). The admin's catalog toggles in
 // orders-admin.html override this per id at runtime — see
 // applyCatalogOverrides() below; these are just the hardcoded defaults.
+const FULL_TOOLS = ['background','border','sticker','shape','wordart','letter','text','isolate'];
 const PRODUCTS = [
-  { id:'lapel-pin',    label:'Lapel Pins',              icon:'📌', catalogState:'enabled' },
-  { id:'challenge-coin', label:'Challenge Coins',        icon:'🪙', catalogState:'enabled' },
-  { id:'medal',        label:'Medals',                  icon:'🏅', catalogState:'enabled' },
-  { id:'golf-marker',  label:'Golf Ball Markers',        icon:'⛳', catalogState:'enabled' },
+  { id:'lapel-pin',    label:'Lapel Pins',              icon:'📌', catalogState:'enabled', tools:FULL_TOOLS },
+  { id:'challenge-coin', label:'Challenge Coins',        icon:'🪙', catalogState:'enabled', tools:FULL_TOOLS },
+  { id:'medal',        label:'Medals',                  icon:'🏅', catalogState:'enabled', tools:FULL_TOOLS },
+  { id:'golf-marker',  label:'Golf Ball Markers',        icon:'⛳', catalogState:'enabled', tools:FULL_TOOLS },
   // `assetGroup` isolates a product's sticker/border/background/character/
   // shape/word-art presets into their own assets/pins/<assetGroup>/<category>/
   // folders instead of the shared pool everything else pulls from — see
   // applyAssetGroup() below. Products without it (every one above) keep
   // pulling from the shared folders exactly as before this existed.
   { id:'election',     label:'Election Pins',           icon:'🗳️', catalogState:'enabled',
-    tools:['background','border','character','sticker','text','shape'], assetGroup:'election' },
+    tools:['background','border','sticker','text','shape','isolate'], assetGroup:'election' },
   { id:'ph-souvenir',  label:'Philippine Souvenir Pins', icon:'🇵🇭', catalogState:'enabled',
-    tools:['background','border','character','sticker','text'], assetGroup:'ph-souvenir' },
-  { id:'wedding',      label:'Wedding Pins',            icon:'💍', catalogState:'enabled', assetGroup:'wedding' },
-  { id:'in-loving-memory', label:'In Loving Memory',    icon:'🕊️', catalogState:'enabled', assetGroup:'in-loving-memory' },
+    tools:['background','border','sticker','text','isolate'], assetGroup:'ph-souvenir' },
+  { id:'wedding',      label:'Wedding Pins',            icon:'💍', catalogState:'enabled', assetGroup:'wedding', tools:FULL_TOOLS },
+  // In Loving Memory is the one product that keeps Character (relabeled
+  // "Person") as its own tool instead of folding it into Sticker (relabeled
+  // "Emblems") — and drops Letters entirely, for a more formal/respectful
+  // feel. See the label overrides in addRowHtml() below.
+  { id:'in-loving-memory', label:'In Loving Memory',    icon:'🕊️', catalogState:'enabled', assetGroup:'in-loving-memory',
+    tools:['background','border','character','sticker','shape','wordart','text','isolate'] },
   { id:'patch',        label:'Patches',                 icon:'🧵', catalogState:'disabled' },
   { id:'keychain',     label:'Keychains',                icon:'🔑', catalogState:'disabled' },
   { id:'ai-marker',    label:'AI Ball Marker Generator', icon:'🤖', catalogState:'disabled' },
@@ -42,11 +54,10 @@ const PRODUCTS = [
    from the form; `composite` is a "${field}" template string combining more
    than one; `text` is a fixed literal. Position/scale are approximate —
    the customer can drag, resize, recolor, or delete anything afterward,
-   same as a from-scratch design. `photo` elements always render dead-center
-   (the Character slot's xFrac/yFrac are stored but drawOneCharacter() never
-   reads them — a pre-existing constraint, not new here) — their xFrac/yFrac
-   below are kept only as position notes for a future off-center photo slot,
-   `scale` is the only field that actually takes effect. ── */
+   same as a from-scratch design. `photo` elements are generated as a
+   regular Sticker layer (see setGeneratedPhoto()) — Election no longer has
+   a separate Character tool, it merged into Sticker like every non-memorial
+   product — so their xFrac/yFrac below do take effect, not just `scale`. ── */
 const PH_BLUE = '#0038A8', PH_RED = '#CE1126', PH_GOLD = '#FCD116', PH_WHITE = '#FFFFFF';
 const ELECTION_TEMPLATES = [
   { id:'sash-classic', label:'Sash Classic',
@@ -614,13 +625,19 @@ function pushGeneratedText(text, opts){
 }
 
 // Starts centered (xFrac/yFrac 0,0) like every other generated element —
-// the customer can drag it afterward same as any other layer.
+// the customer can drag it afterward same as any other layer. Pushed as a
+// regular sticker (not the single-slot `character`) since Election no
+// longer offers Character as a tool — it merged into Sticker like every
+// non-memorial product. This is also the first time a template photo's
+// xFrac/yFrac actually has an effect: drawOneCharacter() never read them
+// (photos were always forced dead-center), but drawOnePlaced() does.
 function setGeneratedPhoto(dataUrl, scale){
   return new Promise(resolve => {
     const img = new Image();
     img.onload = () => {
-      state.character = { img, scale, rotation:0, xFrac:0, yFrac:0, locked:false };
-      pushLayer({ kind:'character' });
+      const el = { id: nextPlacedId('sticker'), img, xFrac:0, yFrac:0, scale, rotation:0, locked:false };
+      state.stickers.push(el);
+      pushLayer({ kind:'sticker', id: el.id });
       resolve();
     };
     img.src = dataUrl;
@@ -1325,16 +1342,30 @@ function duplicateSelectedSticker(){
 }
 window.duplicateSelectedSticker = duplicateSelectedSticker;
 
+// In Loving Memory is the only product where Character stays its own tool
+// (relabeled "Person") instead of folding into Sticker (relabeled
+// "Emblems") — everywhere else these two share the same "Sticker" icon/
+// label, so a memorial customer's photo slot and their sticker library
+// don't read as two overlapping, confusing tools.
+function isMemorialProduct(){ return !!(state.product && state.product.id==='in-loving-memory'); }
+// "Emblems" mirrors the existing plural-dock-label convention (Shapes,
+// Letters are plural even though their individual layers are numbered
+// "Shape 1"/"Letter 1") — stickerNoun() is the singular form for that
+// per-layer numbering and empty-state copy ("No emblems here yet").
+function stickerToolLabel(){ return isMemorialProduct() ? 'Emblems' : 'Sticker'; }
+function stickerNoun(){ return isMemorialProduct() ? 'emblem' : 'sticker'; }
+
 function addRowHtml(){
   const allItems = [
     { kind:'background', onclick:'quickSelectBackground()', icon: bgChipThumb(), label:'Background', thumb:true },
     { kind:'border', onclick:'quickSelectBorder()', icon: state.border ? `<img src="${state.border.img.src}" alt="">` : ICON_BORDER, label:'Border', thumb: !!state.border },
-    { kind:'character', onclick:'quickSelectCharacter()', icon: state.character ? `<img src="${state.character.img.src}" alt="">` : ICON_CHARACTER, label: state.product && state.product.id==='ph-souvenir' ? 'Image' : 'Character', thumb: !!state.character },
-    { kind:'sticker', onclick:'quickAddSticker()', icon: ICON_STICKER, label:'Sticker' },
+    { kind:'character', onclick:'quickSelectCharacter()', icon: state.character ? `<img src="${state.character.img.src}" alt="">` : ICON_CHARACTER, label: isMemorialProduct() ? 'Person' : 'Character', thumb: !!state.character },
+    { kind:'sticker', onclick:'quickAddSticker()', icon: ICON_STICKER, label: stickerToolLabel() },
     { kind:'shape', onclick:'quickAddShape()', icon: ICON_SHAPE, label:'Shapes' },
     { kind:'wordart', onclick:'quickAddWordArt()', icon: ICON_WORDART, label:'Word Art' },
     { kind:'letter', onclick:'quickAddLetter()', icon: ICON_LETTER, label:'Letters' },
     { kind:'text', onclick:'quickAddText()', icon: ICON_TEXT, label:'Text' },
+    { kind:'isolate', onclick:'toggleIsolateMode()', icon: ICON_EXPAND, label:'Full Screen' },
   ];
   const allowed = state.product && state.product.tools;
   const items = allowed ? allItems.filter(it=>allowed.includes(it.kind)) : allItems;
@@ -1755,7 +1786,7 @@ const UPLOAD_INPUT_IDS = {
 };
 
 function promptUpload(kind){
-  const noun = PLACED_META[kind] ? PLACED_META[kind].uploadNoun : kind;
+  const noun = kind==='sticker' ? stickerNoun() : kind==='character' ? 'photo' : (PLACED_META[kind] ? PLACED_META[kind].uploadNoun : kind);
   document.getElementById('uploadHintText').textContent =
     `Your ${noun} file should be a PNG with a transparent (no) background, so it blends cleanly into the design.`;
   document.getElementById('uploadHintInputId').value = UPLOAD_INPUT_IDS[kind] || 'bgFileInput';
@@ -1796,8 +1827,9 @@ function layerThumbFor(d){
   return ICON_TEXT;
 }
 function layerLabelFor(d){
-  if (d.kind==='character') return 'Character';
+  if (d.kind==='character') return isMemorialProduct() ? 'Person' : 'Character';
   if (d.kind==='border') return 'Border';
+  if (d.kind==='sticker'){ const idx=placedArray('sticker').findIndex(x=>x.id===d.id); return capitalize(stickerNoun())+' '+(idx+1); }
   if (PLACED_META[d.kind]){ const idx=placedArray(d.kind).findIndex(x=>x.id===d.id); return PLACED_META[d.kind].label+' '+(idx+1); }
   const t = state.textLines.find(x=>x.id===d.id);
   return (t && t.text ? t.text : 'Text').slice(0,18);
@@ -2060,7 +2092,7 @@ function stickerPickerHtml(el){
 }
 
 function placedToolPanelHtml(kind, tool, id){
-  const noun = PLACED_META[kind].label.toLowerCase();
+  const noun = kind==='sticker' ? stickerNoun() : PLACED_META[kind].label.toLowerCase();
   const isShape = kind==='shape';
   const isLetter = kind==='letter';
   const isSticker = kind==='sticker';
@@ -2328,7 +2360,7 @@ function characterToolPanelHtml(tool){
   const c = state.character;
   if (!c){
     if (tool!=='presets') return '';
-    if (!CHARACTER_PRESETS.length) return `<div class="cr-empty-hint">😢 No characters here yet — check back soon, or use Upload above.</div>`;
+    if (!CHARACTER_PRESETS.length) return `<div class="cr-empty-hint">😢 No ${isMemorialProduct() ? 'photos' : 'characters'} here yet — check back soon, or use Upload above.</div>`;
     return `<div class="cr-preset-grid">${CHARACTER_PRESETS.map((p,i)=>
       `<button class="cr-preset-thumb" onclick="setCharacterFromPreset(${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`
     ).join('')}</div>`;
@@ -3805,14 +3837,22 @@ function buildStickerGroups(flatList){
 // sees the swap, no other code needs to know groups exist.
 function applyAssetGroup(groupId){
   const set = ASSET_GROUP_CACHE[groupId] || emptyAssetSet();
-  STICKER_PRESETS.length = 0;    STICKER_PRESETS.push(...set.stickers);
+  // Character images fold into the Sticker pool for every product except
+  // In Loving Memory (which keeps Character as its own separate "Person"
+  // tool) — tagged into their own "Photos" group so they stay easy to find
+  // inside the merged sticker picker instead of disappearing into "Other".
+  const stickerItems = set.stickers.slice();
+  if (!isMemorialProduct() && set.characters.length){
+    stickerItems.push(...set.characters.map(c => ({ ...c, group:'photos' })));
+  }
+  STICKER_PRESETS.length = 0;    STICKER_PRESETS.push(...stickerItems);
   SHAPE_PRESETS.length = 0;      SHAPE_PRESETS.push(...set.shapes);
   WORDART_PRESETS.length = 0;    WORDART_PRESETS.push(...set.wordart);
   BORDER_PRESETS.length = 0;     BORDER_PRESETS.push(...set.borders);
   BACKGROUND_PRESETS.length = 0; BACKGROUND_PRESETS.push(...set.background);
   CHARACTER_PRESETS.length = 0;  CHARACTER_PRESETS.push(...set.characters);
   LETTER_GROUPS = buildLetterGroups(set.letters);
-  STICKER_GROUPS = buildStickerGroups(set.stickers);
+  STICKER_GROUPS = buildStickerGroups(stickerItems);
 }
 
 async function loadPinAssetManifest(){
@@ -3833,7 +3873,7 @@ async function loadPinAssetManifest(){
 // The floating background pool is whatever the customer has actually added
 // to their pin (stickers/shapes/word art/character) — falls back to random
 // library presets before they've added anything, so the backdrop isn't empty.
-function isMemorialProduct(){ return !!(state.product && state.product.id==='in-loving-memory'); }
+// (isMemorialProduct() lives up near addRowHtml() — reused here.)
 
 function decorAssetPool(){
   const srcs = [];
