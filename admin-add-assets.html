@@ -230,8 +230,13 @@ const STICKER_SLOT_COUNT = 4;
 const ASSET_KINDS = [
   { id:'sticker', label:'Sticker', folder:'stickers', categorized:true,
     intro: 'Copy a transparent PNG, tap a box below, then <b>Ctrl+V</b> (or the 📋 button on mobile). Fill in as many of the 4 slots as you like, name each one, then push them all at once — the category you pick applies to all 4.' },
-  { id:'background', label:'Background', folder:'background', categorized:false,
-    intro: 'Copy a background photo — JPG or PNG both work, transparency isn\'t needed here — tap a box below, then <b>Ctrl+V</b> (or the 📋 button on mobile). No category for backgrounds; they push straight into the shared background library.' },
+  // Background is upload, not paste — a background photo is almost always
+  // an existing file on the admin's device rather than something they'd
+  // have copied to the clipboard, so a plain file picker is the natural
+  // fit here (unlike Sticker/Shape, which really are "copy this graphic
+  // from somewhere, paste it in"). See the `upload` flag below.
+  { id:'background', label:'Background', folder:'background', categorized:false, upload:true,
+    intro: 'Tap a box below to choose a background photo from your device — JPG or PNG both work, transparency isn\'t needed here. No category for backgrounds; they push straight into the shared background library.' },
   { id:'shape', label:'Shape', folder:'shapes', categorized:false,
     intro: 'Copy a transparent PNG shape graphic, tap a box below, then <b>Ctrl+V</b> (or the 📋 button on mobile). No category for shapes; they push straight into the shared shape library.' },
 ];
@@ -262,7 +267,18 @@ window.setAssetKind = setAssetKind;
 
 function renderStickerSlotShells(){
   _stickerSlots = Array.from({length: STICKER_SLOT_COUNT}, () => ({ hasImage:false }));
-  document.querySelector('.sticker-slots-grid').innerHTML = Array.from({length: STICKER_SLOT_COUNT}, (_, i) => `
+  const isUpload = !!currentKindDef().upload;
+  document.querySelector('.sticker-slots-grid').innerHTML = Array.from({length: STICKER_SLOT_COUNT}, (_, i) => isUpload ? `
+    <div class="sticker-slot">
+      <div class="sticker-paste-zone" id="stickerPasteZone_${i}" onclick="document.getElementById('stickerFileInput_${i}').click()">
+        <div class="sticker-paste-hint" id="stickerPasteHint_${i}">Tap to choose a file</div>
+        <canvas class="sticker-paste-canvas" id="stickerPasteCanvas_${i}" style="display:none"></canvas>
+        <button type="button" class="sticker-paste-btn" onclick="event.stopPropagation(); document.getElementById('stickerFileInput_${i}').click()">📁</button>
+        <input type="file" accept="image/*" id="stickerFileInput_${i}" style="display:none" onchange="onSlotFileChosen(${i}, this)">
+      </div>
+      <input type="text" class="sticker-slot-name" id="stickerNameInput_${i}" placeholder="Name (e.g. Sunset)" oninput="updatePushStickerBtnState()">
+    </div>
+  ` : `
     <div class="sticker-slot">
       <div class="sticker-paste-zone" id="stickerPasteZone_${i}" tabindex="0" onfocus="_activePasteSlot=${i}" onclick="_activePasteSlot=${i}">
         <div class="sticker-paste-hint" id="stickerPasteHint_${i}">Tap, then paste<br>(Ctrl+V)</div>
@@ -273,6 +289,17 @@ function renderStickerSlotShells(){
     </div>
   `).join('');
 }
+
+// File-picker counterpart to ingestAssetBlob/pasteStickerFromClipboard —
+// a File is already a Blob, so it reuses the exact same downstream draw
+// pipeline (handlePastedStickerImage). Only used for kinds with `upload:true`.
+function onSlotFileChosen(slotIndex, inputEl){
+  const file = inputEl.files && inputEl.files[0];
+  if (!file) return;
+  ingestAssetBlob(slotIndex, file);
+  inputEl.value = ''; // clears the picker so choosing the same file again still fires 'change'
+}
+window.onSlotFileChosen = onSlotFileChosen;
 
 function resetAllSlots(){
   renderStickerSlotShells();
@@ -380,6 +407,7 @@ function ingestAssetBlob(slotIndex, blob){
 }
 
 document.addEventListener('paste', (e) => {
+  if (currentKindDef().upload) return; // Background uses file upload instead of paste
   const items = (e.clipboardData || {}).items || [];
   const imgItem = Array.from(items).find(it => it.type.startsWith('image/'));
   if (!imgItem) return;
