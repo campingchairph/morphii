@@ -3812,11 +3812,17 @@ function buildAssetSetFromTree(treePaths, basePath, overrides){
 }
 
 // Turns the flat (but group-tagged) sticker list into
-// { groupId, label, thumbSrc (first sticker found in that folder), items }
-// records, one per subfolder — an empty subfolder never appears here since
-// git doesn't track empty directories, so there's nothing to filter out
-// explicitly. Ungrouped stickers (still directly in stickers/, no
-// subfolder) land in a catch-all "Other" group instead of disappearing.
+// { groupId, label, thumbSrc, items } records, one per subfolder — an
+// empty subfolder never appears here since git doesn't track empty
+// directories, so there's nothing to filter out explicitly. Ungrouped
+// stickers (still directly in stickers/, no subfolder) land in a catch-all
+// "Other" group instead of disappearing.
+// thumbSrc is whichever file is named "logo" (any extension, case-
+// insensitive) if one exists in that folder — lets whoever's uploading
+// stickers deliberately pick the category's cover image instead of
+// getting whatever happened to sort first. Falls back to the first item
+// if no file is named that way.
+const STICKER_LOGO_NAME_RE = /^logo\.[^.]+$/i;
 function buildStickerGroups(flatList){
   const byGroup = {};
   const ungrouped = [];
@@ -3825,10 +3831,11 @@ function buildStickerGroups(flatList){
     if (!byGroup[it.group]) byGroup[it.group] = [];
     byGroup[it.group].push(it);
   });
+  const thumbFor = items => (items.find(it => STICKER_LOGO_NAME_RE.test(it.name||'')) || items[0]).src;
   const groups = Object.keys(byGroup).sort((a,b)=>a.localeCompare(b)).map(groupId => ({
-    groupId, label: assetLabelFromFilename(groupId), thumbSrc: byGroup[groupId][0].src, items: byGroup[groupId],
+    groupId, label: assetLabelFromFilename(groupId), thumbSrc: thumbFor(byGroup[groupId]), items: byGroup[groupId],
   }));
-  if (ungrouped.length) groups.push({ groupId:'__uncategorized', label:'Other', thumbSrc: ungrouped[0].src, items: ungrouped });
+  if (ungrouped.length) groups.push({ groupId:'__uncategorized', label:'Other', thumbSrc: thumbFor(ungrouped), items: ungrouped });
   return groups;
 }
 

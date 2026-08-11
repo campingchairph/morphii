@@ -12,6 +12,12 @@ it — it's automatically live in the pin designer, using the filename
 (cleaned up — underscores/dashes become spaces, title-cased) as its label.
 No admin action, no separate "publish" step, no code change or redeploy.
 
+You don't need git for this — `orders-admin.html` → **📦 Add Assets** lets
+an admin paste an image straight from their clipboard and push it to the
+right folder from the browser (Stickers, Background, or Shape; Stickers
+asks which subfolder/category, Background and Shape don't). Manually
+committing the file yourself works exactly the same, if you'd rather.
+
 `create.js` reads each folder's contents straight from GitHub
 (`api.github.com/repos/campingchairph/morphii/contents/assets/pins/<category>`)
 on every page load, so it always reflects exactly what's in the repo.
@@ -62,11 +68,18 @@ Drop stickers straight into `stickers/` and they show up ungrouped under
 "Other". To organize them, push into **one level** of subfolder instead —
 `stickers/animals/cat.png`, `stickers/animals/dog.png`,
 `stickers/food/pizza.png`, etc. Each subfolder becomes a category in the
-picker: customers first see one thumbnail per category (whichever file
-happens to be first in that folder), then tap in to see everything inside
-it — same two-step browsing as Letters above. An empty subfolder (or one
-that doesn't exist yet) just doesn't show up; nothing to configure. Deeper
-nesting (a subfolder inside a subfolder) isn't supported.
+picker: customers first see one thumbnail per category, then tap in to see
+everything inside it — same two-step browsing as Letters above. An empty
+subfolder (or one that doesn't exist yet) just doesn't show up; nothing to
+configure. Deeper nesting (a subfolder inside a subfolder) isn't supported.
+
+**Category thumbnail**: by default the category's thumbnail is whichever
+file happens to sort first in that folder. To pick deliberately, push a
+file literally named `logo` (any image extension — `logo.png`, `logo.jpg`,
+etc.) into the subfolder — that one becomes the thumbnail regardless of
+sort order, e.g. `stickers/animals/logo.png`. It still shows up as a
+regular pickable sticker inside the category too, it's just also used as
+the cover image.
 
 ## Isolated pin types
 

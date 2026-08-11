@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Add Stickers — Morphii Admin</title>
+<title>Add Assets — Morphii Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -47,6 +47,10 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 .print-action-btn{width:100%;padding:12px;background:var(--yellow);color:#0B2E4E;border:none;border-radius:14px;font-family:'Fredoka One',cursive;font-size:16px;cursor:pointer;box-shadow:0 5px 0 #B8B800;margin-top:12px;}
 .print-action-btn:disabled{opacity:0.5;cursor:not-allowed;box-shadow:none;}
 
+.kind-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.kind-tab{padding:8px 16px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:white;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;}
+.kind-tab.active{background:var(--pink);border-color:var(--pink);}
+
 .sticker-slot{display:flex;flex-direction:column;gap:6px;}
 .sticker-paste-zone{
   position:relative;border:2px dashed var(--border);border-radius:12px;min-height:140px;
@@ -70,7 +74,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 <div id="loginScreen">
   <div class="login-card">
     <div class="logo">morphii<span>.</span> Admin</div>
-    <div class="login-sub">Sign in to add stickers</div>
+    <div class="login-sub">Sign in to add assets</div>
     <input type="email" id="loginEmail" class="login-input" placeholder="Admin email">
     <input type="password" id="loginPass" class="login-input" placeholder="Password">
     <button class="login-btn" onclick="doLogin()">Sign In</button>
@@ -82,7 +86,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 <div id="adminScreen">
   <div class="adm-header">
     <a class="adm-back-link" href="orders-admin.html">← Back to Orders</a>
-    <div class="logo">📎 Add Stickers</div>
+    <div class="logo">📦 Add Assets</div>
     <div style="display:flex;align-items:center;gap:12px">
       <div class="adm-user" id="admUserEmail"></div>
       <button class="adm-signout" onclick="doSignOut()">Sign Out</button>
@@ -90,11 +94,11 @@ h1,.logo{font-family:'Fredoka One',cursive;}
   </div>
 
   <div class="adm-main">
-    <div style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-bottom:14px;line-height:1.5;">
-      Copy a transparent PNG, tap a box below, then <b>Ctrl+V</b> (or the 📋 button on mobile). Fill in as many of the 4 slots as you like, name each one, then push them all at once — the category you pick applies to all 4. This is its own page (not a popup) so mobile browsers don't get confused about zoom level the way they can inside an overlay.
-    </div>
+    <div class="kind-tabs" id="assetKindTabs"></div>
 
-    <select class="adm-status-select" id="stickerGroupSelect" onchange="onStickerGroupChange()" style="margin-bottom:10px;width:100%">
+    <div style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-bottom:14px;line-height:1.5;" id="assetIntroText"></div>
+
+    <select class="adm-status-select" id="stickerGroupSelect" onchange="onAssetGroupChange()" style="margin-bottom:10px;width:100%">
       <option value="shared">Shared (Lapel Pins, Coins, Medals, Golf Markers)</option>
       <option value="election">Election Pins</option>
       <option value="ph-souvenir">Philippine Souvenir Pins</option>
@@ -102,14 +106,16 @@ h1,.logo{font-family:'Fredoka One',cursive;}
       <option value="in-loving-memory">In Loving Memory</option>
     </select>
 
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+    <!-- Category only applies to Stickers — Background/Shape uploads skip
+         categorization entirely and land flat in their folder. -->
+    <div id="categoryRow" style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
       <select class="adm-status-select" id="stickerCategorySelect" onchange="toggleNewCategoryInput()" style="flex:1;min-width:160px"></select>
       <input type="text" id="stickerNewCategoryInput" placeholder="New category name" style="display:none;flex:1;min-width:160px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:white;font-size:16px">
     </div>
 
     <div class="sticker-slots-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px"></div>
 
-    <button class="print-action-btn" id="pushStickerBtn" onclick="pushAllStickersToGithub()" disabled>⬆ Push to GitHub</button>
+    <button class="print-action-btn" id="pushStickerBtn" onclick="pushAllAssetsToGithub()" disabled>⬆ Push to GitHub</button>
 
     <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:16px">
       <div style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-bottom:6px" id="githubTokenStatus">Checking token…</div>
@@ -155,7 +161,7 @@ if (AUTH){
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('adminScreen').style.display = 'block';
       document.getElementById('admUserEmail').textContent = user.email;
-      initStickerPage();
+      initAssetPage();
     } else {
       document.getElementById('loginScreen').style.display = 'flex';
       document.getElementById('adminScreen').style.display = 'none';
@@ -196,28 +202,63 @@ function assetLabelFromFilename(name){
   return name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase());
 }
 
-/* ── ADD STICKER (paste up to 4 images at once, push straight to GitHub) ──
+/* ── ADD ASSETS (paste up to 4 images at once, push straight to GitHub) ──
    Uses the GitHub Contents API (pushFileToGithub in firebase-config.js)
    with a fine-grained token the admin pastes in once, stored in Firestore
    behind an admin-only-read collection (morphii_secrets — see
-   firebase-config.js, NOT morphii_config, which is public-read). Stickers
-   land in assets/pins/<group>/stickers/<category>/<filename>.png, matching
-   the subfolder-as-category convention create.js's picker groups by.
+   firebase-config.js, NOT morphii_config, which is public-read).
 
-   This used to be a modal on orders-admin.html — moved to its own page
-   because modals combined with mobile browser zoom state were behaving
-   inconsistently (reported as "unequal zooming"). A plain page has none of
-   that overlay/fixed-position complexity.
+   Covers three asset kinds sharing one UI: Sticker (subfolder-categorized,
+   matching create.js's picker groups — see assets/pins/README.md),
+   Background and Shape (both flat, no categorization — a background photo
+   or a shape graphic doesn't need a "which category" question the way a
+   library of hundreds of stickers does). Stickers land in
+   assets/pins/<group>/stickers/<category>/<filename>.png; Background/Shape
+   land in assets/pins/<group>/<kind>/<filename>.png with no subfolder.
+
+   This used to be sticker-only and a modal on orders-admin.html — moved to
+   its own page because modals combined with mobile browser zoom state were
+   behaving inconsistently (reported as "unequal zooming"), then broadened
+   to cover Background/Shape the same way rather than building two more
+   near-identical pages.
 
    4 independent slots so a batch can be pasted and named before pushing
    them all in one go — a push clears whichever slots succeeded and leaves
-   the page (and the category/group pickers) exactly as it was, ready for
-   the next batch. */
+   the page (and the kind/category/group pickers) exactly as it was, ready
+   for the next batch. */
 const STICKER_SLOT_COUNT = 4;
-let stickerTargetGroup = 'shared';
+const ASSET_KINDS = [
+  { id:'sticker', label:'Sticker', folder:'stickers', categorized:true,
+    intro: 'Copy a transparent PNG, tap a box below, then <b>Ctrl+V</b> (or the 📋 button on mobile). Fill in as many of the 4 slots as you like, name each one, then push them all at once — the category you pick applies to all 4.' },
+  { id:'background', label:'Background', folder:'background', categorized:false,
+    intro: 'Copy a background photo — JPG or PNG both work, transparency isn\'t needed here — tap a box below, then <b>Ctrl+V</b> (or the 📋 button on mobile). No category for backgrounds; they push straight into the shared background library.' },
+  { id:'shape', label:'Shape', folder:'shapes', categorized:false,
+    intro: 'Copy a transparent PNG shape graphic, tap a box below, then <b>Ctrl+V</b> (or the 📋 button on mobile). No category for shapes; they push straight into the shared shape library.' },
+];
+let assetKind = 'sticker';
+let assetTargetGroup = 'shared';
 let _stickerSlots = []; // [{ hasImage }], index-matched to the DOM slots below
 let _activePasteSlot = 0; // which slot Ctrl+V targets — see the paste listener below
 let _cachedGithubToken = '';
+
+function currentKindDef(){ return ASSET_KINDS.find(k => k.id===assetKind); }
+
+function renderAssetKindTabs(){
+  document.getElementById('assetKindTabs').innerHTML = ASSET_KINDS.map(k =>
+    `<button type="button" class="kind-tab ${k.id===assetKind?'active':''}" onclick="setAssetKind('${k.id}')">${escHtml(k.label)}</button>`
+  ).join('');
+}
+
+async function setAssetKind(kindId){
+  assetKind = kindId;
+  renderAssetKindTabs();
+  document.getElementById('assetIntroText').innerHTML = currentKindDef().intro;
+  document.getElementById('categoryRow').style.display = currentKindDef().categorized ? 'flex' : 'none';
+  resetAllSlots();
+  if (currentKindDef().categorized) await loadStickerCategoryOptions();
+  updatePushStickerBtnState();
+}
+window.setAssetKind = setAssetKind;
 
 function renderStickerSlotShells(){
   _stickerSlots = Array.from({length: STICKER_SLOT_COUNT}, () => ({ hasImage:false }));
@@ -233,9 +274,16 @@ function renderStickerSlotShells(){
   `).join('');
 }
 
-async function initStickerPage(){
+function resetAllSlots(){
   renderStickerSlotShells();
-  document.getElementById('stickerGroupSelect').value = stickerTargetGroup;
+}
+
+async function initAssetPage(){
+  renderAssetKindTabs();
+  document.getElementById('assetIntroText').innerHTML = currentKindDef().intro;
+  document.getElementById('categoryRow').style.display = currentKindDef().categorized ? 'flex' : 'none';
+  renderStickerSlotShells();
+  document.getElementById('stickerGroupSelect').value = assetTargetGroup;
   await loadStickerCategoryOptions();
   await refreshGithubTokenStatus();
 }
@@ -250,20 +298,21 @@ function resetStickerSlot(i){
   updatePushStickerBtnState();
 }
 
-async function onStickerGroupChange(){
-  stickerTargetGroup = document.getElementById('stickerGroupSelect').value;
-  await loadStickerCategoryOptions();
+async function onAssetGroupChange(){
+  assetTargetGroup = document.getElementById('stickerGroupSelect').value;
+  if (currentKindDef().categorized) await loadStickerCategoryOptions();
 }
-window.onStickerGroupChange = onStickerGroupChange;
+window.onAssetGroupChange = onAssetGroupChange;
 
 // Populates the category dropdown from whatever sticker subfolders already
 // exist on GitHub for the selected product group (one level deep, same as
 // buildAssetSetFromTree's sticker handling in create.js) plus a
-// "+ New category" option that reveals a free-text input instead.
+// "+ New category" option that reveals a free-text input instead. Only
+// ever called for the Sticker kind — Background/Shape skip this entirely.
 async function loadStickerCategoryOptions(){
   const sel = document.getElementById('stickerCategorySelect');
   sel.innerHTML = '<option value="">Loading…</option>';
-  const base = 'assets/pins/' + (stickerTargetGroup==='shared' ? '' : stickerTargetGroup + '/') + 'stickers/';
+  const base = 'assets/pins/' + (assetTargetGroup==='shared' ? '' : assetTargetGroup + '/') + 'stickers/';
   let cats = [];
   try {
     const treePaths = await fetchPinsAssetTree();
@@ -318,11 +367,13 @@ function handlePastedStickerImage(slotIndex, blob){
 }
 
 // Only PNG/WEBP/GIF clipboard entries can actually carry transparency —
-// JPEG has no alpha channel at all, so a "sticker" copied as JPEG will
+// JPEG has no alpha channel at all, so a sticker/shape copied as JPEG will
 // always paste in with a solid background no matter what the code does.
-// Warn instead of silently pasting something that'll look wrong on the pin.
-function ingestStickerBlob(slotIndex, blob){
-  if (blob.type === 'image/jpeg' || blob.type === 'image/jpg'){
+// Warn instead of silently pasting something that'll look wrong on the pin
+// — but not for Background, where a JPEG photo is completely normal and
+// transparency was never expected in the first place.
+function ingestAssetBlob(slotIndex, blob){
+  if (assetKind !== 'background' && (blob.type === 'image/jpeg' || blob.type === 'image/jpg')){
     if (!confirm("This image is a JPEG, which can't have a transparent background — it'll paste in with a solid background block. Use it anyway?")) return;
   }
   handlePastedStickerImage(slotIndex, blob);
@@ -333,7 +384,7 @@ document.addEventListener('paste', (e) => {
   const imgItem = Array.from(items).find(it => it.type.startsWith('image/'));
   if (!imgItem) return;
   e.preventDefault();
-  ingestStickerBlob(_activePasteSlot, imgItem.getAsFile());
+  ingestAssetBlob(_activePasteSlot, imgItem.getAsFile());
 });
 
 // Desktop Ctrl+V fires the 'paste' event above (targeting whichever slot
@@ -353,7 +404,7 @@ async function pasteStickerFromClipboard(slotIndex){
       const imgType = item.types.find(t => t.startsWith('image/'));
       if (!imgType) continue;
       const blob = await item.getType(imgType);
-      ingestStickerBlob(slotIndex, blob);
+      ingestAssetBlob(slotIndex, blob);
       return;
     }
     alert('No image found on the clipboard — copy an image first.');
@@ -407,20 +458,25 @@ function updatePushStickerBtnState(){
 window.updatePushStickerBtnState = updatePushStickerBtnState;
 
 // Pushes every filled+named slot, one file/commit each. Deliberately does
-// NOT navigate away or reset the category/group pickers when done — only
-// the slots that actually succeeded get cleared, so a failed one stays put
-// for a retry and the admin can immediately start pasting the next batch
-// into the same category.
-async function pushAllStickersToGithub(){
+// NOT navigate away or reset the kind/category/group pickers when done —
+// only the slots that actually succeeded get cleared, so a failed one
+// stays put for a retry and the admin can immediately start pasting the
+// next batch into the same place.
+async function pushAllAssetsToGithub(){
   const filled = filledStickerSlots();
   if (!filled.length){ alert('Paste at least one image first.'); return; }
   const missingName = filled.find(i => !document.getElementById('stickerNameInput_'+i).value.trim());
   if (missingName != null){ alert(`Slot ${missingName+1} has an image but no name — name it (or clear it) before pushing.`); return; }
 
-  let category = document.getElementById('stickerCategorySelect').value;
-  if (category === '__new__') category = sanitizeFileSlug(document.getElementById('stickerNewCategoryInput').value);
-  if (!category){ alert('Pick or type a category first.'); return; }
-  const base = stickerTargetGroup==='shared' ? '' : stickerTargetGroup + '/';
+  const kindDef = currentKindDef();
+  let category = '';
+  if (kindDef.categorized){
+    category = document.getElementById('stickerCategorySelect').value;
+    if (category === '__new__') category = sanitizeFileSlug(document.getElementById('stickerNewCategoryInput').value);
+    if (!category){ alert('Pick or type a category first.'); return; }
+  }
+  const base = assetTargetGroup==='shared' ? '' : assetTargetGroup + '/';
+  const folderPath = category ? `${kindDef.folder}/${category}` : kindDef.folder;
 
   const btn = document.getElementById('pushStickerBtn');
   btn.disabled = true;
@@ -429,11 +485,11 @@ async function pushAllStickersToGithub(){
     const i = filled[n];
     btn.textContent = `Pushing ${n+1}/${filled.length}…`;
     const filename = sanitizeFileSlug(document.getElementById('stickerNameInput_'+i).value) + '.png';
-    const repoPath = `assets/pins/${base}stickers/${category}/${filename}`;
+    const repoPath = `assets/pins/${base}${folderPath}/${filename}`;
     const canvas = document.getElementById('stickerPasteCanvas_'+i);
     const base64 = canvas.toDataURL('image/png').split(',')[1];
     try {
-      await pushFileToGithub(repoPath, base64, `Add sticker: ${category}/${filename}`);
+      await pushFileToGithub(repoPath, base64, `Add ${kindDef.id}: ${folderPath}/${filename}`);
       results.push({ i, filename, ok:true });
       resetStickerSlot(i);
     } catch(e){
@@ -444,13 +500,13 @@ async function pushAllStickersToGithub(){
 
   const okCount = results.filter(r=>r.ok).length;
   const failed = results.filter(r=>!r.ok);
-  let msg = okCount ? `Pushed ${okCount} sticker${okCount===1?'':'s'} to ${category}/.` : '';
+  let msg = okCount ? `Pushed ${okCount} ${kindDef.label.toLowerCase()}${okCount===1?'':'s'} to ${folderPath}/.` : '';
   if (failed.length) msg += (msg?'\n\n':'') + 'Failed:\n' + failed.map(f=>`Slot ${f.i+1} (${f.filename}): ${f.error}`).join('\n');
   alert(msg);
   btn.textContent = '⬆ Push to GitHub';
   updatePushStickerBtnState();
 }
-window.pushAllStickersToGithub = pushAllStickersToGithub;
+window.pushAllAssetsToGithub = pushAllAssetsToGithub;
 
 </script>
 </body>
