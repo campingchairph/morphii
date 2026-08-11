@@ -460,7 +460,7 @@ function setCat(cat,el){
       searchEl.id='outfitSearch';
       searchEl.type='text';
       searchEl.placeholder='🔍 Search outfit…';
-      searchEl.style.cssText='width:100%;padding:7px 10px;border-radius:10px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);font-family:\'Fredoka One\',cursive;font-size:13px;color:white;outline:none;margin-bottom:8px;box-sizing:border-box;';
+      searchEl.style.cssText='width:100%;padding:7px 10px;border-radius:10px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);font-family:\'Fredoka One\',cursive;font-size:16px;color:white;outline:none;margin-bottom:8px;box-sizing:border-box;';
       searchEl.oninput=()=>{renderGrid('assetGrid','outfit');renderGrid('mobAssetGrid','outfit');};
       const wrap=document.getElementById('assetGrid').parentElement;
       wrap.insertBefore(searchEl,document.getElementById('assetGrid'));
@@ -1589,7 +1589,7 @@ function injectSizePicker(){
   if(!wrap||document.getElementById('pinSizeSelect'))return;
   wrap.className = 'inp-group';
   wrap.innerHTML = `<label>Pin Size</label>
-    <select id="pinSizeSelect" style="width:100%;padding:9px 12px;border-radius:12px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);font-family:'Fredoka One',cursive;font-size:14px;color:white;outline:none;cursor:pointer;">
+    <select id="pinSizeSelect" style="width:100%;padding:9px 12px;border-radius:12px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);font-family:'Fredoka One',cursive;font-size:16px;color:white;outline:none;cursor:pointer;">
       <option value="1.5">Small — 1.5"</option>
       <option value="2.25" selected>Regular — 2.25"</option>
       <option value="3">Large — 3"</option>

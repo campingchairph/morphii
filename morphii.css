@@ -593,7 +593,7 @@ header::before{
   width:100%;padding:8px 12px;border-radius:10px;
   border:2px solid rgba(255,255,255,0.15);
   background:rgba(255,255,255,0.08);
-  font-family:'Fredoka One',cursive;font-size:14px;color:white;outline:none;
+  font-family:'Fredoka One',cursive;font-size:16px;color:white;outline:none;
   transition:border-color 0.2s;box-sizing:border-box;
 }
 .text-bar-input::placeholder{color:rgba(255,255,255,0.25);}
@@ -602,7 +602,7 @@ header::before{
   padding:6px 8px;border-radius:8px;
   border:2px solid rgba(255,255,255,0.15);
   background:rgba(255,255,255,0.08);
-  font-family:'Fredoka One',cursive;font-size:12px;color:white;
+  font-family:'Fredoka One',cursive;font-size:16px;color:white;
   outline:none;cursor:pointer;
 }
 .text-bar-row{
@@ -780,11 +780,11 @@ canvas#pinCanvas{border-radius:50%;display:block;filter:drop-shadow(0 8px 20px r
   .mob-inputs{display:flex;gap:8px;padding:12px 16px;background:var(--navy);border-top:3px solid rgba(255,255,255,0.08);}
   .mob-inputs .inp-group{flex:1;}
   .mob-inputs .inp-group label{font-size:8px;color:rgba(255,255,255,0.4);}
-  .mob-inputs .inp-group input{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15);color:white;font-family:'Fredoka One',cursive;font-size:13px;padding:8px 10px;border-radius:10px;border-width:2px;outline:none;width:100%;}
+  .mob-inputs .inp-group input{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15);color:white;font-family:'Fredoka One',cursive;font-size:16px;padding:8px 10px;border-radius:10px;border-width:2px;outline:none;width:100%;}
   .mob-customizer{background:var(--navy);padding:10px 16px 6px;border-top:2px solid rgba(255,255,255,0.06);}
   .mob-customizer-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
   .mob-customizer-label{font-size:9px;font-weight:800;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;min-width:60px;}
-  .mob-customizer select{background:rgba(255,255,255,0.1);border:1.5px solid rgba(255,255,255,0.15);color:white;font-family:'Fredoka One',cursive;font-size:12px;padding:5px 8px;border-radius:8px;outline:none;flex:1;}
+  .mob-customizer select{background:rgba(255,255,255,0.1);border:1.5px solid rgba(255,255,255,0.15);color:white;font-family:'Fredoka One',cursive;font-size:16px;padding:5px 8px;border-radius:8px;outline:none;flex:1;}
   .mob-customizer select option{color:#000;}
   .mob-dot-row{display:flex;gap:5px;flex-wrap:wrap;}
   .mob-dot-row .color-dot{width:20px;height:20px;}
@@ -968,7 +968,7 @@ canvas#pinCanvas{border-radius:50%;display:block;filter:drop-shadow(0 8px 20px r
 .pmi-select{
   padding:7px 12px;border-radius:10px;
   background:rgba(255,255,255,0.08);border:1.5px solid rgba(255,255,255,0.15);
-  color:white;font-family:'Fredoka One',cursive;font-size:13px;outline:none;cursor:pointer;
+  color:white;font-family:'Fredoka One',cursive;font-size:16px;outline:none;cursor:pointer;
 }
 .pmi-select option{color:#000;}
 .pmi-pack-btn{

@@ -11,7 +11,7 @@
 @font-face{font-family:'Cute Roti';src:url('https://raw.githubusercontent.com/campingchairph/morphii/main/assets/fonts/CuteRoti.ttf');}
 @font-face{font-family:'Cute Maple';src:url('https://raw.githubusercontent.com/campingchairph/morphii/main/assets/fonts/CuteMaple.ttf');}
 </style>
-<link rel="stylesheet" href="morphii.css">
+<link rel="stylesheet" href="morphii.css?v=1">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -26,8 +26,8 @@
   <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:36px 32px;max-width:340px;width:100%;text-align:center;">
     <div style="font-family:'Fredoka One',cursive;font-size:26px;color:white;margin-bottom:4px;">morphii<span style="color:#FF6FAE">.</span></div>
     <div style="font-family:'Nunito',sans-serif;font-size:12.5px;color:rgba(255,255,255,0.6);font-weight:800;margin-bottom:22px;">Kiosk — staff sign-in required</div>
-    <input type="email" id="gateEmail" placeholder="Admin email" style="width:100%;box-sizing:border-box;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.06);color:white;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;margin-bottom:10px;outline:none;">
-    <input type="password" id="gatePass" placeholder="Password" style="width:100%;box-sizing:border-box;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.06);color:white;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;margin-bottom:10px;outline:none;">
+    <input type="email" id="gateEmail" placeholder="Admin email" style="width:100%;box-sizing:border-box;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.06);color:white;font-family:'Nunito',sans-serif;font-size:16px;font-weight:700;margin-bottom:10px;outline:none;">
+    <input type="password" id="gatePass" placeholder="Password" style="width:100%;box-sizing:border-box;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.06);color:white;font-family:'Nunito',sans-serif;font-size:16px;font-weight:700;margin-bottom:10px;outline:none;">
     <button onclick="doAdminGateLogin()" style="width:100%;padding:12px;border-radius:50px;border:none;background:#FF6FAE;color:white;font-family:'Fredoka One',cursive;font-size:15px;cursor:pointer;margin-top:6px;box-shadow:0 4px 0 #c0437e;">Sign In</button>
     <div id="gateErr" style="margin-top:10px;font-size:12px;font-weight:700;color:#ff9b98;min-height:16px;font-family:'Nunito',sans-serif;"></div>
   </div>
@@ -318,7 +318,7 @@
 
     <!-- Search -->
     <div style="position:relative;margin-bottom:16px;">
-      <input id="subSearch" type="text" placeholder="Search by name…" oninput="renderSubmissionsList()" style="width:100%;padding:12px 16px;border-radius:12px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);color:white;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;outline:none;box-sizing:border-box;">
+      <input id="subSearch" type="text" placeholder="Search by name…" oninput="renderSubmissionsList()" style="width:100%;padding:12px 16px;border-radius:12px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);color:white;font-family:'Nunito',sans-serif;font-size:16px;font-weight:700;outline:none;box-sizing:border-box;">
     </div>
 
     <!-- List -->
@@ -791,6 +791,6 @@ if (AUTH){
   document.getElementById('gateErr').textContent = 'Firebase not configured yet — see firebase-config.js';
 }
 </script>
-<script src="morphii.js"></script>
+<script src="morphii.js?v=1"></script>
 </body>
 </html>
