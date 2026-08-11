@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Add Stickers — Morphii Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --navy:#0B2E4E; --pink:#FF6FAE; --yellow:#FFFF00; --sky:#4DC8F0;
+  --panel:#0d3557; --border:rgba(255,255,255,0.14); --ink-dim:rgba(255,255,255,0.55);
+}
+body{font-family:'Nunito',sans-serif;background:var(--navy);color:white;min-height:100vh;}
+button,input,select{font-family:inherit;}
+h1,.logo{font-family:'Fredoka One',cursive;}
+
+/* ── LOGIN — same pattern as orders-admin.html, since this page can be
+   opened directly (bookmarked, shared link) and not only via that page's
+   nav, so it needs its own working auth gate rather than assuming a
+   session already exists. ── */
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-card{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:36px 32px;max-width:360px;width:100%;text-align:center;}
+.login-card .logo{font-size:26px;margin-bottom:4px;}
+.login-card .logo span{color:var(--pink);}
+.login-sub{font-size:12.5px;color:var(--ink-dim);font-weight:700;margin-bottom:22px;}
+.login-input{width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);background:rgba(255,255,255,0.06);color:white;font-size:16px;font-weight:700;margin-bottom:10px;outline:none;}
+.login-input:focus{border-color:var(--pink);}
+.login-btn{width:100%;padding:12px;border-radius:50px;border:none;background:var(--pink);color:white;font-family:'Fredoka One',cursive;font-size:15px;cursor:pointer;margin-top:6px;box-shadow:0 4px 0 #c0437e;}
+.login-err{margin-top:10px;font-size:12px;font-weight:700;color:#ff9b98;min-height:16px;}
+
+/* ── PAGE ── */
+#adminScreen{display:none;}
+.adm-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:16px 24px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20;}
+.adm-header .logo{font-size:20px;}
+.adm-header .logo span{color:var(--pink);}
+.adm-back-link{color:var(--ink-dim);font-size:12px;font-weight:800;text-decoration:none;display:flex;align-items:center;gap:4px;}
+.adm-back-link:hover{color:white;}
+.adm-user{font-size:12px;color:var(--ink-dim);font-weight:700;}
+.adm-signout{background:rgba(255,255,255,0.08);border:1px solid var(--border);color:white;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:800;cursor:pointer;}
+.adm-status-select{
+  padding:8px 14px;border-radius:20px;border:1.5px solid var(--border);background:rgba(255,255,255,0.06);
+  color:white;font-size:16px;font-weight:800;cursor:pointer;outline:none;
+}
+.adm-status-select option{color:#000;}
+.adm-main{max-width:640px;margin:0 auto;padding:24px;}
+.print-action-btn{width:100%;padding:12px;background:var(--yellow);color:#0B2E4E;border:none;border-radius:14px;font-family:'Fredoka One',cursive;font-size:16px;cursor:pointer;box-shadow:0 5px 0 #B8B800;margin-top:12px;}
+.print-action-btn:disabled{opacity:0.5;cursor:not-allowed;box-shadow:none;}
+
+.sticker-slot{display:flex;flex-direction:column;gap:6px;}
+.sticker-paste-zone{
+  position:relative;border:2px dashed var(--border);border-radius:12px;min-height:140px;
+  display:flex;align-items:center;justify-content:center;cursor:text;padding:8px;
+}
+.sticker-paste-hint{color:var(--ink-dim);font-size:11px;text-align:center;line-height:1.4;}
+.sticker-paste-canvas{display:none;max-width:100%;max-height:120px;}
+.sticker-paste-btn{
+  position:absolute;bottom:8px;right:8px;width:34px;height:34px;border-radius:50%;
+  border:1px solid var(--border);background:rgba(255,255,255,0.08);color:white;font-size:15px;cursor:pointer;
+}
+.sticker-slot-name{
+  padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);
+  color:white;font-size:16px;width:100%;
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="logo">morphii<span>.</span> Admin</div>
+    <div class="login-sub">Sign in to add stickers</div>
+    <input type="email" id="loginEmail" class="login-input" placeholder="Admin email">
+    <input type="password" id="loginPass" class="login-input" placeholder="Password">
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="adminScreen">
+  <div class="adm-header">
+    <a class="adm-back-link" href="orders-admin.html">← Back to Orders</a>
+    <div class="logo">📎 Add Stickers</div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="adm-user" id="admUserEmail"></div>
+      <button class="adm-signout" onclick="doSignOut()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="adm-main">
+    <div style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-bottom:14px;line-height:1.5;">
+      Copy a transparent PNG, tap a box below, then <b>Ctrl+V</b> (or the 📋 button on mobile). Fill in as many of the 4 slots as you like, name each one, then push them all at once — the category you pick applies to all 4. This is its own page (not a popup) so mobile browsers don't get confused about zoom level the way they can inside an overlay.
+    </div>
+
+    <select class="adm-status-select" id="stickerGroupSelect" onchange="onStickerGroupChange()" style="margin-bottom:10px;width:100%">
+      <option value="shared">Shared (Lapel Pins, Coins, Medals, Golf Markers)</option>
+      <option value="election">Election Pins</option>
+      <option value="ph-souvenir">Philippine Souvenir Pins</option>
+      <option value="wedding">Wedding Pins</option>
+      <option value="in-loving-memory">In Loving Memory</option>
+    </select>
+
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+      <select class="adm-status-select" id="stickerCategorySelect" onchange="toggleNewCategoryInput()" style="flex:1;min-width:160px"></select>
+      <input type="text" id="stickerNewCategoryInput" placeholder="New category name" style="display:none;flex:1;min-width:160px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:white;font-size:16px">
+    </div>
+
+    <div class="sticker-slots-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px"></div>
+
+    <button class="print-action-btn" id="pushStickerBtn" onclick="pushAllStickersToGithub()" disabled>⬆ Push to GitHub</button>
+
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-bottom:6px" id="githubTokenStatus">Checking token…</div>
+      <div style="display:flex;gap:8px">
+        <input type="password" id="githubTokenInput" placeholder="Paste a fine-grained GitHub token" style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:white;font-size:16px">
+        <button class="adm-signout" onclick="saveGithubTokenFromInput()">Save</button>
+      </div>
+      <div style="font-size:10px;color:var(--ink-dim);margin-top:6px;line-height:1.5">
+        Create one at github.com/settings/personal-access-tokens/new — repository access: only <b>morphii</b>, permissions: <b>Contents: Read and write</b>. Never use a classic token with full account access.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js?v=3"></script>
+<script>
+
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function doLogin(){
+  const errEl = document.getElementById('loginErr');
+  errEl.textContent = '';
+  if (!AUTH){ errEl.textContent = 'Firebase not configured yet — see firebase-config.js'; return; }
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPass').value;
+  if (!email || !pass){ errEl.textContent = 'Enter email and password.'; return; }
+  AUTH.signInWithEmailAndPassword(email, pass)
+    .catch(err => { errEl.textContent = err.message; });
+}
+window.doLogin = doLogin;
+
+function doSignOut(){
+  if (AUTH) AUTH.signOut();
+}
+window.doSignOut = doSignOut;
+
+if (AUTH){
+  AUTH.onAuthStateChanged(user => {
+    if (user && isAdmin(user)){
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('adminScreen').style.display = 'block';
+      document.getElementById('admUserEmail').textContent = user.email;
+      initStickerPage();
+    } else {
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('adminScreen').style.display = 'none';
+      if (user && !isAdmin(user)){
+        document.getElementById('loginErr').textContent = 'This account is not authorized as an admin.';
+        AUTH.signOut();
+      }
+    }
+  });
+} else {
+  document.getElementById('loginErr').textContent = 'Firebase not configured yet — see firebase-config.js';
+}
+
+/* ── GitHub asset-tree lookup — same one-request-for-the-whole-repo
+   approach as create.js/orders-admin.html (see the comment there on
+   PINS_TREE_URL) and the SAME cache key, so this page shares the 10-minute
+   localStorage cache with both of those instead of burning its own slice
+   of the 60-req/hr unauthenticated GitHub limit. */
+const PINS_TREE_URL = 'https://api.github.com/repos/campingchairph/morphii/git/trees/main?recursive=1';
+const PINS_TREE_CACHE_KEY = 'morphii_pins_asset_tree_v1';
+const PINS_TREE_CACHE_TTL = 10 * 60 * 1000;
+async function fetchPinsAssetTree(){
+  try {
+    const cached = JSON.parse(localStorage.getItem(PINS_TREE_CACHE_KEY) || 'null');
+    if (cached && Array.isArray(cached.paths) && Date.now() - cached.t < PINS_TREE_CACHE_TTL) return cached.paths;
+  } catch(e){ /* corrupt cache entry — just refetch */ }
+  const res = await fetch(PINS_TREE_URL);
+  if (!res.ok) throw new Error('GitHub tree fetch failed: ' + res.status);
+  const data = await res.json();
+  const paths = (data.tree || [])
+    .filter(it => it.type==='blob' && it.path.startsWith('assets/pins/'))
+    .map(it => it.path);
+  try { localStorage.setItem(PINS_TREE_CACHE_KEY, JSON.stringify({ t: Date.now(), paths })); } catch(e){ /* storage full/disabled — just skip caching */ }
+  return paths;
+}
+
+function assetLabelFromFilename(name){
+  return name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase());
+}
+
+/* ── ADD STICKER (paste up to 4 images at once, push straight to GitHub) ──
+   Uses the GitHub Contents API (pushFileToGithub in firebase-config.js)
+   with a fine-grained token the admin pastes in once, stored in Firestore
+   behind an admin-only-read collection (morphii_secrets — see
+   firebase-config.js, NOT morphii_config, which is public-read). Stickers
+   land in assets/pins/<group>/stickers/<category>/<filename>.png, matching
+   the subfolder-as-category convention create.js's picker groups by.
+
+   This used to be a modal on orders-admin.html — moved to its own page
+   because modals combined with mobile browser zoom state were behaving
+   inconsistently (reported as "unequal zooming"). A plain page has none of
+   that overlay/fixed-position complexity.
+
+   4 independent slots so a batch can be pasted and named before pushing
+   them all in one go — a push clears whichever slots succeeded and leaves
+   the page (and the category/group pickers) exactly as it was, ready for
+   the next batch. */
+const STICKER_SLOT_COUNT = 4;
+let stickerTargetGroup = 'shared';
+let _stickerSlots = []; // [{ hasImage }], index-matched to the DOM slots below
+let _activePasteSlot = 0; // which slot Ctrl+V targets — see the paste listener below
+let _cachedGithubToken = '';
+
+function renderStickerSlotShells(){
+  _stickerSlots = Array.from({length: STICKER_SLOT_COUNT}, () => ({ hasImage:false }));
+  document.querySelector('.sticker-slots-grid').innerHTML = Array.from({length: STICKER_SLOT_COUNT}, (_, i) => `
+    <div class="sticker-slot">
+      <div class="sticker-paste-zone" id="stickerPasteZone_${i}" tabindex="0" onfocus="_activePasteSlot=${i}" onclick="_activePasteSlot=${i}">
+        <div class="sticker-paste-hint" id="stickerPasteHint_${i}">Tap, then paste<br>(Ctrl+V)</div>
+        <canvas class="sticker-paste-canvas" id="stickerPasteCanvas_${i}" style="display:none"></canvas>
+        <button type="button" class="sticker-paste-btn" onclick="event.stopPropagation(); pasteStickerFromClipboard(${i})">📋</button>
+      </div>
+      <input type="text" class="sticker-slot-name" id="stickerNameInput_${i}" placeholder="Name (e.g. Cute Cat)" oninput="updatePushStickerBtnState()">
+    </div>
+  `).join('');
+}
+
+async function initStickerPage(){
+  renderStickerSlotShells();
+  document.getElementById('stickerGroupSelect').value = stickerTargetGroup;
+  await loadStickerCategoryOptions();
+  await refreshGithubTokenStatus();
+}
+
+function resetStickerSlot(i){
+  _stickerSlots[i].hasImage = false;
+  const canvas = document.getElementById('stickerPasteCanvas_'+i);
+  canvas.style.display = 'none';
+  canvas.width = 0; canvas.height = 0;
+  document.getElementById('stickerPasteHint_'+i).style.display = '';
+  document.getElementById('stickerNameInput_'+i).value = '';
+  updatePushStickerBtnState();
+}
+
+async function onStickerGroupChange(){
+  stickerTargetGroup = document.getElementById('stickerGroupSelect').value;
+  await loadStickerCategoryOptions();
+}
+window.onStickerGroupChange = onStickerGroupChange;
+
+// Populates the category dropdown from whatever sticker subfolders already
+// exist on GitHub for the selected product group (one level deep, same as
+// buildAssetSetFromTree's sticker handling in create.js) plus a
+// "+ New category" option that reveals a free-text input instead.
+async function loadStickerCategoryOptions(){
+  const sel = document.getElementById('stickerCategorySelect');
+  sel.innerHTML = '<option value="">Loading…</option>';
+  const base = 'assets/pins/' + (stickerTargetGroup==='shared' ? '' : stickerTargetGroup + '/') + 'stickers/';
+  let cats = [];
+  try {
+    const treePaths = await fetchPinsAssetTree();
+    const set = new Set();
+    treePaths.forEach(p => {
+      if (!p.startsWith(base)) return;
+      const parts = p.slice(base.length).split('/');
+      if (parts.length === 2) set.add(parts[0]);
+    });
+    cats = Array.from(set).sort((a,b)=>a.localeCompare(b));
+  } catch(e){ /* GitHub fetch failed — just fall back to "new category only" below */ }
+  sel.innerHTML = cats.map(c => `<option value="${escHtml(c)}">${escHtml(assetLabelFromFilename(c))}</option>`).join('')
+    + `<option value="__new__">+ New category…</option>`;
+  toggleNewCategoryInput();
+}
+
+function toggleNewCategoryInput(){
+  const isNew = document.getElementById('stickerCategorySelect').value === '__new__';
+  document.getElementById('stickerNewCategoryInput').style.display = isNew ? '' : 'none';
+}
+window.toggleNewCategoryInput = toggleNewCategoryInput;
+
+function sanitizeFileSlug(name){
+  return (name||'').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+// Draws the pasted image onto the visible canvas at its native resolution
+// (capped) so the pushed file stays full quality — CSS just scales the
+// on-screen box down, the pixel buffer keeps the real size. A freshly
+// resized canvas is fully transparent by default and 2D contexts are
+// alpha:true unless told otherwise, so drawImage alone preserves whatever
+// alpha channel the source had — clearRect + the explicit {alpha:true} here
+// are just making that guarantee visible in the code, not changing behavior.
+function handlePastedStickerImage(slotIndex, blob){
+  const img = new Image();
+  img.onload = () => {
+    const MAX = 1024;
+    const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+    const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+    const canvas = document.getElementById('stickerPasteCanvas_'+slotIndex);
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d', { alpha: true });
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+    canvas.style.display = 'block'; // the .sticker-paste-canvas CLASS also sets display:none — clearing the inline style would just fall through to that, so this has to explicitly override it
+    document.getElementById('stickerPasteHint_'+slotIndex).style.display = 'none';
+    _stickerSlots[slotIndex].hasImage = true;
+    updatePushStickerBtnState();
+    URL.revokeObjectURL(img.src);
+  };
+  img.src = URL.createObjectURL(blob);
+}
+
+// Only PNG/WEBP/GIF clipboard entries can actually carry transparency —
+// JPEG has no alpha channel at all, so a "sticker" copied as JPEG will
+// always paste in with a solid background no matter what the code does.
+// Warn instead of silently pasting something that'll look wrong on the pin.
+function ingestStickerBlob(slotIndex, blob){
+  if (blob.type === 'image/jpeg' || blob.type === 'image/jpg'){
+    if (!confirm("This image is a JPEG, which can't have a transparent background — it'll paste in with a solid background block. Use it anyway?")) return;
+  }
+  handlePastedStickerImage(slotIndex, blob);
+}
+
+document.addEventListener('paste', (e) => {
+  const items = (e.clipboardData || {}).items || [];
+  const imgItem = Array.from(items).find(it => it.type.startsWith('image/'));
+  if (!imgItem) return;
+  e.preventDefault();
+  ingestStickerBlob(_activePasteSlot, imgItem.getAsFile());
+});
+
+// Desktop Ctrl+V fires the 'paste' event above (targeting whichever slot
+// was last clicked/focused), but mobile browsers have no keyboard shortcut
+// for it — this button uses the async Clipboard API instead, which works
+// from a tap (a user-gesture requirement the API enforces) on iOS Safari
+// and Android Chrome alike.
+async function pasteStickerFromClipboard(slotIndex){
+  _activePasteSlot = slotIndex;
+  if (!navigator.clipboard || !navigator.clipboard.read){
+    alert("This browser doesn't support the Paste button. Long-press inside the box and choose Paste instead.");
+    return;
+  }
+  try {
+    const items = await navigator.clipboard.read();
+    for (const item of items){
+      const imgType = item.types.find(t => t.startsWith('image/'));
+      if (!imgType) continue;
+      const blob = await item.getType(imgType);
+      ingestStickerBlob(slotIndex, blob);
+      return;
+    }
+    alert('No image found on the clipboard — copy an image first.');
+  } catch (e){
+    alert("Couldn't read the clipboard: " + e.message + '\nMake sure you copied an image and allowed clipboard access when prompted.');
+  }
+}
+window.pasteStickerFromClipboard = pasteStickerFromClipboard;
+
+async function refreshGithubTokenStatus(){
+  const statusEl = document.getElementById('githubTokenStatus');
+  try {
+    _cachedGithubToken = await getGithubToken();
+    statusEl.textContent = _cachedGithubToken
+      ? '✓ Token configured'
+      : '⚠ No token set — paste one below to enable pushing.';
+  } catch (e){
+    _cachedGithubToken = '';
+    // Almost always means the morphii_secrets Firestore rule (see the
+    // bottom of firebase-config.js) hasn't been published in the Firebase
+    // Console yet — every read/write to that collection gets rejected
+    // until it is, which otherwise looks exactly like "nothing happens".
+    statusEl.innerHTML = `⚠ Can't reach token storage: ${escHtml(e.message)}<br>Usually means the morphii_secrets Firestore rule hasn't been published yet — see firebase-config.js.`;
+  }
+  updatePushStickerBtnState();
+}
+
+async function saveGithubTokenFromInput(){
+  const val = document.getElementById('githubTokenInput').value.trim();
+  if (!val) return;
+  try {
+    await saveGithubToken(val);
+    document.getElementById('githubTokenInput').value = '';
+    await refreshGithubTokenStatus();
+    alert('GitHub token saved.');
+  } catch (e){
+    alert(`Couldn't save the token: ${e.message}\n\nThis almost always means the morphii_secrets Firestore security rule hasn't been published in the Firebase Console yet — see the "Firestore Security Rules" comment at the bottom of firebase-config.js.`);
+  }
+}
+window.saveGithubTokenFromInput = saveGithubTokenFromInput;
+
+function filledStickerSlots(){
+  return _stickerSlots.map((s,i)=>s.hasImage?i:-1).filter(i=>i>=0);
+}
+
+function updatePushStickerBtnState(){
+  const filled = filledStickerSlots();
+  const allNamed = filled.length>0 && filled.every(i => !!document.getElementById('stickerNameInput_'+i).value.trim());
+  document.getElementById('pushStickerBtn').disabled = !(allNamed && _cachedGithubToken);
+}
+window.updatePushStickerBtnState = updatePushStickerBtnState;
+
+// Pushes every filled+named slot, one file/commit each. Deliberately does
+// NOT navigate away or reset the category/group pickers when done — only
+// the slots that actually succeeded get cleared, so a failed one stays put
+// for a retry and the admin can immediately start pasting the next batch
+// into the same category.
+async function pushAllStickersToGithub(){
+  const filled = filledStickerSlots();
+  if (!filled.length){ alert('Paste at least one image first.'); return; }
+  const missingName = filled.find(i => !document.getElementById('stickerNameInput_'+i).value.trim());
+  if (missingName != null){ alert(`Slot ${missingName+1} has an image but no name — name it (or clear it) before pushing.`); return; }
+
+  let category = document.getElementById('stickerCategorySelect').value;
+  if (category === '__new__') category = sanitizeFileSlug(document.getElementById('stickerNewCategoryInput').value);
+  if (!category){ alert('Pick or type a category first.'); return; }
+  const base = stickerTargetGroup==='shared' ? '' : stickerTargetGroup + '/';
+
+  const btn = document.getElementById('pushStickerBtn');
+  btn.disabled = true;
+  const results = [];
+  for (let n=0; n<filled.length; n++){
+    const i = filled[n];
+    btn.textContent = `Pushing ${n+1}/${filled.length}…`;
+    const filename = sanitizeFileSlug(document.getElementById('stickerNameInput_'+i).value) + '.png';
+    const repoPath = `assets/pins/${base}stickers/${category}/${filename}`;
+    const canvas = document.getElementById('stickerPasteCanvas_'+i);
+    const base64 = canvas.toDataURL('image/png').split(',')[1];
+    try {
+      await pushFileToGithub(repoPath, base64, `Add sticker: ${category}/${filename}`);
+      results.push({ i, filename, ok:true });
+      resetStickerSlot(i);
+    } catch(e){
+      results.push({ i, filename, ok:false, error:e.message });
+    }
+  }
+  try { localStorage.removeItem(PINS_TREE_CACHE_KEY); } catch(e){}
+
+  const okCount = results.filter(r=>r.ok).length;
+  const failed = results.filter(r=>!r.ok);
+  let msg = okCount ? `Pushed ${okCount} sticker${okCount===1?'':'s'} to ${category}/.` : '';
+  if (failed.length) msg += (msg?'\n\n':'') + 'Failed:\n' + failed.map(f=>`Slot ${f.i+1} (${f.filename}): ${f.error}`).join('\n');
+  alert(msg);
+  btn.textContent = '⬆ Push to GitHub';
+  updatePushStickerBtnState();
+}
+window.pushAllStickersToGithub = pushAllStickersToGithub;
+
+</script>
+</body>
+</html>
