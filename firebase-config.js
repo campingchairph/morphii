@@ -34,6 +34,7 @@ const FIREBASE_CONFIG = {
 
 const ADMIN_EMAILS = [
   'buboyseph@gmail.com',
+  'morphiicreate@gmail.com',
 ];
 
 /* ── INIT ─────────────────────────────────────── */
@@ -287,29 +288,29 @@ async function pushFileToGithub(repoPath, base64Content, commitMessage) {
        match /morphii_orders/{orderId} {
          allow create: if true;
          allow read, update, delete: if request.auth != null
-           && request.auth.token.email in ['buboyseph@gmail.com'];
+           && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
        }
        match /morphii_config/{docId} {
          allow read: if true;
          allow write: if request.auth != null
-           && request.auth.token.email in ['buboyseph@gmail.com'];
+           && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
        }
        match /morphii_costs/{costId} {
          allow read, write: if request.auth != null
-           && request.auth.token.email in ['buboyseph@gmail.com'];
+           && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
        }
        match /morphii_finance/{docId} {
          allow read, write: if request.auth != null
-           && request.auth.token.email in ['buboyseph@gmail.com'];
+           && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
        }
        match /morphii_pin_templates/{templateId} {
          allow read: if true;
          allow create, update, delete: if request.auth != null
-           && request.auth.token.email in ['buboyseph@gmail.com'];
+           && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
        }
        match /morphii_secrets/{docId} {
          allow read, write: if request.auth != null
-           && request.auth.token.email in ['buboyseph@gmail.com'];
+           && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
        }
      }
    }
