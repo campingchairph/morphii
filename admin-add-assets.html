@@ -113,6 +113,17 @@ h1,.logo{font-family:'Fredoka One',cursive;}
       <input type="text" id="stickerNewCategoryInput" placeholder="New category name" style="display:none;flex:1;min-width:160px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:white;font-size:16px">
     </div>
 
+    <!-- Lets the admin pin a specific category order for the picker instead
+         of the alphabetical default — only shown for Stickers, same as
+         categoryRow above. Order is per product group (stickerGroupSelect). -->
+    <div id="categoryOrderSection" style="display:none;border-top:1px solid var(--border);padding-top:12px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-bottom:8px">
+        Category order (this product group) — use ↑/↓ to reorder, then Save.
+      </div>
+      <div id="categoryOrderList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+      <button class="adm-signout" id="saveCategoryOrderBtn" onclick="saveCategoryOrderFromUI()" disabled>Save Order</button>
+    </div>
+
     <div class="sticker-slots-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px"></div>
 
     <button class="print-action-btn" id="pushStickerBtn" onclick="pushAllAssetsToGithub()" disabled>⬆ Push to GitHub</button>
@@ -133,7 +144,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js?v=3"></script>
+<script src="firebase-config.js?v=4"></script>
 <script>
 
 function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -259,6 +270,7 @@ async function setAssetKind(kindId){
   renderAssetKindTabs();
   document.getElementById('assetIntroText').innerHTML = currentKindDef().intro;
   document.getElementById('categoryRow').style.display = currentKindDef().categorized ? 'flex' : 'none';
+  if (!currentKindDef().categorized) document.getElementById('categoryOrderSection').style.display = 'none';
   resetAllSlots();
   if (currentKindDef().categorized) await loadStickerCategoryOptions();
   updatePushStickerBtnState();
@@ -309,6 +321,7 @@ async function initAssetPage(){
   renderAssetKindTabs();
   document.getElementById('assetIntroText').innerHTML = currentKindDef().intro;
   document.getElementById('categoryRow').style.display = currentKindDef().categorized ? 'flex' : 'none';
+  if (!currentKindDef().categorized) document.getElementById('categoryOrderSection').style.display = 'none';
   renderStickerSlotShells();
   document.getElementById('stickerGroupSelect').value = assetTargetGroup;
   await loadStickerCategoryOptions();
@@ -354,7 +367,66 @@ async function loadStickerCategoryOptions(){
   sel.innerHTML = cats.map(c => `<option value="${escHtml(c)}">${escHtml(assetLabelFromFilename(c))}</option>`).join('')
     + `<option value="__new__">+ New category…</option>`;
   toggleNewCategoryInput();
+  await loadCategoryOrderSection(cats);
 }
+
+// Reordering UI, kept separate from the category <select> above — pulls
+// whatever order is already saved for this product group (see
+// firebase-config.js getCategoryOrder), falling back to the same
+// alphabetical list `cats` already is. Any category not yet saved just
+// keeps its alphabetical position within the working list.
+let _categoryOrderMap = {};
+let _categoryOrderWorking = [];
+
+async function loadCategoryOrderSection(cats){
+  const section = document.getElementById('categoryOrderSection');
+  if (!cats.length){ section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  try { _categoryOrderMap = await getCategoryOrder(); } catch(e){ _categoryOrderMap = {}; }
+  const saved = _categoryOrderMap[assetTargetGroup] || [];
+  const known = new Set(cats);
+  _categoryOrderWorking = [
+    ...saved.filter(c => known.has(c)),
+    ...cats.filter(c => !saved.includes(c)),
+  ];
+  renderCategoryOrderList();
+  document.getElementById('saveCategoryOrderBtn').disabled = true;
+}
+
+function renderCategoryOrderList(){
+  const list = document.getElementById('categoryOrderList');
+  list.innerHTML = _categoryOrderWorking.map((c,i) => `
+    <div style="display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:6px 10px">
+      <span style="flex:1;font-size:12px;font-weight:700">${escHtml(assetLabelFromFilename(c))}</span>
+      <button class="adm-signout" style="padding:4px 10px" onclick="moveCategoryOrder(${i},-1)" ${i===0?'disabled':''}>↑</button>
+      <button class="adm-signout" style="padding:4px 10px" onclick="moveCategoryOrder(${i},1)" ${i===_categoryOrderWorking.length-1?'disabled':''}>↓</button>
+    </div>`).join('');
+}
+
+function moveCategoryOrder(i, dir){
+  const j = i + dir;
+  if (j < 0 || j >= _categoryOrderWorking.length) return;
+  [_categoryOrderWorking[i], _categoryOrderWorking[j]] = [_categoryOrderWorking[j], _categoryOrderWorking[i]];
+  renderCategoryOrderList();
+  document.getElementById('saveCategoryOrderBtn').disabled = false;
+}
+window.moveCategoryOrder = moveCategoryOrder;
+
+async function saveCategoryOrderFromUI(){
+  const btn = document.getElementById('saveCategoryOrderBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  _categoryOrderMap[assetTargetGroup] = _categoryOrderWorking;
+  try {
+    await saveCategoryOrder(_categoryOrderMap);
+    btn.textContent = '✓ Saved';
+  } catch(e){
+    btn.textContent = 'Save Order';
+    btn.disabled = false;
+    alert('Error: '+e.message);
+  }
+}
+window.saveCategoryOrderFromUI = saveCategoryOrderFromUI;
 
 function toggleNewCategoryInput(){
   const isNew = document.getElementById('stickerCategorySelect').value === '__new__';

@@ -336,7 +336,7 @@ function serializeCurrentDesign(){
     shapes: serializePlacedArray('shape'),
     wordArts: serializePlacedArray('wordart'),
     letters: serializePlacedArray('letter'),
-    character: state.character ? { scale: state.character.scale, rotation: state.character.rotation||0, src: state.character.img.src } : null,
+    character: state.character ? { scale: state.character.scale, rotation: state.character.rotation||0, src: state.character.img.src, grayscale: !!state.character.grayscale } : null,
     border: state.border ? {
       src: state.border.src || state.border.img.src, label: state.border.label || null,
       rotation: state.border.rotation||0, scale: state.border.scale||1,
@@ -405,7 +405,7 @@ async function applyPinTemplateSnapshot(snap){
     await new Promise(resolve => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      img.onload = () => { state.character = { img, scale: snap.character.scale||1, rotation: snap.character.rotation||0, xFrac:0, yFrac:0, locked:false }; resolve(); };
+      img.onload = () => { state.character = { img, scale: snap.character.scale||1, rotation: snap.character.rotation||0, xFrac:0, yFrac:0, locked:false, grayscale: !!snap.character.grayscale }; resolve(); };
       img.onerror = resolve;
       img.src = snap.character.src;
     });
@@ -616,7 +616,7 @@ function pushGeneratedShape(shapeId, color, xFrac, yFrac, scale, rotationDeg){
 function pushGeneratedText(text, opts){
   if (!text) return;
   const line = {
-    id: state.nextTextId++, text, font:FONTS[0], color:opts.color||'#000000',
+    id: state.nextTextId++, text, font:currentFontList()[0], color:opts.color||'#000000',
     placement: opts.placement||'straight', size: opts.size||0.06, arcRadiusMult:0.78, shadow:false,
     xFrac: opts.xFrac||0, yFrac: opts.yFrac||0, rotation:(opts.rotation||0)*Math.PI/180, locked:false,
   };
@@ -693,6 +693,15 @@ const STEP_ORDER = ['product','size','template','pinTemplates','design','submit'
 const CANVAS_PX   = 480;   // fixed on-screen render resolution
 const EXPORT_PPMM = 11.8;  // export resolution for the clean (admin-facing) design, px per mm (~300 DPI)
 const FONTS = ['Luckiest Guy','Shrikhand','Carter One','Ceviche One','Kavoon','Cherry Bomb One','Lobster','Spicy Rice','Chicle'];
+// In Loving Memory keeps its own, separately-curated font list instead of
+// sharing the playful display fonts above — this product is meant to read
+// as respectful/formal (see the Character→"Person" relabel and Letters
+// removal for the same product). Seeded with just Nunito (already loaded
+// site-wide as the fallback family) so the picker is never empty before an
+// admin adds anything; admin-added fonts scoped to 'in-loving-memory' (see
+// loadCustomFonts) get appended here instead of the general FONTS list.
+const MEMORIAL_FONTS = ['Nunito'];
+function currentFontList(){ return isMemorialProduct() ? MEMORIAL_FONTS : FONTS; }
 
 // A font's @font-face rule existing (its stylesheet <link> loaded) doesn't
 // mean the actual font FILE has been fetched — that only happens once
@@ -1185,6 +1194,7 @@ function capitalize(s){ return s[0].toUpperCase()+s.slice(1); }
 const ICON_BG        = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
 const ICON_STICKER    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/></svg>';
 const ICON_CHARACTER  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>';
+const ICON_GRAYSCALE  = '<svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><circle cx="12" cy="12" r="9" fill="none"/><path d="M12 3a9 9 0 010 18z" fill="currentColor" stroke="none"/></svg>';
 const ICON_TEXT       = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h7"/></svg>';
 const ICON_SHAPE      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="16" r="3.5"/><rect x="13" y="12.5" width="7" height="7" rx="1.2"/><path d="M9 3l4 7H5z"/></svg>';
 const ICON_WORDART    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l4-3 4 3 4-3 4 3v10l-4-3-4 3-4-3-4 3z"/></svg>';
@@ -1392,6 +1402,7 @@ function toolIconsForSelection(){
     ];
     return [
       { id:'replace', label:'Replace', icon:ICON_UPLOAD, instant:"promptUpload('character')" },
+      { id:'bw', label: state.character.grayscale?'Color':'B&W', icon:ICON_GRAYSCALE, instant:'toggleCharacterGrayscale()', on: state.character.grayscale },
       { id:'lock', label: state.character.locked?'Locked':'Lock', icon: state.character.locked?ICON_LOCK:ICON_UNLOCK, instant:"toggleLock('character')", on: state.character.locked },
       { id:'remove', label:'Remove', icon:ICON_TRASH, instant:'removeCharacter()', danger:true },
     ];
@@ -2390,7 +2401,7 @@ function setCharacterFromPreset(i){
   img.crossOrigin = 'anonymous'; // raw.githubusercontent.com sends CORS headers — needed so the design canvas doesn't get tainted
   img.onload = () => {
     const isNew = !state.character;
-    state.character = { img, scale:1, rotation:0, xFrac:0, yFrac:0, locked:false };
+    state.character = { img, scale:1, rotation:0, xFrac:0, yFrac:0, locked:false, grayscale:false };
     if (isNew) pushLayer({ kind:'character' });
     selectLayer({kind:'character'});
     if (isNew) renderCanvasBgDecor();
@@ -2407,7 +2418,7 @@ function onCharacterFileChosen(e){
     const img = new Image();
     img.onload = () => {
       const isNew = !state.character;
-      state.character = { img, scale:1, rotation:0, xFrac:0, yFrac:0, locked:false };
+      state.character = { img, scale:1, rotation:0, xFrac:0, yFrac:0, locked:false, grayscale:false };
       if (isNew) pushLayer({ kind:'character' });
       selectLayer({kind:'character'});
       if (isNew) renderCanvasBgDecor();
@@ -2427,9 +2438,17 @@ function removeCharacter(){
 }
 window.removeCharacter = removeCharacter;
 
+function toggleCharacterGrayscale(){
+  if (!state.character) return;
+  state.character.grayscale = !state.character.grayscale;
+  renderDock();
+  drawPreview();
+}
+window.toggleCharacterGrayscale = toggleCharacterGrayscale;
+
 /* ── TEXT PANEL ───────────────────────────────── */
 function addTextLine(){
-  const line = { id: state.nextTextId++, text:'Your Text', font:FONTS[0], color:'#FFFFFF', placement:'straight', size:1, arcRadiusMult:0.78, shadow:false, xFrac:0, yFrac:0, rotation:0, locked:false };
+  const line = { id: state.nextTextId++, text:'Your Text', font:currentFontList()[0], color:'#FFFFFF', placement:'straight', size:1, arcRadiusMult:0.78, shadow:false, xFrac:0, yFrac:0, rotation:0, locked:false };
   state.textLines.push(line);
   pushLayer({ kind:'text', id: line.id });
   selectLayer({ kind:'text', id: line.id });
@@ -2592,7 +2611,7 @@ function renderTextEditFonts(){
   const t = state.textLines.find(x=>x.id===_textEditId);
   if (!wrap || !t) return;
   const rows = Array.from({ length: FONT_ROW_COUNT }, () => []);
-  FONTS.forEach((f,i) => rows[i % FONT_ROW_COUNT].push(f));
+  currentFontList().forEach((f,i) => rows[i % FONT_ROW_COUNT].push(f));
   wrap.innerHTML = rows.map((list, r) => `
     <div class="cr-font-carousel-row" id="fontRow${r}" onscroll="onFontRowScroll(${r})">
       <div class="cr-font-carousel-spacer"></div>
@@ -2619,7 +2638,7 @@ function initFontCarousel(currentFont){
     const spacerW = row.clientWidth / 2;
     row.querySelectorAll('.cr-font-carousel-spacer').forEach(s => s.style.flex = `0 0 ${spacerW}px`);
   }
-  const activeRow = FONTS.indexOf(currentFont) % FONT_ROW_COUNT;
+  const activeRow = currentFontList().indexOf(currentFont) % FONT_ROW_COUNT;
   const activeBtn = document.querySelector(`#fontRow${activeRow} [data-font="${cssEscapeAttr(currentFont)}"]`);
   if (activeBtn) activeBtn.scrollIntoView({ behavior:'auto', inline:'center', block:'nearest' });
   _fontCarouselActiveRow = activeRow;
@@ -2993,7 +3012,9 @@ function drawBorder(ctx, artboardPx){
 function drawOneCharacter(ctx, artboardPx){
   if (!state.character || !state.character.img) return;
   const c = state.character;
+  ctx.filter = c.grayscale ? 'grayscale(100%)' : 'none';
   drawPlacedImage(ctx, artboardPx, c.img, c.xFrac||0, c.yFrac||0, CHARACTER_BASE_R*2*c.scale, c.rotation||0);
+  ctx.filter = 'none';
 }
 
 function drawPlacedImage(ctx, artboardPx, img, xFrac, yFrac, dFrac, rotation){
@@ -3728,6 +3749,7 @@ const CATEGORY_TO_SET_KEY = {
 const LETTER_FILENAME_RE = /^(\d+)_+([A-Za-z]).*\.[^.]+$/i;
 const NEW_PRODUCT_ASSET_GROUPS = ['election','ph-souvenir','wedding','in-loving-memory'];
 const ASSET_GROUP_CACHE = {}; // groupId -> { stickers, shapes, wordart, borders, background, characters, letters }
+let CATEGORY_ORDER = {}; // groupId -> ["categoryId", ...] — admin-set sticker category order, see getCategoryOrder
 let LETTER_GROUPS = []; // rebuilt in applyAssetGroup() — [{ groupId, thumbSrc, letters:{A:url,...} }]
 let STICKER_GROUPS = []; // rebuilt in applyAssetGroup() — [{ groupId, label, thumbSrc, items:[{label,src,name}] }]
 
@@ -3823,7 +3845,12 @@ function buildAssetSetFromTree(treePaths, basePath, overrides){
 // getting whatever happened to sort first. Falls back to the first item
 // if no file is named that way.
 const STICKER_LOGO_NAME_RE = /^logo\.[^.]+$/i;
-function buildStickerGroups(flatList){
+// assetGroupId identifies which product's category order to use (see
+// CATEGORY_ORDER / getCategoryOrder) — 'shared' for the default library,
+// or a product's own asset group id. Categories the admin has explicitly
+// ordered come first in that order; anything else falls back to
+// alphabetical, sorted in after them.
+function buildStickerGroups(flatList, assetGroupId){
   const byGroup = {};
   const ungrouped = [];
   flatList.forEach(it => {
@@ -3832,7 +3859,15 @@ function buildStickerGroups(flatList){
     byGroup[it.group].push(it);
   });
   const thumbFor = items => (items.find(it => STICKER_LOGO_NAME_RE.test(it.name||'')) || items[0]).src;
-  const groups = Object.keys(byGroup).sort((a,b)=>a.localeCompare(b)).map(groupId => ({
+  const order = CATEGORY_ORDER[assetGroupId] || [];
+  const sortedIds = Object.keys(byGroup).sort((a,b) => {
+    const ia = order.indexOf(a), ib = order.indexOf(b);
+    if (ia !== -1 && ib !== -1) return ia - ib;
+    if (ia !== -1) return -1;
+    if (ib !== -1) return 1;
+    return a.localeCompare(b);
+  });
+  const groups = sortedIds.map(groupId => ({
     groupId, label: assetLabelFromFilename(groupId), thumbSrc: thumbFor(byGroup[groupId]), items: byGroup[groupId],
   }));
   if (ungrouped.length) groups.push({ groupId:'__uncategorized', label:'Other', thumbSrc: thumbFor(ungrouped), items: ungrouped });
@@ -3859,12 +3894,13 @@ function applyAssetGroup(groupId){
   BACKGROUND_PRESETS.length = 0; BACKGROUND_PRESETS.push(...set.background);
   CHARACTER_PRESETS.length = 0;  CHARACTER_PRESETS.push(...set.characters);
   LETTER_GROUPS = buildLetterGroups(set.letters);
-  STICKER_GROUPS = buildStickerGroups(stickerItems);
+  STICKER_GROUPS = buildStickerGroups(stickerItems, groupId);
 }
 
 async function loadPinAssetManifest(){
   let overrides = {};
   try { overrides = await getAssetLabelOverrides(); } catch(e){}
+  try { CATEGORY_ORDER = await getCategoryOrder(); } catch(e){}
   let treePaths = [];
   try { treePaths = await fetchPinsAssetTree(); }
   catch(e){ /* offline/rate-limited — every category just stays empty, same as before */ }
@@ -4045,12 +4081,17 @@ function updateCanvasBorderRing(){
 window.updateCanvasBorderRing = updateCanvasBorderRing;
 
 // Admin-added fonts (orders-admin.html → Fonts) — stored in Firestore
-// (morphii_config/fonts), loaded into the FONTS list the text tool offers.
+// (morphii_config/fonts), loaded into whichever list matches each font's
+// scope: 'in-loving-memory' fonts go into MEMORIAL_FONTS only, everything
+// else (including fonts saved before scope existed) goes into the general
+// FONTS list.
 async function loadCustomFonts(){
   try {
     const list = await getCustomFonts();
     list.forEach(f => {
-      if (!f || !f.name || !f.url || FONTS.includes(f.name)) return;
+      if (!f || !f.name || !f.url) return;
+      const target = f.scope==='in-loving-memory' ? MEMORIAL_FONTS : FONTS;
+      if (target.includes(f.name)) return;
       if (!document.querySelector(`link[data-font-url="${f.url}"]`)){
         const link = document.createElement('link');
         link.rel = 'stylesheet';
@@ -4062,7 +4103,7 @@ async function loadCustomFonts(){
         link.onload = () => ensureFontLoaded(f.name);
         document.head.appendChild(link);
       }
-      FONTS.push(f.name);
+      target.push(f.name);
     });
   } catch(e){
     // not configured / offline — text tool just keeps the built-in fonts

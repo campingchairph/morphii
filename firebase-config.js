@@ -75,9 +75,12 @@ async function submitOrder(order) {
 }
 
 /* ── CUSTOM FONTS (morphii_config/fonts doc) ───
-   { list: [ { name:'Bangers', url:'https://fonts.googleapis.com/css2?family=Bangers&display=swap' }, ... ] }
-   Public read (create.html needs it, unauthenticated) — admin-only write.
-   Used by both the admin Fonts manager and the pin designer's text tool. */
+   { list: [ { name:'Bangers', url:'...', scope:'all' }, ... ] }
+   scope is 'all' (default, every product) or 'in-loving-memory' (only
+   offered on that product's own, separately-curated font list — see
+   create.js's MEMORIAL_FONTS). Public read (create.html needs it,
+   unauthenticated) — admin-only write. Used by both the admin Fonts
+   manager and the pin designer's text tool. */
 async function getCustomFonts() {
   if (!DB) return [];
   try {
@@ -108,6 +111,26 @@ async function getAssetLabelOverrides() {
 async function saveAssetLabelOverrides(map) {
   if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
   return DB.collection('morphii_config').doc('assetLabels').set(map);
+}
+
+/* ── STICKER CATEGORY ORDER (morphii_config/categoryOrder doc) ──
+   { "<product group id, or 'shared'>": ["twice","aespa",...], ... }
+   Sticker subfolders (categories) default to alphabetical order in the
+   customer-facing picker; this doc lets the admin pin a specific order
+   per product group instead. Any category not listed just falls back to
+   alphabetical, sorted in after the ones that are. Public read (create.js
+   needs it), admin-only write. Used by admin-add-assets.html's reorder
+   panel and the pin designer's buildStickerGroups(). */
+async function getCategoryOrder() {
+  if (!DB) return {};
+  try {
+    const doc = await DB.collection('morphii_config').doc('categoryOrder').get();
+    return (doc.exists && doc.data()) || {};
+  } catch (e) { return {}; }
+}
+async function saveCategoryOrder(map) {
+  if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
+  return DB.collection('morphii_config').doc('categoryOrder').set(map);
 }
 
 /* ── CATALOG CONFIG (morphii_config/catalog doc) ──

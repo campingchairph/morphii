@@ -204,6 +204,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 .asset-row-btn.saved{border-color:#55EFC4;color:#55EFC4;}
 .asset-row-remove{background:none;border:none;color:#ff9b98;font-size:10.5px;font-weight:800;cursor:pointer;flex-shrink:0;}
 .font-row-name{flex:1;font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.font-row-badge{font-size:10px;font-weight:800;color:var(--ink-dim);background:var(--bg-alt,rgba(255,255,255,0.08));border-radius:6px;padding:3px 7px;flex-shrink:0;white-space:nowrap;}
 .font-row-remove{background:none;border:none;color:#ff9b98;font-size:11px;font-weight:800;cursor:pointer;flex-shrink:0;}
 .print-modal-inner{background:var(--navy);border-radius:24px;width:100%;max-width:900px;border:2px solid var(--border);overflow:hidden;margin:auto;}
 .pmi-header{padding:18px 24px;background:#071929;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--border);}
@@ -402,6 +403,11 @@ h1,.logo{font-family:'Fredoka One',cursive;}
       <input type="text" id="fontUrlInput" class="login-input" placeholder="https://fonts.googleapis.com/css2?family=Bangers&display=swap" oninput="onFontUrlInput()">
       <label class="login-sub" style="text-align:left;margin-bottom:4px">Font name</label>
       <input type="text" id="fontNameInput" class="login-input" placeholder="Auto-filled from Google Fonts links">
+      <label class="login-sub" style="text-align:left;margin-bottom:4px">Available on</label>
+      <select class="adm-status-select" id="fontScopeSelect" style="width:100%;margin-bottom:4px">
+        <option value="all">All products</option>
+        <option value="in-loving-memory">In Loving Memory only</option>
+      </select>
       <button class="print-action-btn" style="margin-top:4px" onclick="addCustomFont()">+ Add Font</button>
       <div id="fontsError" style="color:#ff9b98;font-size:11px;font-weight:700;margin-top:10px;display:none"></div>
     </div>
@@ -583,7 +589,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js?v=3"></script>
+<script src="firebase-config.js?v=4"></script>
 <!-- jsPDF — used by doPrint() to write the exact page size directly into the
      PDF file itself, so the export is correct regardless of any browser
      print-dialog "Scale" setting (which is what was causing the 3% mismatch
@@ -889,6 +895,7 @@ function renderFontsList(){
     <div class="font-row">
       <span class="font-row-preview" style="font-family:'${escHtml(f.name)}',sans-serif">Aa</span>
       <span class="font-row-name">${escHtml(f.name)}</span>
+      ${f.scope==='in-loving-memory' ? '<span class="font-row-badge" title="Only offered on In Loving Memory pins">🕊️ ILM only</span>' : ''}
       <button class="font-row-remove" onclick="removeCustomFont(${i})">Remove</button>
     </div>`).join('');
 }
@@ -910,13 +917,15 @@ async function addCustomFont(){
   errEl.style.display = 'none';
   const url = document.getElementById('fontUrlInput').value.trim();
   const name = document.getElementById('fontNameInput').value.trim();
+  const scope = document.getElementById('fontScopeSelect').value;
   if (!url || !name){ errEl.textContent = 'Enter both a font link and a name.'; errEl.style.display = 'block'; return; }
   if (customFonts.some(f=>f.name===name)){ errEl.textContent = 'A font with that name already exists.'; errEl.style.display = 'block'; return; }
-  customFonts.push({ name, url });
+  customFonts.push({ name, url, scope });
   try {
     await saveCustomFonts(customFonts);
     document.getElementById('fontUrlInput').value = '';
     document.getElementById('fontNameInput').value = '';
+    document.getElementById('fontScopeSelect').value = 'all';
     ensureFontLinksLoaded();
     renderFontsList();
   } catch(e){
