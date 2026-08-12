@@ -1203,6 +1203,10 @@ const ICON_ARC        = '<svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 const ICON_CURVE_STRAIGHT = '<svg viewBox="0 0 40 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="4" y1="12" x2="36" y2="12"/></svg>';
 const ICON_CURVE_TOP     = '<svg viewBox="0 0 40 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 20 Q20 2 36 20"/></svg>';
 const ICON_CURVE_BOTTOM  = '<svg viewBox="0 0 40 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 4 Q20 22 36 4"/></svg>';
+const ICON_EFFECT_NONE    = '<svg viewBox="0 0 40 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="4" y1="12" x2="36" y2="12"/><line x1="8" y1="4" x2="32" y2="20" stroke-width="2" opacity="0.5"/></svg>';
+const ICON_EFFECT_WAVY    = '<svg viewBox="0 0 40 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M2 16 Q9 4 16 16 T30 16 T44 16"/></svg>';
+const ICON_EFFECT_FISHEYE = '<svg viewBox="0 0 40 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 18 Q10 8 14 16 Q18 22 20 12 Q22 22 26 16 Q30 8 36 18"/></svg>';
+const ICON_EFFECT_CHROME  = '<svg viewBox="0 0 40 24"><defs><linearGradient id="chromeIconGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="0.45" stop-color="#5b6770"/><stop offset="0.6" stop-color="#eef2f5"/><stop offset="1" stop-color="#2b333a"/></linearGradient></defs><text x="20" y="18" font-size="18" font-weight="900" text-anchor="middle" fill="url(#chromeIconGrad)">C</text></svg>';
 const ICON_PICKER_WHEEL  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 019 9M12 3a4.5 4.5 0 000 9 4.5 4.5 0 010 9"/></svg>';
 const TEXT_COLOR_SWATCHES = ['#FFFFFF','#000000','#FF3B30','#FF9500','#FFCC00','#34C759','#007AFF','#5856D6','#FF2D92','#8B5A2B'];
 const ICON_SWATCH     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/></svg>';
@@ -1433,6 +1437,7 @@ function toolIconsForSelection(){
       { id:'edit', label:'Edit', icon:ICON_EDIT, instant:`openTextEditModal(${t.id})` },
       { id:'placement', label:'Style', icon:ICON_ARC, panel:true },
       { id:'color', label:'Color', icon:ICON_SWATCH, panel:true },
+      { id:'effect', label:'Effect', icon:ICON_EFFECT_WAVY, panel:true },
     ];
     // Straight text's size is just .size, fully covered by the resize rail
     // + pinch/wheel now — only curved text still needs a dock control,
@@ -2429,7 +2434,7 @@ window.removeCharacter = removeCharacter;
 
 /* ── TEXT PANEL ───────────────────────────────── */
 function addTextLine(){
-  const line = { id: state.nextTextId++, text:'Your Text', font:FONTS[0], color:'#FFFFFF', placement:'straight', size:1, arcRadiusMult:0.78, shadow:false, xFrac:0, yFrac:0, rotation:0, locked:false };
+  const line = { id: state.nextTextId++, text:'Your Text', font:FONTS[0], color:'#FFFFFF', placement:'straight', size:1, arcRadiusMult:0.78, shadow:false, effect:null, xFrac:0, yFrac:0, rotation:0, locked:false };
   state.textLines.push(line);
   pushLayer({ kind:'text', id: line.id });
   selectLayer({ kind:'text', id: line.id });
@@ -2457,7 +2462,7 @@ function updateTextLine(id, field, value){
       if (slider) slider.value = line.size;
     }
   }
-  if (field==='font' || field==='placement' || field==='color') renderToolPanelContent();
+  if (field==='font' || field==='placement' || field==='color' || field==='effect') renderToolPanelContent();
   drawPreview();
   // A font can be linked (its @font-face rule exists) without its actual
   // file being fetched yet — that only happens once something renders with
@@ -2503,6 +2508,20 @@ function textToolPanelHtml(tool, id){
         <span class="cr-curve-icon">${o.icon}</span><span class="cr-curve-label">${o.label}</span>
       </button>`
     ).join('')}</div>`;
+  }
+  if (tool==='effect'){
+    const options = [
+      { v:null,       label:'None',    icon:ICON_EFFECT_NONE },
+      { v:'wavy',     label:'Wavy',    icon:ICON_EFFECT_WAVY },
+      { v:'fisheye',  label:'Fisheye', icon:ICON_EFFECT_FISHEYE },
+      { v:'chrome',   label:'Chrome',  icon:ICON_EFFECT_CHROME },
+    ];
+    return `<div class="cr-curve-grid">${options.map(o=>
+      `<button class="cr-curve-swatch ${ (t.effect||null)===o.v ?'active':''}" onclick="updateTextLine(${t.id},'effect',${o.v?`'${o.v}'`:'null'})">
+        <span class="cr-curve-icon">${o.icon}</span><span class="cr-curve-label">${o.label}</span>
+      </button>`
+    ).join('')}
+    <div class="cr-hint" style="width:100%;margin-top:6px">Wavy and Fisheye work on Straight text — pick "Style → Straight" first if you're on an arc.</div>`;
   }
   if (tool==='color'){
     const safeColor = /^#[0-9a-fA-F]{6}$/.test(t.color) ? t.color : '#000000';
@@ -3094,7 +3113,8 @@ function drawOneTextLine(ctx, artboardPx, t){
   // text came out relatively smaller or bigger than what was shown live
   // depending on which size was exported. Scaling by artboardPx/CANVAS_PX
   // matches everything else and keeps text true to what was designed.
-  ctx.font = `bold ${28*t.size*(artboardPx/CANVAS_PX)}px "${t.font}", 'Nunito', sans-serif`;
+  const fontPx = 28*t.size*(artboardPx/CANVAS_PX);
+  ctx.font = `bold ${fontPx}px "${t.font}", 'Nunito', sans-serif`;
   ctx.fillStyle = t.color;
   if (t.shadow){
     ctx.shadowColor = 'rgba(0,0,0,0.45)';
@@ -3111,16 +3131,81 @@ function drawOneTextLine(ctx, artboardPx, t){
     ctx.rotate(t.rotation);
     ctx.translate(-cx, -cy);
   }
+  // Chrome swaps the solid fill for a metallic gradient (works with any
+  // placement, since it's just a fillStyle) plus a dark stroke for edge
+  // definition. Wavy/Fisheye reposition individual characters instead, so
+  // they only make sense for straight text — see the hint in
+  // textToolPanelHtml's 'effect' panel.
+  let effectStroke = null;
+  if (t.effect === 'chrome'){
+    ctx.fillStyle = chromeGradientFor(ctx, cy, fontPx);
+    effectStroke = 'rgba(20,26,31,0.85)';
+  }
   if (t.placement==='straight'){
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(t.text, cx, cy);
+    if (t.effect === 'wavy' || t.effect === 'fisheye'){
+      drawEffectText(ctx, t.text, cx, cy, fontPx, t.effect, effectStroke);
+    } else {
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(t.text, cx, cy);
+      if (effectStroke){ ctx.lineWidth = Math.max(1, fontPx*0.02); ctx.strokeStyle = effectStroke; ctx.strokeText(t.text, cx, cy); }
+    }
   } else {
-    drawArcText(ctx, t.text, cx, cy, cutRadiusPx*(t.arcRadiusMult||0.78), t.placement==='bottom-arc');
+    drawArcText(ctx, t.text, cx, cy, cutRadiusPx*(t.arcRadiusMult||0.78), t.placement==='bottom-arc', effectStroke);
   }
   ctx.restore();
 }
 
-function drawArcText(ctx, text, cx, cy, radius, bottom){
+// A fixed metallic light/dark banding — cheap but reads as "chrome" without
+// needing real environment reflections. A vertical gradient anchored on the
+// text's own cy so it looks consistent regardless of rotation (built while
+// still inside the same rotated coordinate space as the text itself).
+function chromeGradientFor(ctx, cy, fontPx){
+  const h = fontPx * 0.8;
+  const g = ctx.createLinearGradient(0, cy - h/2, 0, cy + h/2);
+  g.addColorStop(0,    '#ffffff');
+  g.addColorStop(0.22, '#b8c4cc');
+  g.addColorStop(0.48, '#4b5860');
+  g.addColorStop(0.58, '#eef2f5');
+  g.addColorStop(0.78, '#8a97a1');
+  g.addColorStop(1,    '#2b333a');
+  return g;
+}
+
+// Straight-line "Wavy" (sine baseline) and "Fisheye" (lens-bulge scale)
+// effects — each character is measured and placed individually rather than
+// drawn as one fillText call, the same technique drawArcText already uses
+// for curved placement. Amplitude is driven by fontPx so it stays
+// proportional at any text size and at any pin's export resolution.
+function drawEffectText(ctx, text, cx, cy, fontPx, effect, strokeStyle){
+  const chars = text.split('');
+  const widths = chars.map(c=>ctx.measureText(c).width);
+  const totalWidth = widths.reduce((a,w)=>a+w, 0);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  let x = cx - totalWidth/2;
+  const n = chars.length;
+  chars.forEach((ch,i)=>{
+    const w = widths[i];
+    const centerX = x + w/2;
+    const pos = n>1 ? i/(n-1) : 0.5; // 0..1 across the run
+    let dy = 0, scale = 1;
+    if (effect==='wavy'){
+      dy = Math.sin(pos * Math.PI * 2.4) * (fontPx * 0.22);
+    } else if (effect==='fisheye'){
+      const bulge = Math.sin(pos * Math.PI); // 0 at each edge, 1 in the middle
+      scale = 1 + bulge * 0.45;
+      dy = -bulge * fontPx * 0.12;
+    }
+    ctx.save();
+    ctx.translate(centerX, cy + dy);
+    if (scale !== 1) ctx.scale(scale, scale);
+    ctx.fillText(ch, 0, 0);
+    if (strokeStyle){ ctx.lineWidth = Math.max(1, fontPx*0.02); ctx.strokeStyle = strokeStyle; ctx.strokeText(ch, 0, 0); }
+    ctx.restore();
+    x += w;
+  });
+}
+
+function drawArcText(ctx, text, cx, cy, radius, bottom, strokeStyle){
   // Position sweep already goes left-to-right for both top and bottom arcs
   // (see angle formula below) — reversing characters here would mirror the
   // reading order, so the same left-to-right char order is used for both.
