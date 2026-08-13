@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Morphii — 3-Week Social Media Content Calendar</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800;900&family=Bubblegum+Sans&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --pink:   #ff6eb4;
+      --purple: #a855f7;
+      --blue:   #3b82f6;
+      --yellow: #fbbf24;
+      --mint:   #34d399;
+      --coral:  #f97316;
+      --bg:     #0f0a1e;
+      --card:   #1a1035;
+      --card2:  #1e1540;
+      --text:   #f0e6ff;
+      --muted:  #9d8ec4;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Nunito', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      background: linear-gradient(135deg, #1a0533 0%, #0f1a3d 50%, #1a0533 100%);
+      padding: 60px 24px 50px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      border-bottom: 2px solid rgba(168,85,247,0.3);
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 20% 50%, rgba(168,85,247,0.15) 0%, transparent 60%),
+                  radial-gradient(ellipse at 80% 50%, rgba(59,130,246,0.15) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .hero-logo {
+      font-family: 'Fredoka One', cursive;
+      font-size: clamp(2.5rem, 8vw, 5rem);
+      background: linear-gradient(135deg, var(--pink), var(--purple), var(--blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -1px;
+      line-height: 1;
+    }
+    .hero-sub {
+      font-family: 'Bubblegum Sans', cursive;
+      font-size: clamp(1rem, 3vw, 1.4rem);
+      color: var(--yellow);
+      margin: 10px 0 6px;
+      letter-spacing: 1px;
+    }
+    .hero-tagline {
+      font-size: clamp(0.85rem, 2.5vw, 1.05rem);
+      color: var(--muted);
+      max-width: 560px;
+      margin: 0 auto 28px;
+      line-height: 1.6;
+    }
+    .pill-row {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      justify-content: center; margin-bottom: 0;
+    }
+    .pill {
+      background: rgba(168,85,247,0.2);
+      border: 1px solid rgba(168,85,247,0.4);
+      border-radius: 999px;
+      padding: 4px 14px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #d8b4fe;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── TICKER ── */
+    .ticker-wrap {
+      background: linear-gradient(90deg, var(--pink), var(--purple), var(--blue), var(--mint), var(--yellow), var(--pink));
+      background-size: 200% auto;
+      animation: gradMove 4s linear infinite;
+      padding: 10px 0;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    @keyframes gradMove { to { background-position: 200% center; } }
+    .ticker-inner {
+      display: inline-block;
+      animation: ticker 30s linear infinite;
+      font-family: 'Fredoka One', cursive;
+      font-size: 0.9rem;
+      color: #fff;
+      letter-spacing: 2px;
+    }
+    @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+    /* ── WEEK SECTIONS ── */
+    .week-section {
+      max-width: 1100px;
+      margin: 48px auto 0;
+      padding: 0 20px;
+    }
+    .week-header {
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 24px;
+    }
+    .week-badge {
+      font-family: 'Fredoka One', cursive;
+      font-size: 0.8rem;
+      letter-spacing: 2px;
+      padding: 6px 18px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+    .w1 .week-badge { background: linear-gradient(135deg, var(--pink), var(--purple)); color: #fff; }
+    .w2 .week-badge { background: linear-gradient(135deg, var(--blue), var(--mint)); color: #fff; }
+    .w3 .week-badge { background: linear-gradient(135deg, var(--coral), var(--yellow)); color: #fff; }
+
+    .week-title {
+      font-family: 'Fredoka One', cursive;
+      font-size: clamp(1.4rem, 4vw, 2rem);
+      background: linear-gradient(135deg, #f0e6ff, var(--muted));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .week-theme {
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* ── GRID ── */
+    .posts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 18px;
+      margin-bottom: 16px;
+    }
+
+    /* ── POST CARD ── */
+    .post-card {
+      background: var(--card);
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.07);
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+    }
+    .post-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(168,85,247,0.2);
+    }
+
+    .post-visual {
+      height: 160px;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      overflow: hidden;
+      font-size: 3.5rem;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .post-visual::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom, transparent 60%, var(--card) 100%);
+    }
+
+    /* week color themes for visuals */
+    .v-pink   { background: linear-gradient(135deg, #3d1040, #1a0533); }
+    .v-blue   { background: linear-gradient(135deg, #0c2040, #0f1a3d); }
+    .v-orange { background: linear-gradient(135deg, #3d1a00, #2d0f1a); }
+    .v-green  { background: linear-gradient(135deg, #003d2d, #0f1a3d); }
+    .v-yellow { background: linear-gradient(135deg, #3d2d00, #1a1035); }
+    .v-red    { background: linear-gradient(135deg, #3d0010, #1a0533); }
+
+    .visual-emoji { font-size: 3rem; z-index: 1; }
+    .visual-label {
+      font-family: 'Fredoka One', cursive;
+      font-size: 0.7rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      z-index: 1;
+      opacity: 0.7;
+    }
+
+    .post-body { padding: 18px 18px 20px; }
+
+    .post-meta {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 10px;
+    }
+    .day-badge {
+      font-family: 'Fredoka One', cursive;
+      font-size: 0.7rem;
+      letter-spacing: 1px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      text-transform: uppercase;
+    }
+    .db-mon  { background: rgba(168,85,247,0.25); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.4); }
+    .db-tue  { background: rgba(59,130,246,0.25); color: #93c5fd; border: 1px solid rgba(59,130,246,0.4); }
+    .db-wed  { background: rgba(52,211,153,0.25); color: #6ee7b7; border: 1px solid rgba(52,211,153,0.4); }
+    .db-thu  { background: rgba(251,191,36,0.25); color: #fde68a; border: 1px solid rgba(251,191,36,0.4); }
+    .db-fri  { background: rgba(249,115,22,0.25); color: #fed7aa; border: 1px solid rgba(249,115,22,0.4); }
+    .db-sat  { background: rgba(255,110,180,0.25); color: #fbcfe8; border: 1px solid rgba(255,110,180,0.4); }
+    .db-sun  { background: rgba(239,68,68,0.25); color: #fca5a5; border: 1px solid rgba(239,68,68,0.4); }
+
+    .target-tag {
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .post-hook {
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.05rem;
+      color: var(--text);
+      line-height: 1.35;
+      margin-bottom: 8px;
+    }
+
+    .post-caption {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+
+    .post-caption strong {
+      color: #c4b5fd;
+      font-weight: 800;
+    }
+
+    .post-cta {
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: var(--yellow);
+      letter-spacing: 0.5px;
+    }
+
+    .hashtags {
+      font-size: 0.72rem;
+      color: rgba(168,85,247,0.6);
+      margin-top: 8px;
+      line-height: 1.7;
+      font-weight: 700;
+    }
+
+    .format-strip {
+      display: flex; gap: 6px; flex-wrap: wrap;
+      margin-top: 12px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding-top: 12px;
+    }
+    .fmt {
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .fmt-reel  { background: rgba(255,110,180,0.2); color: var(--pink); }
+    .fmt-story { background: rgba(168,85,247,0.2); color: #d8b4fe; }
+    .fmt-post  { background: rgba(59,130,246,0.2); color: #93c5fd; }
+    .fmt-tiktok{ background: rgba(239,68,68,0.2); color: #fca5a5; }
+    .fmt-fb    { background: rgba(52,211,153,0.2); color: #6ee7b7; }
+    .fmt-tweet { background: rgba(251,191,36,0.2); color: #fde68a; }
+
+    /* ── STRATEGY BLOCK ── */
+    .strategy-bar {
+      background: linear-gradient(135deg, rgba(168,85,247,0.12), rgba(59,130,246,0.12));
+      border: 1px solid rgba(168,85,247,0.2);
+      border-radius: 16px;
+      padding: 20px 24px;
+      margin: 16px 0 48px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .strat-item { }
+    .strat-label {
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: var(--purple);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .strat-val {
+      font-size: 0.88rem;
+      color: var(--text);
+      font-weight: 600;
+      line-height: 1.5;
+    }
+
+    /* ── FOOTER NOTE ── */
+    .footer-note {
+      max-width: 1100px;
+      margin: 0 auto 60px;
+      padding: 28px 24px;
+      text-align: center;
+    }
+    .footer-note h3 {
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.4rem;
+      background: linear-gradient(135deg, var(--pink), var(--purple));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-bottom: 10px;
+    }
+    .footer-note p { font-size: 0.85rem; color: var(--muted); line-height: 1.7; max-width: 640px; margin: 0 auto; }
+
+    .divider {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 20px;
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: rgba(168,85,247,0.4); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-logo">morphii.</div>
+  <div class="hero-sub">⭐ 3-Week Social Media Content Calendar ⭐</div>
+  <p class="hero-tagline">
+    Core Message: <strong style="color:#f0e6ff">You are the designer.</strong> We are only here to appreciate your work — and print it. 📌
+  </p>
+  <div class="pill-row">
+    <span class="pill">🎓 Schools</span>
+    <span class="pill">🎤 K-Pop Fans</span>
+    <span class="pill">🎂 Birthdays</span>
+    <span class="pill">🗳 Elections</span>
+    <span class="pill">🎁 Souvenirs</span>
+    <span class="pill">🎨 Designers</span>
+    <span class="pill">🏆 Collectibles</span>
+    <span class="pill">🎪 Events</span>
+    <span class="pill">👩‍🎓 Students</span>
+  </div>
+</div>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker-inner">
+    ✦ YOUR DESIGN · YOUR VISION · YOUR PIN ✦ WE JUST PRINT IT ✦ morphii. ✦ YOUR DESIGN · YOUR VISION · YOUR PIN ✦ WE JUST PRINT IT ✦ morphii. ✦ YOUR DESIGN · YOUR VISION · YOUR PIN ✦ WE JUST PRINT IT ✦ morphii. ✦ YOUR DESIGN · YOUR VISION · YOUR PIN ✦ WE JUST PRINT IT ✦ morphii. ✦ YOUR DESIGN · YOUR VISION · YOUR PIN ✦ WE JUST PRINT IT ✦ morphii. ✦
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!--  WEEK 1                                                       -->
+<!-- ============================================================ -->
+<div class="week-section w1">
+  <div class="week-header">
+    <div>
+      <div class="week-badge">Week 1</div>
+    </div>
+    <div>
+      <div class="week-title">✨ "You Made This" — Awareness</div>
+      <div class="week-theme">Theme: Introduce the idea that the customer IS the creator</div>
+    </div>
+  </div>
+
+  <div class="posts-grid">
+
+    <!-- Day 1 -->
+    <div class="post-card">
+      <div class="post-visual v-pink">
+        <div class="visual-emoji">🎨📌</div>
+        <div class="visual-label">Day 1 · Launch Hook</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="day-badge db-mon">Mon</span>
+          <span class="target-tag">🎓 Students · Designers</span>
+        </div>
+        <div class="post-hook">"We don't design your pin. You do."</div>
+        <p class="post-caption">
+          Most people think they need to hire a designer to make a pin. Nope. <strong>You are the designer.</strong> We built a tool where you pick the colors, upload your art, type your text — and we turn your vision into a real, physical pin. No app. No skill required. Just you and your creativity. 📌✨
+        </p>
+        <div class="post-cta">👉 Link in bio — design yours for free</div>
+        <div class="hashtags">#morphii #custompin #designyourown #pinmaking #youarethedesigner #custombutton</div>
+        <div class="format-strip">
+          <span class="fmt fmt-reel">Reel</span>
+          <span class="fmt fmt-story">Story</span>
+          <span class="fmt fmt-fb">Facebook</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 2 -->
+    <div class="post-card">
+      <div class="post-visual v-blue">
+        <div class="visual-emoji">🎤⭐</div>
+        <div class="visual-label">Day 2 · K-Pop Fans</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="day-badge db-tue">Tue</span>
+          <span class="target-tag">🎤 K-Pop Fans · Collectors</span>
+        </div>
+        <div class="post-hook">"Your fave. Your design. Your pin."</div>
+        <p class="post-caption">
+          Stan culture runs deep — and nothing hits different than wearing something YOU made for YOUR fave. Upload your edit, your fanart, or your favorite photo. We handle the rest. <strong>You design it. We print it.</strong> 🫶
+        </p>
+        <div class="post-cta">💜 Drop your fave's name in the comments — let's see who's getting pinned</div>
+        <div class="hashtags">#kpopmerch #kpoppin #fanmade #stanculture #customkpoppin #morphii #pinit</div>
+        <div class="format-strip">
+          <span class="fmt fmt-tiktok">TikTok</span>
+          <span class="fmt fmt-reel">Reel</span>
+          <span class="fmt fmt-story">Story</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 3 -->
+    <div class="post-card">
+      <div class="post-visual v-green">
+        <div class="visual-emoji">🏫🎒</div>
+        <div class="visual-label">Day 3 · School Events</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="day-badge db-wed">Wed</span>
+          <span class="target-tag">🎓 Schools · School Events</span>
+        </div>
+        <div class="post-hook">"Planning a school event? Let every student design their own pin."</div>
+        <p class="post-caption">
+          Acquaintance parties. Recognition nights. Foundation days. Instead of handing out generic souvenirs, let students <strong>build their own pin on the spot</strong> — their name, their design, their memory. It's an activity AND a keepsake in one.
+        </p>
+        <div class="post-cta">📩 DM us to set up a school event booth</div>
+        <div class="hashtags">#schoolevent #acquaintanceparty #recognitionnight #studentlife #schoolpin #morphii</div>
+        <div class="format-strip">
+          <span class="fmt fmt-post">Carousel</span>
+          <span class="fmt fmt-fb">Facebook</span>
+          <span class="fmt fmt-story">Story</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 4 -->
+    <div class="post-card">
+      <div class="post-visual v-yellow">
+        <div class="visual-emoji">🗳️📣</div>
+        <div class="visual-label">Day 4 · Elections</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="day-badge db-thu">Thu</span>
+          <span class="target-tag">🗳 Elections · Organizations</span>
+        </div>
+        <div class="post-hook">"Campaign pins that look exactly how you imagined them."</div>
+        <p class="post-caption">
+          Running for student council? Org officer? Design your own campaign pin — your photo, your slogan, your colors. <strong>We have 9 ready-made election templates</strong> you can customize in seconds. Or start from scratch. Either way, your vision, your pin.
+        </p>
+        <div class="post-cta">🗳 Design your campaign pin now → link in bio</div>
+        <div class="hashtags">#electionpin #campaignmerch #studentcouncil #orgpin #morphii #voteforme #pindesign</div>
+        <div class="format-strip">
+          <span class="fmt fmt-reel">Reel</span>
+          <span class="fmt fmt-post">Post</span>
+          <span class="fmt fmt-tiktok">TikTok</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 5 -->
+    <div class="post-card">
+      <div class="post-visual v-pink">
+        <div class="visual-emoji">🎂🎉</div>
+        <div class="visual-label">Day 5 · Birthdays</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="day-badge db-fri">Fri</span>
+          <span class="target-tag">🎂 Birthdays · Events</span>
+        </div>
+        <div class="post-hook">"The best birthday giveaway? One they actually designed."</div>
+        <p class="post-caption">
+          Forget the usual loot bag fillers. Set up a mini Morphii station at your party — guests design their own pin as part of the experience and walk away with something <strong>they made themselves</strong>. It's personal, it's fun, and it lasts longer than candy.
+        </p>
+        <div class="post-cta">🎈 Planning a birthday? DM us to learn how to set it up</div>
+        <div class="hashtags">#birthdaypin #birthdaygiveaway #lootbag #partyideas #morphii #customgiveaway</div>
+        <div class="format-strip">
+          <span class="fmt fmt-reel">Reel</span>
+          <span class="fmt fmt-fb">Facebook</span>
+          <span class="fmt fmt-story">Story</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 6 -->
+    <div class="post-card">
+      <div class="post-visual v-blue">
+        <div class="visual-emoji">🖥️✨</div>
+        <div class="visual-label">Day 6 · How It Works</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="day-badge db-sat">Sat</span>
+          <span class="target-tag">🎨 All audiences</span>
+        </div>
+        <div class="post-hook">"How it works in 3 steps — and yes, it's that easy."</div>
+        <p class="post-caption">
+          <strong>Step 1:</strong> Open the link on your phone or laptop — no app, no sign-up. <br/>
+          <strong>Step 2:</strong> Design your pin. Upload your art, pick your colors, type your text. <br/>
+          <strong>Step 3:</strong> Submit. We print it and send it your way. <br/>
+          That's it. <strong>You do the creative part. We do the printing part.</strong>
+        </p>
+        <div class="post-cta">📱 Try it now → link in bio. It's free to design.</div>
+        <div class="hashtags">#howitworks #morphii #custompin #easydesign #noappneeded #pindesigner</div>
+        <div class="format-strip">
+          <span class="fmt fmt-reel">Reel</span>
+          <span class="fmt fmt-tiktok">TikTok</span>
+          <span class="fmt fmt-story">Story</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 7 -->
+    <div class="post-card">
+      <div class="post-visual v-orange">
+        <div class="visual-emoji">🗺️🧡</div>
+        <div class="visual-label">Day 7 · Souvenirs</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="day-badge db-sun">Sun</span>
+          <span class="target-tag">🎁 Souvenirs · Events</span>
+        </div>
+        <div class="post-hook">"A souvenir that actually means something — because you made it."</div>
+        <p class="post-caption">
+          Generic pasalubong is forgettable. A pin you designed yourself? That's a story. Whether it's for a trip, a town fiesta, or a company event — <strong>let your people design their own piece</strong> to remember it by. We print, they keep.
+        </p>
+        <div class="post-cta">🎁 Perfect for events, fiestas, and reunions. DM us for bulk orders.</div>
+        <div class="hashtags">#souvenir #pasalubong #eventpin #customsouvenir #morphii #pinph #handcrafted</div>
+        <div class="format-strip">
+          <span class="fmt fmt-post">Carousel</span>
+          <span class="fmt fmt-fb">Facebook</span>
+          <span class="fmt fmt-story">Story</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="strategy-bar">
+    <div class="strat-item"><div class="strat-label">Week 1 Goal</div><div class="strat-val">Awareness — introduce the "you are the designer" positioning to each target audience</div></div>
+    <div class="strat-item"><div class="strat-label">Tone</div><div class="strat-val">Warm, empowering, casual — like a creative friend, not a printer</div></div>
+    <div class="strat-item"><div class="strat-label">CTA Focus</div><div class="strat-val">Link in bio + DM for events/bulk. Soft sell only.</div></div>
+    <div class="strat-item"><div class="strat-label">Visual Tip</div><div class="strat-val">Show the designer tool UI + finished pin side by side for all reels</div></div>
+  </div>
+</div>
+
+<hr class="divider"/>
+
+
+<!-- ============================================================ -->
+<!--  WEEK 2                                                       -->
+<!-- ============================================================ -->
+<div class="week-section w2">
+  <div class="week-header">
+    <div>
+      <div class="week-badge">Week 2</div>
+    </div>
+    <div>
+      <div class="week-title">🔥 "What Can You Do?" — Discovery</div>
+      <div class="week-theme">Theme: Show the full scope of possibilities — features, sizes, use cases</div>
+    </div>
+  </div>
+
+  <div class="posts-grid">
+
+    <!-- Day 8 -->
+    <div class="post-card">
+      <div class="post-visual v-blue">
+        <div class="visual-emoji">📐🎨</div>
+        <div class="visual-label">Day 8 · Features Deep Dive</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="day-badge db-mon">Mon</span>
+          <span class="target-tag">🎨 Designers · Artists</span>
+        </div>
+        <div class="post-hook">"POV: You just uploaded your fanart and turned it into a real pin in 5 minutes."</div>
+        <p class="post-caption">
+          Upload your PNG art. Add a custom font. Curve your text. Pick a gradient background. Add stickers. Preview it in 3D. <strong>That's all you — we don't touch the design.</strong> Morphii is just the tool. Your art is the product.
+        </p>
+        <div class="post-cta">🎨 Upload your art at morphii → link in bio</div>
+        <div class="hashtags">#artistmerch #fanart #pindesign #morphii #pinmaker #digitalart #artmerch</div>
+        <div class="format-strip">
+          <span class="fmt fmt-tiktok">TikTok</span>
+          <span class="fmt fmt-reel">Reel</span>
+          <span class="fmt fmt-story">Story</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 9 -->
+    <div class="post-card">
+      <div class="post-visual v-green">
+        <div class="visual-emoji">📏⭐</div>
+        <div class="visual-label">Day 9 · Sizes</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="day-badge db-tue">Tue</span>
+          <span class="target-tag">🏆 Collectibles · All</span>
+        </div>
+        <div class="post-hook">"25mm to 75mm — your design, whatever size you need."</div>
+        <p class="post-caption">
+          Tiny accent pin for your bag strap? Bold statement piece for your jacket? We have 6 sizes. And because the bleed math is already built into the designer, <strong>what you see on screen is exactly what prints</strong> — no guessing, no surprises.
+        </p>
+        <div class="post-cta">📐 Pick your size and start designing → link in bio</div>
+        <div class="hashtags">#pinsize #buttonpin #morphii #customsize #pindesign #pincollector #pinlover</div>
+        <div class="format-strip">
+          <span class="fmt fmt-post">Carousel</span>
+          <span class="fmt fmt-story">Story</span>
+          <span class="fmt fmt-fb">Facebook</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 10 -->
+    <div class="post-card">
+      <div class="post-visual v-pink">
+        <div class="visual-emoji">🏆🎖️</div>
+        <div class="visual-label">Day 10 · Medals & Coins</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="day-badge db-wed">Wed</span>
+          <span class="target-tag">🎪 Events · Schools · Organizations</span>
+        </div>
+        <div class="post-hook">"Not just pins — medals, challenge coins, golf markers. All designed by you."</div>
+        <p class="post-caption">
+          Running a sports day? Need medals for your academic competition? Hosting a golf event? <strong>Design your own medal or challenge coin</strong> with our builder — no graphic designer needed. You pick everything, we make it real.
+        </p>
+        <div class="post-cta">🏅 DM us for event orders — medals, pins, coins, all in one place</div>
+        <div class="hashtags">#eventmedal #challengecoin #custommedal #schoolsports #morphii #eventorganizer</div>
+        <div class="format-strip">
+          <span class="fmt fmt-post">Post</span>
+          <span class="fmt fmt-fb">Facebook</span>
+          <span class="fmt fmt-reel">Reel</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 11 -->
+    <div class="post-card">
+      <div class="post-visual v-yellow">
+        <div class="visual-emoji">🎓💛</div>
+        <div class="visual-label">Day 11 · Graduation</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="day-badge db-thu">Thu</span>
+          <span class="target-tag">🎓 Students · Schools</span>
+        </div>
+        <div class="post-hook">"Grad pins. Designed by the grad, not the supplier."</div>
+        <p class="post-caption">
+          Palancas. Yearbook inserts. Batch pins. This graduation season, let your batchmates design their own keepsake. Upload your class logo, add your batch year, pick your colors. <strong>Every graduate gets a pin that feels personal — because it is.</strong>
+        </p>
+        <div class="post-cta">🎓 Bulk grad orders available — DM us your batch size</div>
+        <div class="hashtags">#graduationpin #batchpin #gradseason #schoolpin #morphii #palanca #classof2025</div>
+        <div class="format-strip">
+          <span class="fmt fmt-reel">Reel</span>
+          <span class="fmt fmt-story">Story</span>
+          <span class="fmt fmt-fb">Facebook</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 12 -->
+    <div class="post-card">
+      <div class="post-visual v-orange">
+        <div class="visual-emoji">🌍📌</div>
+        <div class="visual-label">Day 12 · Philippine Souvenirs</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="day-badge db-fri">Fri</span>
+          <span class="target-tag">🎁 Souvenirs · LGUs · Tourism</span>
+        </div>
+        <div class="post-hook">"Your province. Your landmark. Your pin."</div>
+        <p class="post-caption">
+          We have a dedicated Philippine Souvenir Pin category — but the best souvenir isn't one we picked for you. It's the one <strong>you designed with your place's colors, symbols, and identity</strong>. Perfect for town fiestas, LGU events, and tourism booths.
+        </p>
+        <div class="post-cta">🇵🇭 Design your province's pin — link in bio</div>
+        <div class="hashtags">#philippinesouvenir #pinph #LGU #townfiesta #touristpin #morphii #pilipinas</div>
+        <div class="format-strip">
+          <span class="fmt fmt-post">Carousel</span>
+          <span class="fmt fmt-fb">Facebook</span>
+          <span class="fmt fmt-story">Story</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 13 -->
+    <div class="post-card">
+      <div class="post-visual v-blue">
+        <div class="visual-emoji">💍🤍</div>
+        <div class="visual-label">Day 13 · Weddings</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="day-badge db-sat">Sat</span>
+          <span class="target-tag">💍 Weddings · Events</span>
+        </div>
+        <div class="post-hook">"Wedding pins that guests designed — and can't stop talking about."</div>
+        <p class="post-caption">
+          Picture this: a design station at your reception where guests make their own personalized pin as a giveaway. No two pins the same. Everyone leaves with something <strong>they actually made</strong> at your wedding. That's the kind of detail people remember.
+        </p>
+        <div class="post-cta">💌 DM us for wedding event setup — we handle the booth, you enjoy the day</div>
+        <div class="hashtags">#weddingpin #weddingfavor #weddingph #weddingideas #morphii #customwedding</div>
+        <div class="format-strip">
+          <span class="fmt fmt-reel">Reel</span>
+          <span class="fmt fmt-story">Story</span>
+          <span class="fmt fmt-fb">Facebook</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 14 -->
+    <div class="post-card">
+      <div class="post-visual v-pink">
+        <div class="visual-emoji">🖨️🪄</div>
+        <div class="visual-label">Day 14 · 3D Preview</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="day-badge db-sun">Sun</span>
+          <span class="target-tag">🎨 All audiences · First-timers</span>
+        </div>
+        <div class="post-hook">"You see it in 3D before it gets printed. No surprises."</div>
+        <p class="post-caption">
+          Before you submit, Morphii lets you tilt and rotate your design like a real product photo — <strong>see the actual edge thickness, how the colors catch light, everything</strong>. What you see is what you get. That's the standard we hold ourselves to when printing your work.
+        </p>
+        <div class="post-cta">👀 Preview your pin before it's real — try it free → link in bio</div>
+        <div class="hashtags">#3dpreview #custompin #morphii #whatyouseeiswhatyouget #pindesign #pinpreview</div>
+        <div class="format-strip">
+          <span class="fmt fmt-tiktok">TikTok</span>
+          <span class="fmt fmt-reel">Reel</span>
+          <span class="fmt fmt-story">Story</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="strategy-bar">
+    <div class="strat-item"><div class="strat-label">Week 2 Goal</div><div class="strat-val">Discovery — show the breadth of products, features, and use cases to different audiences</div></div>
+    <div class="strat-item"><div class="strat-label">Tone</div><div class="strat-val">Excited, specific — give people concrete "aha" moments about what's possible</div></div>
+    <div class="strat-item"><div class="strat-label">CTA Focus</div><div class="strat-val">Mix of "try free" and "DM for bulk/events" — start capturing leads</div></div>
+    <div class="strat-item"><div class="strat-label">Visual Tip</div><div class="strat-val">Screen recordings of the actual tool + finished physical pins side by side</div></div>
+  </div>
+</div>
+
+<hr class="divider"/>
+
+
+<!-- ============================================================ -->
+<!--  WEEK 3                                                       -->
+<!-- ============================================================ -->
+<div class="week-section w3">
+  <div class="week-header">
+    <div>
+      <div class="week-badge">Week 3</div>
+    </div>
+    <div>
+      <div class="week-title">💬 "Real Designs, Real People" — Social Proof & Action</div>
+      <div class="week-theme">Theme: Build trust, create FOMO, and drive conversions</div>
+    </div>
+  </div>
+
+  <div class="posts-grid">
+
+    <!-- Day 15 -->
+    <div class="post-card">
+      <div class="post-visual v-green">
+        <div class="visual-emoji">💬🌟</div>
+        <div class="visual-label">Day 15 · Community Showcase</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="day-badge db-mon">Mon</span>
+          <span class="target-tag">🏆 Collectibles · K-Pop · Designers</span>
+        </div>
+        <div class="post-hook">"Look what they made. 👀"</div>
+        <p class="post-caption">
+          Every pin you see was designed by its owner — not by us. Not by a graphic artist on our end. <strong>Just someone with an idea, a phone, and 5 minutes.</strong> We printed it exactly as they designed it. That's the whole deal.
+          <br/><br/>
+          (Share real customer pin photos here — or show the Morphii UI with a finished design)
+        </p>
+        <div class="post-cta">📌 What will yours look like? Design it free → link in bio</div>
+        <div class="hashtags">#custompin #pindesign #morphii #madebyme #designersofinstagram #pincollecter</div>
+        <div class="format-strip">
+          <span class="fmt fmt-post">Carousel</span>
+          <span class="fmt fmt-reel">Reel</span>
+          <span class="fmt fmt-fb">Facebook</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 16 -->
+    <div class="post-card">
+      <div class="post-visual v-pink">
+        <div class="visual-emoji">🎤💜</div>
+        <div class="visual-label">Day 16 · K-Pop Deep Dive</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="day-badge db-tue">Tue</span>
+          <span class="target-tag">🎤 K-Pop · Fandom</span>
+        </div>
+        <div class="post-hook">"Your bias, your design, your merch — and no one else has it."</div>
+        <p class="post-caption">
+          Mass-produced merch is everywhere. But a pin you designed? That's yours alone. Upload your favorite photo, your own edit, or your hand-drawn fanart. Add your bias' name in your font of choice. <strong>We don't gatekeep the design process — you have full control.</strong>
+        </p>
+        <div class="post-cta">💜 Drop your fandom below and show us what you'd design</div>
+        <div class="hashtags">#kpopfan #btsmerch #kpopmerch #fanmade #kpopph #morphii #biaspin #kpopph</div>
+        <div class="format-strip">
+          <span class="fmt fmt-tiktok">TikTok</span>
+          <span class="fmt fmt-reel">Reel</span>
+          <span class="fmt fmt-story">Story</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 17 -->
+    <div class="post-card">
+      <div class="post-visual v-yellow">
+        <div class="visual-emoji">🎪🎠</div>
+        <div class="visual-label">Day 17 · Event Booth Promo</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="day-badge db-wed">Wed</span>
+          <span class="target-tag">🎪 Event Organizers · Schools · Planners</span>
+        </div>
+        <div class="post-hook">"Imagine this at your next event: everyone walks away with a pin they designed themselves."</div>
+        <p class="post-caption">
+          A Morphii station at your booth = an activity + a giveaway in one. Guests scan a QR, design their pin on their phone, and we print it on-site. <strong>No pre-orders. No generic merch. Just real-time, personal design.</strong> It becomes the most-talked-about part of the event.
+        </p>
+        <div class="post-cta">📩 Interested in a Morphii event booth? DM us your event date + expected headcount</div>
+        <div class="hashtags">#eventbooth #eventph #eventideas #eventorganizer #morphii #custompinbooth #uniqueactivation</div>
+        <div class="format-strip">
+          <span class="fmt fmt-reel">Reel</span>
+          <span class="fmt fmt-fb">Facebook</span>
+          <span class="fmt fmt-story">Story</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 18 -->
+    <div class="post-card">
+      <div class="post-visual v-blue">
+        <div class="visual-emoji">🖌️🧑‍🎨</div>
+        <div class="visual-label">Day 18 · For Independent Designers</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="day-badge db-thu">Thu</span>
+          <span class="target-tag">🎨 Designers · Small Creatives</span>
+        </div>
+        <div class="post-hook">"Designers: your art deserves to exist in physical form."</div>
+        <p class="post-caption">
+          If you're a digital artist, illustrator, or graphic designer — you've probably thought about selling merch. Morphii makes it low-commitment. Design a pin, order a small run, test the market. <strong>We print what you design. Zero creative interference.</strong> Your art, your prices, your brand.
+        </p>
+        <div class="post-cta">🎨 Upload your design and see how it looks → free to try, link in bio</div>
+        <div class="hashtags">#independentartist #artmerch #illustrator #graphicdesigner #morphii #custompin #artistph</div>
+        <div class="format-strip">
+          <span class="fmt fmt-post">Post</span>
+          <span class="fmt fmt-reel">Reel</span>
+          <span class="fmt fmt-tiktok">TikTok</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 19 -->
+    <div class="post-card">
+      <div class="post-visual v-orange">
+        <div class="visual-emoji">🗳️🌟</div>
+        <div class="visual-label">Day 19 · Election Templates</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="day-badge db-fri">Fri</span>
+          <span class="target-tag">🗳 Elections · Student Government</span>
+        </div>
+        <div class="post-hook">"9 campaign pin templates — fill in your name and go."</div>
+        <p class="post-caption">
+          Not a designer? No problem. Pick one of our 9 ready-made election templates — sash, sunburst, flag, portrait layouts — fill in your name and number, and <strong>your campaign pin is done in under 3 minutes</strong>. Or go full custom if you want. Either way, it's your design.
+        </p>
+        <div class="post-cta">🗳 Running for office? DM us your candidate number and let's go</div>
+        <div class="hashtags">#studentelection #campaignpin #studentcouncilph #org #morphii #eleksyon #candidatepin</div>
+        <div class="format-strip">
+          <span class="fmt fmt-reel">Reel</span>
+          <span class="fmt fmt-story">Story</span>
+          <span class="fmt fmt-fb">Facebook</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 20 -->
+    <div class="post-card">
+      <div class="post-visual v-green">
+        <div class="visual-emoji">🧩🏅</div>
+        <div class="visual-label">Day 20 · Collectible Series</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="day-badge db-sat">Sat</span>
+          <span class="target-tag">🏆 Collectors · Fandoms · Artists</span>
+        </div>
+        <div class="post-hook">"Design a whole series. Make people collect them all."</div>
+        <p class="post-caption">
+          Artists and fandoms have been doing blind box drops, pin series, and limited sets for years. Now you can too — without a print shop relationship. <strong>Design a set of 5, 10, or 20 pins, each a variation of your theme.</strong> We print the exact quantity you need, nothing more.
+        </p>
+        <div class="post-cta">📦 Planning a collectible drop? DM us — we love pin series projects</div>
+        <div class="hashtags">#pincollection #limitededition #pinart #collectiblepin #morphii #pindrop #seriespin</div>
+        <div class="format-strip">
+          <span class="fmt fmt-post">Carousel</span>
+          <span class="fmt fmt-tiktok">TikTok</span>
+          <span class="fmt fmt-reel">Reel</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 21 -->
+    <div class="post-card">
+      <div class="post-visual v-pink">
+        <div class="visual-emoji">📌💫</div>
+        <div class="visual-label">Day 21 · Closing Hero Post</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="day-badge db-sun">Sun</span>
+          <span class="target-tag">✨ All audiences</span>
+        </div>
+        <div class="post-hook">"We don't make pins. We print yours."</div>
+        <p class="post-caption">
+          That's the whole brand. You design it. You pick every color, every font, every sticker, every detail. You see it in 3D before it's real. You submit it. <strong>And we print your vision into something you can hold, wear, and keep.</strong>
+          <br/><br/>
+          We're not the designer. You are. We're just really good at making your designs real.
+        </p>
+        <div class="post-cta">📌 Open your browser. Design your first pin. morphii → link in bio.</div>
+        <div class="hashtags">#morphii #youarethedesigner #custompin #designyourown #pinmaker #madebyyou #printedbyus</div>
+        <div class="format-strip">
+          <span class="fmt fmt-reel">Reel</span>
+          <span class="fmt fmt-tiktok">TikTok</span>
+          <span class="fmt fmt-post">Post</span>
+          <span class="fmt fmt-fb">Facebook</span>
+          <span class="fmt fmt-story">Story</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="strategy-bar">
+    <div class="strat-item"><div class="strat-label">Week 3 Goal</div><div class="strat-val">Conversion — build trust through community, close with strong CTAs and DM-able hooks</div></div>
+    <div class="strat-item"><div class="strat-label">Tone</div><div class="strat-val">Confident, community-driven — let the designs speak, amplify the "you made this" pride</div></div>
+    <div class="strat-item"><div class="strat-label">CTA Focus</div><div class="strat-val">DM us, link in bio to design, "drop your fandom/event" engagement bait</div></div>
+    <div class="strat-item"><div class="strat-label">Visual Tip</div><div class="strat-val">Use real submitted designs (with permission) — actual customer work is your best ad</div></div>
+  </div>
+</div>
+
+<hr class="divider"/>
+
+<!-- FOOTER NOTES -->
+<div class="footer-note">
+  <h3>✦ Content Strategy Notes ✦</h3>
+  <p>
+    Post daily, or drop to Mon / Wed / Fri / Sun if bandwidth is tight. Reels and TikToks drive reach — Stories and Facebook posts drive DMs and conversions. The core message never changes no matter the target: <strong style="color:#f0e6ff">you design it, we print it</strong>. Every caption, every hook, every CTA should reinforce that the customer's creativity is the product — not the printer's. Always link back to <strong style="color:#c4b5fd">morphii</strong> and keep the tool free to try, so the design experience itself becomes the strongest sales tool.
+  </p>
+  <br/>
+  <p style="color:rgba(157,142,196,0.6); font-size:0.75rem;">morphii. · Build Your Future Self · campingchairph.github.io/morphii</p>
+</div>
+
+</body>
+</html>
