@@ -3310,14 +3310,14 @@ function drawWatermark(ctx, sizePx, opacity){
   opacity = opacity==null ? 1 : opacity;
   ctx.save();
   ctx.font = 'bold 13px Nunito, sans-serif';
-  ctx.fillStyle = `rgba(255,255,255,${0.22*opacity})`;
-  ctx.strokeStyle = `rgba(0,0,0,${0.15*opacity})`;
+  ctx.fillStyle = `rgba(255,255,255,${0.4*opacity})`;
+  ctx.strokeStyle = `rgba(0,0,0,${0.3*opacity})`;
   ctx.textAlign = 'center';
   ctx.translate(sizePx/2, sizePx/2);
   ctx.rotate(-Math.PI/6);
   ctx.translate(-sizePx/2, -sizePx/2);
-  for (let y=-40; y<sizePx+40; y+=54){
-    for (let x=-40; x<sizePx+80; x+=150){
+  for (let y=-40; y<sizePx+40; y+=42){
+    for (let x=-40; x<sizePx+80; x+=120){
       ctx.strokeText('MORPHII PREVIEW', x, y);
       ctx.fillText('MORPHII PREVIEW', x, y);
     }
@@ -3617,8 +3617,14 @@ function renderSubmitSummary(){
   off.width = CANVAS_PX; off.height = CANVAS_PX;
   renderWatermarkedPreview(off);
   const thumb = off.toDataURL('image/png');
+  // Same right-click/drag/long-press-save hardening as the design canvas
+  // and 3D print preview — the image itself is already the heavily
+  // watermarked composite (baked into the pixels above, not an overlay),
+  // so this just closes off the easy "right-click > Save Image As" and
+  // mobile long-press paths on top of that.
   wrap.innerHTML = `
-    <img src="${thumb}" alt="Your design preview">
+    <img src="${thumb}" alt="Your design preview" draggable="false" oncontextmenu="return false"
+      style="-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;">
     <div style="font-size:12px;font-weight:800;color:var(--ink-dim)">
       ${state.product.label}<br>${state.size}mm Circle
     </div>`;
