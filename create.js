@@ -6,7 +6,7 @@
 // background/border/character/sticker/shape/wordart/letter/text/isolate).
 // `character` only ever appears in `in-loving-memory`'s list — every other
 // product folds character images into the regular `sticker` tool instead
-// (see STICKER_PRESETS/CHARACTER_PRESETS handling in applyAssetGroup(),
+// (see STICKER_PRESETS handling in applyAssetGroup(),
 // and the product-conditional labels in addRowHtml()/stickerNoun() below).
 // `isolate` is the full-screen/isolate-mode toggle (same action as the
 // #isolateBtn FAB) — added to every product's dock so the icon grid is a
@@ -405,7 +405,11 @@ async function applyPinTemplateSnapshot(snap){
     await new Promise(resolve => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      img.onload = () => { state.character = { img, scale: snap.character.scale||1, rotation: snap.character.rotation||0, xFrac:0, yFrac:0, locked:false, grayscale: !!snap.character.grayscale }; resolve(); };
+      img.onload = () => {
+        state.character = { img, scale: snap.character.scale||1, rotation: snap.character.rotation||0, xFrac:0, yFrac:0, locked:false, grayscale: !!snap.character.grayscale };
+        if (state.character.grayscale) state.character._grayCanvas = buildGrayscaleCanvas(img);
+        resolve();
+      };
       img.onerror = resolve;
       img.src = snap.character.src;
     });
@@ -755,7 +759,8 @@ const GRADIENTS = [
 // (see loadPinAssetManifest below). Uploading your own PNG always works
 // regardless of what's in these lists.
 const STICKER_PRESETS = [];
-const CHARACTER_PRESETS = [];
+// No CHARACTER_PRESETS — the Person tool (In Loving Memory only) is
+// upload-only, never a preset library (it's always a real photo).
 const SHAPE_PRESETS = [];      // shapes + holders (text banners/badges) — same category
 const WORDART_PRESETS = [];    // premade word-art graphics ("BEST MOM" etc.)
 const BORDER_PRESETS = [];     // full-circle decorative frame overlays
@@ -1029,10 +1034,20 @@ function goStep(name){
 }
 window.goStep = goStep;
 
-// Shows the paste-feature explainer every time a customer reaches the
-// design step — deliberately NOT a one-time/localStorage-tracked thing,
-// so it stays visible to people even if they missed or forgot it before.
-function showPasteHint(){
+// Shows the paste-feature explainer — every time a customer reaches the
+// design step, AND every time they tap the Person tool (see
+// quickSelectCharacter) since that's the moment a copied photo is most
+// useful. Deliberately NOT a one-time/localStorage-tracked thing, so it
+// stays visible to people even if they missed or forgot it before.
+// 'character' swaps the copy to match what paste actually does in that
+// context — see pasteStickerFromClipboard, which routes to the Person
+// slot instead of adding a sticker while Person is selected.
+function showPasteHint(context){
+  const isCharacter = context==='character';
+  document.getElementById('pasteHintTitle').textContent = isCharacter ? 'Paste a Photo as Your Person Photo' : 'Paste a Photo as a Sticker';
+  document.getElementById('pasteHintBody').innerHTML = isCharacter
+    ? 'Already have the photo copied on your phone or computer? Just tap the paste icon <b>📋</b> near the bottom of the pin — it drops straight into the Person photo, no need to browse your files.'
+    : 'Got a photo of yourself (or anything else) already copied on your phone or computer? Just tap the paste icon <b>📋</b> near the bottom of the pin — it drops that photo straight onto your design as a sticker you can move, resize, and rotate.';
   document.getElementById('pasteHintOverlay').classList.add('show');
 }
 function closePasteHintModal(){
@@ -1292,6 +1307,7 @@ function quickAddSticker(){ addNew('sticker'); }
 window.quickAddSticker = quickAddSticker;
 
 function quickSelectCharacter(){
+  showPasteHint('character');
   if (state.character) selectLayer({ kind:'character' });
   else addNew('character');
 }
@@ -1396,8 +1412,10 @@ function toolIconsForSelection(){
     { id:'lock', label: state.bg.locked?'Locked':'Lock', icon: state.bg.locked?ICON_LOCK:ICON_UNLOCK, instant:"toggleLock('background')", on: state.bg.locked },
   ];
   if (kind==='character'){
+    // In Loving Memory only — no presets, this is always a real person's
+    // photo, so Upload is the only option (see addNew()'s character branch,
+    // which skips the presets-panel auto-open other kinds get).
     if (!state.character) return [
-      { id:'presets', label:'Presets', icon:ICON_PALETTE, panel:true },
       { id:'replace', label:'Upload', icon:ICON_UPLOAD, instant:"promptUpload('character')" },
     ];
     return [
@@ -1770,21 +1788,14 @@ function clampBgTransform(){
   state.bg.offsetYFrac = Math.max(-maxY, Math.min(maxY, state.bg.offsetYFrac));
 }
 
-function presetsForKind(kind){
-  if (kind==='character') return CHARACTER_PRESETS;
-  if (kind==='border') return BORDER_PRESETS;
-  if (PLACED_META[kind]) return placedPresets(kind);
-  return [];
-}
-
 // Adding a sticker/shape/word art/character works exactly like Border:
 // select the category (id:null = "nothing created yet"), which shows a
 // [Presets, Upload] tool row; the Presets rising panel shows the grid
 // inline, tapping a preset creates the element. No modal anywhere in this
 // flow — the PNG-upload instructions modal only appears via the Upload icon.
 function addNew(kind){
-  if (kind==='character') selectLayer({ kind:'character' });
-  else selectLayer({ kind, id:null });
+  if (kind==='character'){ selectLayer({ kind:'character' }); return; } // no presets panel — Upload is the only tool
+  selectLayer({ kind, id:null });
   openToolPanel('presets');
 }
 window.addNew = addNew;
@@ -2296,13 +2307,15 @@ function onPlacedFileChosen(kind, e){
 }
 window.onPlacedFileChosen = onPlacedFileChosen;
 
-// Paste-as-sticker — reads whatever image the customer copied elsewhere
-// (e.g. iOS's long-press "Copy" on a photo) straight off the system
-// clipboard. Must run directly from a user gesture (the button tap itself)
-// for browsers to allow clipboard access at all. Not universally supported
-// (older/some mobile browsers lack navigator.clipboard.read for images),
-// so every failure path gets a plain-language explanation instead of a
-// silent no-op.
+// Reads whatever image the customer copied elsewhere (e.g. iOS's
+// long-press "Copy" on a photo) straight off the system clipboard — goes
+// into the Person photo slot if that's currently selected (see
+// quickSelectCharacter/showPasteHint, which promises exactly this),
+// otherwise added as a sticker like before. Must run directly from a user
+// gesture (the button tap itself) for browsers to allow clipboard access
+// at all. Not universally supported (older/some mobile browsers lack
+// navigator.clipboard.read for images), so every failure path gets a
+// plain-language explanation instead of a silent no-op.
 async function pasteStickerFromClipboard(){
   if (!navigator.clipboard || !navigator.clipboard.read){
     alert("Paste isn't supported in this browser yet — use Upload instead.");
@@ -2320,7 +2333,8 @@ async function pasteStickerFromClipboard(){
     const type = item.types.find(t => IMAGE_TYPES.includes(t));
     if (type){
       const blob = await item.getType(type);
-      addPlacedFromBlob('sticker', blob);
+      if (state.selected && state.selected.kind==='character') setCharacterFromBlob(blob);
+      else addPlacedFromBlob('sticker', blob);
       return;
     }
   }
@@ -2366,18 +2380,10 @@ window.onStickerFileChosen = onStickerFileChosen;
 function removeSticker(id){ removePlaced('sticker', id); }
 window.removeSticker = removeSticker;
 
-/* ── CHARACTER TOOL PANELS (single, big mascot/logo slot — freely draggable) ── */
-function characterToolPanelHtml(tool){
-  const c = state.character;
-  if (!c){
-    if (tool!=='presets') return '';
-    if (!CHARACTER_PRESETS.length) return `<div class="cr-empty-hint">😢 No ${isMemorialProduct() ? 'photos' : 'characters'} here yet — check back soon, or use Upload above.</div>`;
-    return `<div class="cr-preset-grid">${CHARACTER_PRESETS.map((p,i)=>
-      `<button class="cr-preset-thumb" onclick="setCharacterFromPreset(${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`
-    ).join('')}</div>`;
-  }
-  return '';
-}
+/* ── CHARACTER TOOL PANEL (single Person photo slot, upload-only — every
+   tool it has (Upload/B&W/Lock/Remove) is instant, none of them rise a
+   panel, so there's nothing for this to ever render) ── */
+function characterToolPanelHtml(){ return ''; }
 
 function toggleLock(kind, id){
   const el = kind==='background' ? state.bg
@@ -2394,25 +2400,10 @@ function toggleLock(kind, id){
 window.toggleLock = toggleLock;
 window.toggleIsolateMode = toggleIsolateMode;
 
-function setCharacterFromPreset(i){
-  const preset = CHARACTER_PRESETS[i];
-  if (!preset) return;
-  const img = new Image();
-  img.crossOrigin = 'anonymous'; // raw.githubusercontent.com sends CORS headers — needed so the design canvas doesn't get tainted
-  img.onload = () => {
-    const isNew = !state.character;
-    state.character = { img, scale:1, rotation:0, xFrac:0, yFrac:0, locked:false, grayscale:false };
-    if (isNew) pushLayer({ kind:'character' });
-    selectLayer({kind:'character'});
-    if (isNew) renderCanvasBgDecor();
-  };
-  img.src = preset.src;
-}
-window.setCharacterFromPreset = setCharacterFromPreset;
-
-function onCharacterFileChosen(e){
-  const file = e.target.files[0];
-  if (!file) return;
+// Shared by the file-input flow and the clipboard-paste flow (see
+// pasteStickerFromClipboard) — same Blob-in pattern as addPlacedFromBlob.
+function setCharacterFromBlob(blob){
+  if (!blob) return;
   const reader = new FileReader();
   reader.onload = ev => {
     const img = new Image();
@@ -2425,7 +2416,12 @@ function onCharacterFileChosen(e){
     };
     img.src = ev.target.result;
   };
-  reader.readAsDataURL(file);
+  reader.readAsDataURL(blob);
+}
+
+function onCharacterFileChosen(e){
+  const file = e.target.files[0];
+  setCharacterFromBlob(file);
   e.target.value = '';
 }
 window.onCharacterFileChosen = onCharacterFileChosen;
@@ -2438,9 +2434,33 @@ function removeCharacter(){
 }
 window.removeCharacter = removeCharacter;
 
+// Manually desaturates each pixel onto an offscreen canvas rather than
+// relying on ctx.filter='grayscale(...)' — canvas 2D context filters aren't
+// supported on every mobile browser/in-app WebView customers actually use
+// (notably older Safari), where it silently no-ops and the toggle looks
+// broken. A plain pixel loop works everywhere and only needs to run once
+// per photo (cached on state.character._grayCanvas).
+function buildGrayscaleCanvas(img){
+  const c = document.createElement('canvas');
+  c.width = img.naturalWidth; c.height = img.naturalHeight;
+  const cx = c.getContext('2d');
+  cx.drawImage(img, 0, 0);
+  const frame = cx.getImageData(0, 0, c.width, c.height);
+  const px = frame.data;
+  for (let i=0; i<px.length; i+=4){
+    const lum = px[i]*0.299 + px[i+1]*0.587 + px[i+2]*0.114;
+    px[i] = px[i+1] = px[i+2] = lum;
+  }
+  cx.putImageData(frame, 0, 0);
+  return c;
+}
+
 function toggleCharacterGrayscale(){
   if (!state.character) return;
   state.character.grayscale = !state.character.grayscale;
+  if (state.character.grayscale && !state.character._grayCanvas){
+    state.character._grayCanvas = buildGrayscaleCanvas(state.character.img);
+  }
   renderDock();
   drawPreview();
 }
@@ -3012,16 +3032,18 @@ function drawBorder(ctx, artboardPx){
 function drawOneCharacter(ctx, artboardPx){
   if (!state.character || !state.character.img) return;
   const c = state.character;
-  ctx.filter = c.grayscale ? 'grayscale(100%)' : 'none';
-  drawPlacedImage(ctx, artboardPx, c.img, c.xFrac||0, c.yFrac||0, CHARACTER_BASE_R*2*c.scale, c.rotation||0);
-  ctx.filter = 'none';
+  const img = (c.grayscale && c._grayCanvas) ? c._grayCanvas : c.img;
+  drawPlacedImage(ctx, artboardPx, img, c.xFrac||0, c.yFrac||0, CHARACTER_BASE_R*2*c.scale, c.rotation||0);
 }
 
+// img may be an Image (naturalWidth/naturalHeight) or a Canvas (width/
+// height) — the character's grayscale render is a cached canvas, not an
+// Image, so this reads whichever pair the source actually has.
 function drawPlacedImage(ctx, artboardPx, img, xFrac, yFrac, dFrac, rotation){
   const d = artboardPx * dFrac;
   const cx = artboardPx/2 + xFrac*artboardPx;
   const cy = artboardPx/2 + yFrac*artboardPx;
-  const ar = img.naturalWidth / img.naturalHeight;
+  const ar = (img.naturalWidth || img.width) / (img.naturalHeight || img.height);
   const w = ar >= 1 ? d : d*ar, h = ar >= 1 ? d/ar : d;
   ctx.save();
   ctx.translate(cx, cy);
@@ -3188,7 +3210,7 @@ function selectedElementAndKind(){
 }
 function drawSelectionHandles(ctx, artboardPx){
   const { el, kind } = selectedElementAndKind();
-  const ringKinds = ['sticker','shape','wordart','letter','text','border'];
+  const ringKinds = ['sticker','shape','wordart','letter','text','border','character'];
   if (!el || !ringKinds.includes(kind)) return;
   const r = elementRadiusFrac(el, kind) * artboardPx;
   const cx = artboardPx/2 + el.xFrac*artboardPx, cy = artboardPx/2 + el.yFrac*artboardPx;
@@ -3898,7 +3920,6 @@ function applyAssetGroup(groupId){
   WORDART_PRESETS.length = 0;    WORDART_PRESETS.push(...set.wordart);
   BORDER_PRESETS.length = 0;     BORDER_PRESETS.push(...set.borders);
   BACKGROUND_PRESETS.length = 0; BACKGROUND_PRESETS.push(...set.background);
-  CHARACTER_PRESETS.length = 0;  CHARACTER_PRESETS.push(...set.characters);
   LETTER_GROUPS = buildLetterGroups(set.letters);
   STICKER_GROUPS = buildStickerGroups(stickerItems, groupId);
 }
