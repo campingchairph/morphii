@@ -395,21 +395,31 @@ h1,.logo{font-family:'Fredoka One',cursive;}
       <button class="pmi-close" onclick="closeFontsModal()">✕</button>
     </div>
     <div class="pmi-body" style="flex-direction:column;flex-wrap:nowrap">
-      <div style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-bottom:12px;line-height:1.5;">
-        Paste a Google Fonts link (Google Fonts → select a font → "Get font" → copy the embed &lt;link&gt; URL) to add it as a text choice in the pin designer.
+      <div class="adm-tab-row" style="display:flex;gap:8px;margin-bottom:14px">
+        <button class="adm-tab active" id="fontsTabLibraryBtn" onclick="setFontsTab('library')">Library</button>
+        <button class="adm-tab" id="fontsTabAddBtn" onclick="setFontsTab('add')">+ Add Font</button>
       </div>
-      <div id="fontsList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>
-      <label class="login-sub" style="text-align:left;margin-bottom:4px">Font link</label>
-      <input type="text" id="fontUrlInput" class="login-input" placeholder="https://fonts.googleapis.com/css2?family=Bangers&display=swap" oninput="onFontUrlInput()">
-      <label class="login-sub" style="text-align:left;margin-bottom:4px">Font name</label>
-      <input type="text" id="fontNameInput" class="login-input" placeholder="Auto-filled from Google Fonts links">
-      <label class="login-sub" style="text-align:left;margin-bottom:4px">Available on</label>
-      <select class="adm-status-select" id="fontScopeSelect" style="width:100%;margin-bottom:4px">
-        <option value="all">All products</option>
-        <option value="in-loving-memory">In Loving Memory only</option>
-      </select>
-      <button class="print-action-btn" style="margin-top:4px" onclick="addCustomFont()">+ Add Font</button>
-      <div id="fontsError" style="color:#ff9b98;font-size:11px;font-weight:700;margin-top:10px;display:none"></div>
+
+      <div id="fontsTabLibrary">
+        <div id="fontsList" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+
+      <div id="fontsTabAdd" style="display:none">
+        <div style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-bottom:12px;line-height:1.5;">
+          Paste a Google Fonts link (Google Fonts → select a font → "Get font" → copy the embed &lt;link&gt; URL) to add it as a text choice in the pin designer.
+        </div>
+        <label class="login-sub" style="text-align:left;margin-bottom:4px">Font link</label>
+        <input type="text" id="fontUrlInput" class="login-input" placeholder="https://fonts.googleapis.com/css2?family=Bangers&display=swap" oninput="onFontUrlInput()">
+        <label class="login-sub" style="text-align:left;margin-bottom:4px">Font name</label>
+        <input type="text" id="fontNameInput" class="login-input" placeholder="Auto-filled from Google Fonts links">
+        <label class="login-sub" style="text-align:left;margin-bottom:4px">Available on</label>
+        <select class="adm-status-select" id="fontScopeSelect" style="width:100%;margin-bottom:4px">
+          <option value="all">All products</option>
+          <option value="in-loving-memory">In Loving Memory only</option>
+        </select>
+        <button class="print-action-btn" style="margin-top:4px" onclick="addCustomFont()">+ Add Font</button>
+        <div id="fontsError" style="color:#ff9b98;font-size:11px;font-weight:700;margin-top:10px;display:none"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -863,9 +873,22 @@ async function openFontsModal(){
   customFonts = await getCustomFonts();
   ensureFontLinksLoaded();
   renderFontsList();
+  setFontsTab('library');
   document.getElementById('fontsModal').classList.add('open');
 }
 window.openFontsModal = openFontsModal;
+
+// Library (browse/remove what's already there) and Add Font (the form) are
+// separate tabs instead of both showing at once — with 20+ fonts the list
+// used to push the add-form far down the modal, making the whole thing
+// hard to navigate.
+function setFontsTab(tab){
+  document.getElementById('fontsTabLibrary').style.display = tab==='library' ? 'block' : 'none';
+  document.getElementById('fontsTabAdd').style.display = tab==='add' ? 'block' : 'none';
+  document.getElementById('fontsTabLibraryBtn').classList.toggle('active', tab==='library');
+  document.getElementById('fontsTabAddBtn').classList.toggle('active', tab==='add');
+}
+window.setFontsTab = setFontsTab;
 function closeFontsModal(){
   document.getElementById('fontsModal').classList.remove('open');
 }
@@ -928,6 +951,7 @@ async function addCustomFont(){
     document.getElementById('fontScopeSelect').value = 'all';
     ensureFontLinksLoaded();
     renderFontsList();
+    setFontsTab('library');
   } catch(e){
     customFonts.pop();
     errEl.textContent = 'Error: '+e.message; errEl.style.display = 'block';

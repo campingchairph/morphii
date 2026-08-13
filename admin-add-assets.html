@@ -106,27 +106,35 @@ h1,.logo{font-family:'Fredoka One',cursive;}
       <option value="in-loving-memory">In Loving Memory</option>
     </select>
 
-    <!-- Category only applies to Stickers — Background/Shape uploads skip
-         categorization entirely and land flat in their folder. -->
-    <div id="categoryRow" style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
-      <select class="adm-status-select" id="stickerCategorySelect" onchange="toggleNewCategoryInput()" style="flex:1;min-width:160px"></select>
-      <input type="text" id="stickerNewCategoryInput" placeholder="New category name" style="display:none;flex:1;min-width:160px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:white;font-size:16px">
+    <!-- Only shown for the Sticker kind (the only one with categories) —
+         separates "add new stickers" from "reorder existing categories" so
+         the category-order list doesn't clutter the upload flow every time
+         this page opens. -->
+    <div class="kind-tabs" id="stickerSubTabs" style="display:none"></div>
+
+    <div id="stickerAddPanel">
+      <!-- Category only applies to Stickers — Background/Shape uploads skip
+           categorization entirely and land flat in their folder. -->
+      <div id="categoryRow" style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+        <select class="adm-status-select" id="stickerCategorySelect" onchange="toggleNewCategoryInput()" style="flex:1;min-width:160px"></select>
+        <input type="text" id="stickerNewCategoryInput" placeholder="New category name" style="display:none;flex:1;min-width:160px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:white;font-size:16px">
+      </div>
+
+      <div class="sticker-slots-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px"></div>
+
+      <button class="print-action-btn" id="pushStickerBtn" onclick="pushAllAssetsToGithub()" disabled>⬆ Push to GitHub</button>
     </div>
 
     <!-- Lets the admin pin a specific category order for the picker instead
-         of the alphabetical default — only shown for Stickers, same as
-         categoryRow above. Order is per product group (stickerGroupSelect). -->
-    <div id="categoryOrderSection" style="display:none;border-top:1px solid var(--border);padding-top:12px;margin-bottom:14px">
+         of the alphabetical default. Order is per product group
+         (stickerGroupSelect). -->
+    <div id="categoryOrderSection" style="display:none">
       <div style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-bottom:8px">
         Category order (this product group) — use ↑/↓ to reorder, then Save.
       </div>
       <div id="categoryOrderList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
       <button class="adm-signout" id="saveCategoryOrderBtn" onclick="saveCategoryOrderFromUI()" disabled>Save Order</button>
     </div>
-
-    <div class="sticker-slots-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px"></div>
-
-    <button class="print-action-btn" id="pushStickerBtn" onclick="pushAllAssetsToGithub()" disabled>⬆ Push to GitHub</button>
 
     <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:16px">
       <div style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-bottom:6px" id="githubTokenStatus">Checking token…</div>
@@ -253,6 +261,7 @@ const ASSET_KINDS = [
 ];
 let assetKind = 'sticker';
 let assetTargetGroup = 'shared';
+let stickerSubTab = 'add'; // 'add' | 'reorder' — only meaningful when currentKindDef().categorized
 let _stickerSlots = []; // [{ hasImage }], index-matched to the DOM slots below
 let _activePasteSlot = 0; // which slot Ctrl+V targets — see the paste listener below
 let _cachedGithubToken = '';
@@ -270,11 +279,34 @@ async function setAssetKind(kindId){
   renderAssetKindTabs();
   document.getElementById('assetIntroText').innerHTML = currentKindDef().intro;
   document.getElementById('categoryRow').style.display = currentKindDef().categorized ? 'flex' : 'none';
-  if (!currentKindDef().categorized) document.getElementById('categoryOrderSection').style.display = 'none';
   resetAllSlots();
   if (currentKindDef().categorized) await loadStickerCategoryOptions();
+  setStickerSubTab('add');
   updatePushStickerBtnState();
 }
+
+// "Add Stickers" (category select + paste slots + push) and "Reorder
+// Categories" (the category-order list) used to both show at once, which
+// buried the upload form under a long category list once there were more
+// than a handful of categories. Only relevant for the Sticker kind — the
+// row itself stays hidden for Background/Shape, which have no categories.
+function renderStickerSubTabs(){
+  const row = document.getElementById('stickerSubTabs');
+  if (!currentKindDef().categorized){ row.style.display = 'none'; return; }
+  row.style.display = 'flex';
+  row.innerHTML = `
+    <button type="button" class="kind-tab ${stickerSubTab==='add'?'active':''}" onclick="setStickerSubTab('add')">Add Stickers</button>
+    <button type="button" class="kind-tab ${stickerSubTab==='reorder'?'active':''}" onclick="setStickerSubTab('reorder')">Reorder Categories</button>`;
+}
+
+function setStickerSubTab(tab){
+  stickerSubTab = tab;
+  renderStickerSubTabs();
+  const categorized = currentKindDef().categorized;
+  document.getElementById('stickerAddPanel').style.display = (!categorized || tab==='add') ? 'block' : 'none';
+  document.getElementById('categoryOrderSection').style.display = (categorized && tab==='reorder') ? 'block' : 'none';
+}
+window.setStickerSubTab = setStickerSubTab;
 window.setAssetKind = setAssetKind;
 
 function renderStickerSlotShells(){
@@ -321,10 +353,10 @@ async function initAssetPage(){
   renderAssetKindTabs();
   document.getElementById('assetIntroText').innerHTML = currentKindDef().intro;
   document.getElementById('categoryRow').style.display = currentKindDef().categorized ? 'flex' : 'none';
-  if (!currentKindDef().categorized) document.getElementById('categoryOrderSection').style.display = 'none';
   renderStickerSlotShells();
   document.getElementById('stickerGroupSelect').value = assetTargetGroup;
   await loadStickerCategoryOptions();
+  setStickerSubTab('add');
   await refreshGithubTokenStatus();
 }
 
@@ -379,9 +411,10 @@ let _categoryOrderMap = {};
 let _categoryOrderWorking = [];
 
 async function loadCategoryOrderSection(cats){
-  const section = document.getElementById('categoryOrderSection');
-  if (!cats.length){ section.style.display = 'none'; return; }
-  section.style.display = 'block';
+  // Visibility is driven by the Add/Reorder sub-tabs (setStickerSubTab) —
+  // this just keeps the working list current so the Reorder tab shows the
+  // right thing whenever it's switched to.
+  if (!cats.length){ _categoryOrderWorking = []; renderCategoryOrderList(); return; }
   try { _categoryOrderMap = await getCategoryOrder(); } catch(e){ _categoryOrderMap = {}; }
   const saved = _categoryOrderMap[assetTargetGroup] || [];
   const known = new Set(cats);
