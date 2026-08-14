@@ -3530,6 +3530,7 @@ function buildPin3dEdgeWall(edgeColor){
 }
 
 function openPinPreview(){
+  stopPin3dAutoRotate();
   const canvas = document.getElementById('pinPreviewCanvas');
   canvas.width = 500; canvas.height = 500;
   renderFinishedPinFace(canvas, { watermarkOpacity: 0.4 });
@@ -3545,8 +3546,34 @@ window.openPinPreview = openPinPreview;
 
 function closePinPreview(){
   document.getElementById('pinPreviewOverlay').classList.remove('show');
+  stopPin3dAutoRotate();
+  document.getElementById('pinPreviewConfirmFooter').classList.remove('show');
+  document.getElementById('pinPreviewHint').style.display = '';
 }
 window.closePinPreview = closePinPreview;
+
+// Auto-rotate used ONLY by the pre-submit confirmation preview (see
+// reviewBeforeSubmit) — a gentle continuous tumble so the customer sees
+// multiple angles without having to know they can drag, before the final
+// "Yes, Submit" button appears. Grabbing the pin (onDown, below) cancels it
+// so a manual drag always wins.
+let _pin3dAutoRAF = null;
+function startPin3dAutoRotate(){
+  stopPin3dAutoRotate();
+  const t0 = performance.now();
+  function frame(t){
+    const dt = (t - t0) / 1000;
+    _pin3dRot.y = Math.sin(dt * 0.6) * 28;
+    _pin3dRot.x = 12 + Math.sin(dt * 0.9) * 14;
+    applyPin3dTransform();
+    _pin3dAutoRAF = requestAnimationFrame(frame);
+  }
+  _pin3dAutoRAF = requestAnimationFrame(frame);
+}
+function stopPin3dAutoRotate(){
+  if (_pin3dAutoRAF) cancelAnimationFrame(_pin3dAutoRAF);
+  _pin3dAutoRAF = null;
+}
 
 function applyPin3dTransform(){
   const pin = document.getElementById('pinPreviewPin');
@@ -3577,6 +3604,7 @@ function initPin3dDrag(){
   const clampRot = (v, min, max) => Math.max(min, Math.min(max, v));
 
   function onDown(e){
+    stopPin3dAutoRotate();
     const p = e.touches ? e.touches[0] : e;
     start = { x:p.clientX, y:p.clientY, rot:{ ..._pin3dRot } };
     pin.classList.add('dragging');
@@ -3647,7 +3675,10 @@ function renderSubmitSummary(){
   const wrap = document.getElementById('submitSummary');
   const off = document.createElement('canvas');
   off.width = CANVAS_PX; off.height = CANVAS_PX;
-  renderWatermarkedPreview(off);
+  // Cropped to the finished (trimmed) pin, not the full bleed artboard —
+  // this is what the customer will actually receive, so it's what they
+  // should see right before submitting. See renderFinishedPinFace.
+  renderFinishedPinFace(off);
   const thumb = off.toDataURL('image/png');
   // Same right-click/drag/long-press-save hardening as the design canvas
   // and 3D print preview — the image itself is already the heavily
@@ -3671,7 +3702,7 @@ function generateSaveCode(){
   return Array.from({length:6}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
 }
 
-async function submitDesign(){
+function getValidatedSubmitFields(){
   const errEl = document.getElementById('submitError');
   errEl.style.display = 'none';
   const name = document.getElementById('custName').value.trim();
@@ -3682,24 +3713,70 @@ async function submitDesign(){
   if (!name || !email){
     errEl.textContent = 'Please fill in your name and email.';
     errEl.style.display = 'block';
-    return;
+    return null;
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
     errEl.textContent = 'Please enter a valid email address.';
     errEl.style.display = 'block';
-    return;
+    return null;
   }
   if (!state.bg.colorOn && !state.bg.imageOn){
     errEl.textContent = 'Please add a background before submitting.';
     errEl.style.display = 'block';
-    return;
+    return null;
   }
   if (state.bg.imageOn && state.bg.tainted){
     errEl.textContent = "That image link can't be used — please go back and upload the file instead.";
     errEl.style.display = 'block';
-    return;
+    return null;
   }
+  return { name, email, phone, notes };
+}
 
+// Fields validated by reviewBeforeSubmit, held until the customer confirms
+// in the 3D preview (confirmSubmitDesign) or backs out to keep editing.
+let _pendingSubmitFields = null;
+
+// Wired to the "Submit My Design" button — instead of submitting right
+// away, validates the form then shows the finished (cropped, no-bleed) pin
+// auto-rotating in 3D so the customer sees what they're about to order,
+// with a final "Yes, Submit" button to actually send it.
+function reviewBeforeSubmit(){
+  const fields = getValidatedSubmitFields();
+  if (!fields) return;
+  _pendingSubmitFields = fields;
+  openSubmitConfirmPreview();
+}
+window.reviewBeforeSubmit = reviewBeforeSubmit;
+
+function openSubmitConfirmPreview(){
+  const canvas = document.getElementById('pinPreviewCanvas');
+  canvas.width = 500; canvas.height = 500;
+  renderFinishedPinFace(canvas, { watermarkOpacity: 0.4 });
+  document.getElementById('pinPreviewTitle').textContent =
+    state.product ? `${state.product.label} · ${state.size}mm Preview` : 'Print Preview';
+  buildPin3dEdgeWall(samplePinEdgeColor(canvas));
+  _pin3dRot = { ...PIN3D_REST };
+  applyPin3dTransform();
+  document.getElementById('pinPreviewHint').style.display = 'none';
+  document.getElementById('pinPreviewConfirmFooter').classList.add('show');
+  document.getElementById('pinPreviewOverlay').classList.add('show');
+  initPin3dDrag();
+  startPin3dAutoRotate();
+}
+
+async function confirmSubmitDesign(){
+  document.getElementById('pinPreviewOverlay').classList.remove('show');
+  stopPin3dAutoRotate();
+  const fields = _pendingSubmitFields;
+  _pendingSubmitFields = null;
+  if (!fields) return;
+  await performSubmit(fields);
+}
+window.confirmSubmitDesign = confirmSubmitDesign;
+
+async function performSubmit({ name, email, phone, notes }){
+  const errEl = document.getElementById('submitError');
   const btn = document.getElementById('submitBtn');
   btn.disabled = true; btn.textContent = 'Submitting…';
   try {
@@ -3732,7 +3809,6 @@ async function submitDesign(){
     btn.disabled = false; btn.textContent = '✓ Submit My Design';
   }
 }
-window.submitDesign = submitDesign;
 
 function showDoneScreen(code, emailResult){
   document.getElementById('saveCodeDisplay').textContent = code;

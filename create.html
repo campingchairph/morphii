@@ -12,7 +12,7 @@
 })();
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&family=Luckiest+Guy&family=Shrikhand&family=Carter+One&family=Ceviche+One&family=Kavoon&family=Cherry+Bomb+One&family=Lobster&family=Spicy+Rice&family=Chicle&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="create.css?v=3">
+<link rel="stylesheet" href="create.css?v=4">
 </head>
 <body>
 
@@ -251,34 +251,6 @@
       <div class="cr-font-carousel" id="textEditFonts"></div>
     </div>
 
-    <!-- 3D PRINT PREVIEW — a CSS-3D-tilted render of just the finished
-         (trimmed) pin face, so the customer can see roughly how it'll look
-         once printed rather than the flat editing canvas. -->
-    <div class="cr-modal-overlay" id="pinPreviewOverlay">
-      <div class="cr-pin3d-card">
-        <button class="cr-pin3d-close" onclick="closePinPreview()" title="Close">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </button>
-        <div class="cr-modal-title" id="pinPreviewTitle">Print Preview</div>
-        <div class="cr-pin3d-stage" id="pinPreviewStage">
-          <div class="cr-pin3d-shadow"></div>
-          <!-- Front face, cylindrical edge wall, and back all rotate together
-               as one rigid body (shared preserve-3d parent) so the pin reads
-               as an actual mounted, physically thick object when tilted,
-               not a flat disc with a lighting trick painted on it. -->
-          <div class="cr-pin3d" id="pinPreviewPin">
-            <div class="cr-pin3d-back"></div>
-            <div class="cr-pin3d-edge-wall" id="pinPreviewEdgeWall"></div>
-            <div class="cr-pin3d-face">
-              <canvas id="pinPreviewCanvas" oncontextmenu="return false" draggable="false"></canvas>
-              <div class="cr-pin3d-shine" id="pinPreviewShine"></div>
-              <div class="cr-pin3d-rim"></div>
-            </div>
-          </div>
-        </div>
-        <div class="cr-pin3d-hint">Drag to tilt</div>
-      </div>
-    </div>
   </section>
 
   <!-- STEP 4: SUBMIT -->
@@ -302,7 +274,7 @@
         <textarea id="custNotes" class="cr-text-input" rows="3" placeholder="Anything else we should know?"></textarea>
 
         <div id="submitError" class="cr-warning" style="display:none"></div>
-        <button class="cr-btn-primary" id="submitBtn" onclick="submitDesign()">✓ Submit My Design</button>
+        <button class="cr-btn-primary" id="submitBtn" onclick="reviewBeforeSubmit()">✓ Submit My Design</button>
       </div>
       <div class="cr-submit-summary" id="submitSummary"></div>
     </div>
@@ -324,6 +296,41 @@
       <button class="cr-btn-primary" onclick="location.reload()">Design Another Pin</button>
     </div>
   </section>
+
+  <!-- 3D PRINT PREVIEW — a CSS-3D-tilted render of just the finished
+       (trimmed) pin face, so the customer can see roughly how it'll look
+       once printed rather than the flat editing canvas. Top-level (not
+       nested in a .cr-panel) since it's opened both from the Design step
+       (print-preview FAB) and the Submit step (pre-submit confirmation). -->
+  <div class="cr-modal-overlay" id="pinPreviewOverlay">
+    <div class="cr-pin3d-card">
+      <button class="cr-pin3d-close" onclick="closePinPreview()" title="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+      <div class="cr-modal-title" id="pinPreviewTitle">Print Preview</div>
+      <div class="cr-pin3d-stage" id="pinPreviewStage">
+        <div class="cr-pin3d-shadow"></div>
+        <!-- Front face, cylindrical edge wall, and back all rotate together
+             as one rigid body (shared preserve-3d parent) so the pin reads
+             as an actual mounted, physically thick object when tilted,
+             not a flat disc with a lighting trick painted on it. -->
+        <div class="cr-pin3d" id="pinPreviewPin">
+          <div class="cr-pin3d-back"></div>
+          <div class="cr-pin3d-edge-wall" id="pinPreviewEdgeWall"></div>
+          <div class="cr-pin3d-face">
+            <canvas id="pinPreviewCanvas" oncontextmenu="return false" draggable="false"></canvas>
+            <div class="cr-pin3d-shine" id="pinPreviewShine"></div>
+            <div class="cr-pin3d-rim"></div>
+          </div>
+        </div>
+      </div>
+      <div class="cr-pin3d-hint" id="pinPreviewHint">Drag to tilt</div>
+      <div class="cr-pin3d-confirm-footer" id="pinPreviewConfirmFooter">
+        <button class="cr-link-back" onclick="closePinPreview()">&larr; Back to Edit</button>
+        <button class="cr-btn-primary" onclick="confirmSubmitDesign()">✓ Yes, Submit</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ELECTION TEMPLATE FILL-IN FORM — top-level (not nested in a .cr-panel)
        since it's opened from the Template step, not Design. -->
@@ -420,6 +427,6 @@
 <!-- EmailJS (sends the confirmation email client-side, no backend needed) -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="email-config.js"></script>
-<script src="create.js?v=51"></script>
+<script src="create.js?v=52"></script>
 </body>
 </html>

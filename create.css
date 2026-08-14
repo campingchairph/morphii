@@ -583,6 +583,9 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
   background:linear-gradient(180deg,#eef0f3,#9aa1ab 45%,#666d78);
 }
 .cr-pin3d-hint{font-size:10.5px;font-weight:800;color:var(--ink-dim);margin-top:12px;text-transform:uppercase;letter-spacing:0.3px;}
+.cr-pin3d-confirm-footer{display:none;flex-direction:column;align-items:center;gap:12px;margin-top:14px;width:100%;}
+.cr-pin3d-confirm-footer.show{display:flex;}
+.cr-pin3d-confirm-footer .cr-btn-primary{width:100%;}
 
 /* ── UPLOAD INSTRUCTIONS MODAL ── */
 .cr-modal-overlay{
