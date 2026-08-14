@@ -320,7 +320,6 @@ function serializePlacedArray(kind){
   return placedArray(kind).map(el => {
     const out = { id: el.id, xFrac: el.xFrac, yFrac: el.yFrac, scale: el.scale, rotation: el.rotation||0, src: el.img.src };
     if (el.vectorShapeId){ out.vectorShapeId = el.vectorShapeId; out.color = el.color; }
-    if (el.grayscale) out.grayscale = true;
     return out;
   });
 }
@@ -360,7 +359,6 @@ function loadPlacedArrayFromSnapshot(kind, list){
     img.onload = () => {
       const el = { id: nextPlacedId(kind), img, xFrac: item.xFrac||0, yFrac: item.yFrac||0, scale: item.scale||1, rotation: item.rotation||0, locked:false };
       if (item.vectorShapeId){ el.vectorShapeId = item.vectorShapeId; el.color = item.color; }
-      if (item.grayscale){ el.grayscale = true; el._grayCanvas = buildGrayscaleCanvas(img); }
       placedArray(kind).push(el);
       idMap[item.id] = el.id;
       resolve();
@@ -1494,12 +1492,6 @@ function toolIconsForSelection(){
     // Stickers get floating Duplicate/Add buttons instead (updateCanvasFabButtons)
     // — keep Duplicate in the dock for Shape/Word Art, which don't have those FABs.
     if (kind!=='sticker') icons.push({ id:'duplicate', label:'Duplicate', icon:ICON_DUPLICATE, instant:`duplicatePlaced('${kind}',${el.id})` });
-    // Stickers only — a customer may paste/upload a photo (e.g. a loved
-    // one's picture on In Loving Memory) as a plain sticker instead of
-    // through the Person tool, so B&W needs to be available here too, not
-    // just on Character. Shape/Word Art/Letter are decorative graphics,
-    // not photos, so they don't get this.
-    if (kind==='sticker') icons.push({ id:'bw', label: el.grayscale?'Color':'B&W', icon:ICON_GRAYSCALE, instant:`togglePlacedGrayscale('${kind}',${el.id})`, on: el.grayscale });
     icons.push(
       { id:'lock', label: el.locked?'Locked':'Lock', icon: el.locked?ICON_LOCK:ICON_UNLOCK, instant:`toggleLock('${kind}',${el.id})`, on: el.locked },
       { id:'remove', label:'Remove', icon:ICON_TRASH, instant:`removePlaced('${kind}',${el.id})`, danger:true },
@@ -1520,6 +1512,7 @@ function toolIconsForSelection(){
     // pinch/rail adjusts (see textToolPanelHtml's 'size' branch).
     if (t.placement !== 'straight') icons.push({ id:'size', label:'Font Size', icon:ICON_SIZE, panel:true });
     icons.push(
+      { id:'duplicate', label:'Duplicate', icon:ICON_DUPLICATE, instant:`duplicateTextLine(${t.id})` },
       { id:'shadow', label:'Shadow', icon:ICON_SHADOW, instant:`toggleTextShadow(${t.id},${!t.shadow})`, on:t.shadow },
       { id:'lock', label: t.locked?'Locked':'Lock', icon: t.locked?ICON_LOCK:ICON_UNLOCK, instant:`toggleLock('text',${t.id})`, on: t.locked },
       { id:'remove', label:'Remove', icon:ICON_TRASH, instant:`removeTextLine(${t.id})`, danger:true },
@@ -2404,7 +2397,6 @@ function duplicatePlaced(kind, id){
     scale: el.scale, rotation: el.rotation, locked: false,
   };
   if (el.vectorShapeId){ copy.vectorShapeId = el.vectorShapeId; copy.color = el.color; }
-  if (el.grayscale){ copy.grayscale = true; copy._grayCanvas = el._grayCanvas; }
   arr.push(copy);
   pushLayer({ kind, id: copy.id });
   selectLayer({ kind, id: copy.id });
@@ -2535,6 +2527,20 @@ function removeTextLine(id){
   else { renderDock(); drawPreview(); }
 }
 window.removeTextLine = removeTextLine;
+
+// Same pattern as duplicatePlaced — copy every field except id, nudge the
+// position slightly so the copy doesn't sit exactly on top of the original.
+function duplicateTextLine(id){
+  const t = state.textLines.find(x=>x.id===id);
+  if (!t) return;
+  const copy = { ...t, id: state.nextTextId++, locked:false };
+  copy.xFrac = Math.max(-0.4, Math.min(0.4, (t.xFrac||0) + 0.08));
+  copy.yFrac = Math.max(-0.4, Math.min(0.4, (t.yFrac||0) + 0.08));
+  state.textLines.push(copy);
+  pushLayer({ kind:'text', id: copy.id });
+  selectLayer({ kind:'text', id: copy.id });
+}
+window.duplicateTextLine = duplicateTextLine;
 
 function updateTextLine(id, field, value){
   const line = state.textLines.find(t=>t.id===id);
@@ -2943,10 +2949,13 @@ function bindCanvasInteractions(canvas){
     // it was glitching other objects' geometry math while active).
   }, { passive:false });
 
-  // Two-finger touch pinch-resizes whichever element is selected (or the
-  // background photo). There's no canvas-view-zoom fallback anymore — with
-  // nothing to resize, a two-finger touch just does nothing.
+  // Two-finger touch pinch-resizes AND twist-rotates whichever element is
+  // selected (or the background photo, resize-only — background has no
+  // rotation, same restriction setSelectedRotation already applies). No
+  // canvas-view-zoom fallback — with nothing to resize, a two-finger touch
+  // just does nothing.
   let pinchTarget = null, pinchStartDist = null, pinchStartScale = 1;
+  let pinchStartAngle = null, pinchStartRotation = 0;
 
   canvas.addEventListener('touchstart', e=>{
     if (e.touches.length===2){
@@ -2962,6 +2971,8 @@ function bindCanvasInteractions(canvas){
       if (target){
         pinchStartDist = touchDist(e.touches);
         pinchStartScale = resizeStartScaleFor(target.el, target.kind);
+        pinchStartAngle = touchAngle(e.touches);
+        pinchStartRotation = target.kind!=='background' ? (target.el.rotation||0) : 0;
       }
     }
   }, { passive:true });
@@ -2971,6 +2982,10 @@ function bindCanvasInteractions(canvas){
       e.preventDefault();
       const d = touchDist(e.touches);
       applyResizeRatioTarget(pinchTarget, pinchStartScale, d/pinchStartDist);
+      if (pinchTarget.kind!=='background'){
+        const angle = touchAngle(e.touches);
+        pinchTarget.el.rotation = normalizeAngle(pinchStartRotation + (angle - pinchStartAngle));
+      }
       drawPreview();
     }
   }, { passive:false });
@@ -2978,11 +2993,23 @@ function bindCanvasInteractions(canvas){
   canvas.addEventListener('touchend', e=>{
     pinchTarget = null;
     pinchStartDist = null;
+    pinchStartAngle = null;
   });
 }
 function touchDist(touches){
   const dx = touches[0].clientX-touches[1].clientX, dy = touches[0].clientY-touches[1].clientY;
   return Math.sqrt(dx*dx+dy*dy);
+}
+// Angle of the line between the two touch points — tracking how this
+// changes between touchstart and touchmove is what turns a two-finger
+// twist into a rotation delta, same idea as touchDist for pinch-resize.
+function touchAngle(touches){
+  return Math.atan2(touches[1].clientY-touches[0].clientY, touches[1].clientX-touches[0].clientX);
+}
+function normalizeAngle(a){
+  while (a > Math.PI) a -= 2*Math.PI;
+  while (a < -Math.PI) a += 2*Math.PI;
+  return a;
 }
 
 /* ── DRAWING ──────────────────────────────────── */
@@ -3067,22 +3094,8 @@ const CHARACTER_BASE_R = 0.275;
 
 function drawOnePlaced(ctx, artboardPx, el){
   if (!el || !el.img) return;
-  const img = (el.grayscale && el._grayCanvas) ? el._grayCanvas : el.img;
-  drawPlacedImage(ctx, artboardPx, img, el.xFrac, el.yFrac, STICKER_BASE_R*2*el.scale, el.rotation||0);
+  drawPlacedImage(ctx, artboardPx, el.img, el.xFrac, el.yFrac, STICKER_BASE_R*2*el.scale, el.rotation||0);
 }
-
-// Sticker-only B&W toggle (see the 'bw' dock icon, kind==='sticker' only) —
-// same cached-offscreen-canvas approach as toggleCharacterGrayscale, for
-// the same reason: ctx.filter isn't reliable across mobile browsers.
-function togglePlacedGrayscale(kind, id){
-  const el = placedArray(kind).find(x=>x.id===id);
-  if (!el) return;
-  el.grayscale = !el.grayscale;
-  if (el.grayscale && !el._grayCanvas) el._grayCanvas = buildGrayscaleCanvas(el.img);
-  renderDock();
-  drawPreview();
-}
-window.togglePlacedGrayscale = togglePlacedGrayscale;
 
 // Single full-circle decorative frame, fixed above the background — the
 // asset should be authored as a square PNG with a transparent center so it
