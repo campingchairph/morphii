@@ -320,6 +320,7 @@ function serializePlacedArray(kind){
   return placedArray(kind).map(el => {
     const out = { id: el.id, xFrac: el.xFrac, yFrac: el.yFrac, scale: el.scale, rotation: el.rotation||0, src: el.img.src };
     if (el.vectorShapeId){ out.vectorShapeId = el.vectorShapeId; out.color = el.color; }
+    if (el.grayscale) out.grayscale = true;
     return out;
   });
 }
@@ -359,6 +360,7 @@ function loadPlacedArrayFromSnapshot(kind, list){
     img.onload = () => {
       const el = { id: nextPlacedId(kind), img, xFrac: item.xFrac||0, yFrac: item.yFrac||0, scale: item.scale||1, rotation: item.rotation||0, locked:false };
       if (item.vectorShapeId){ el.vectorShapeId = item.vectorShapeId; el.color = item.color; }
+      if (item.grayscale){ el.grayscale = true; el._grayCanvas = buildGrayscaleCanvas(img); }
       placedArray(kind).push(el);
       idMap[item.id] = el.id;
       resolve();
@@ -1449,6 +1451,12 @@ function toolIconsForSelection(){
     // Stickers get floating Duplicate/Add buttons instead (updateCanvasFabButtons)
     // — keep Duplicate in the dock for Shape/Word Art, which don't have those FABs.
     if (kind!=='sticker') icons.push({ id:'duplicate', label:'Duplicate', icon:ICON_DUPLICATE, instant:`duplicatePlaced('${kind}',${el.id})` });
+    // Stickers only — a customer may paste/upload a photo (e.g. a loved
+    // one's picture on In Loving Memory) as a plain sticker instead of
+    // through the Person tool, so B&W needs to be available here too, not
+    // just on Character. Shape/Word Art/Letter are decorative graphics,
+    // not photos, so they don't get this.
+    if (kind==='sticker') icons.push({ id:'bw', label: el.grayscale?'Color':'B&W', icon:ICON_GRAYSCALE, instant:`togglePlacedGrayscale('${kind}',${el.id})`, on: el.grayscale });
     icons.push(
       { id:'lock', label: el.locked?'Locked':'Lock', icon: el.locked?ICON_LOCK:ICON_UNLOCK, instant:`toggleLock('${kind}',${el.id})`, on: el.locked },
       { id:'remove', label:'Remove', icon:ICON_TRASH, instant:`removePlaced('${kind}',${el.id})`, danger:true },
@@ -2353,6 +2361,7 @@ function duplicatePlaced(kind, id){
     scale: el.scale, rotation: el.rotation, locked: false,
   };
   if (el.vectorShapeId){ copy.vectorShapeId = el.vectorShapeId; copy.color = el.color; }
+  if (el.grayscale){ copy.grayscale = true; copy._grayCanvas = el._grayCanvas; }
   arr.push(copy);
   pushLayer({ kind, id: copy.id });
   selectLayer({ kind, id: copy.id });
@@ -3015,8 +3024,22 @@ const CHARACTER_BASE_R = 0.275;
 
 function drawOnePlaced(ctx, artboardPx, el){
   if (!el || !el.img) return;
-  drawPlacedImage(ctx, artboardPx, el.img, el.xFrac, el.yFrac, STICKER_BASE_R*2*el.scale, el.rotation||0);
+  const img = (el.grayscale && el._grayCanvas) ? el._grayCanvas : el.img;
+  drawPlacedImage(ctx, artboardPx, img, el.xFrac, el.yFrac, STICKER_BASE_R*2*el.scale, el.rotation||0);
 }
+
+// Sticker-only B&W toggle (see the 'bw' dock icon, kind==='sticker' only) —
+// same cached-offscreen-canvas approach as toggleCharacterGrayscale, for
+// the same reason: ctx.filter isn't reliable across mobile browsers.
+function togglePlacedGrayscale(kind, id){
+  const el = placedArray(kind).find(x=>x.id===id);
+  if (!el) return;
+  el.grayscale = !el.grayscale;
+  if (el.grayscale && !el._grayCanvas) el._grayCanvas = buildGrayscaleCanvas(el.img);
+  renderDock();
+  drawPreview();
+}
+window.togglePlacedGrayscale = togglePlacedGrayscale;
 
 // Single full-circle decorative frame, fixed above the background — the
 // asset should be authored as a square PNG with a transparent center so it
