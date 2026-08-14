@@ -381,6 +381,21 @@
     </div>
   </div>
 
+  <!-- SWITCH PRODUCT WARNING — reached only from selectProduct() when the
+       customer already has design content for a DIFFERENT product and
+       picks a new one. Each product's design lives in the same shared
+       state fields (stickers/text/character/etc.), so switching without
+       clearing would otherwise carry one product's design into another
+       (e.g. a Lapel Pin's stickers showing up on an In Loving Memory pin). -->
+  <div class="cr-modal-overlay" id="switchProductWarningOverlay">
+    <div class="cr-modal" style="max-width:340px">
+      <div class="cr-modal-title">Start a New Design?</div>
+      <div class="cr-modal-body">Switching to a different product clears what you've built so far — this pin's design can't carry over. This can't be undone.</div>
+      <button class="cr-btn-primary" style="margin-top:16px" onclick="confirmSwitchProduct()">Yes, Switch &amp; Clear</button>
+      <button class="cr-link-back" style="display:block;margin:10px auto 0" onclick="closeSwitchProductWarning()">Cancel</button>
+    </div>
+  </div>
+
   <!-- PASTE FEATURE HINT — shown once (see maybeShowPasteHint in create.js)
        the first time a customer reaches the design step, so they discover
        the clipboard-paste FAB without having to stumble onto it. -->
@@ -405,6 +420,6 @@
 <!-- EmailJS (sends the confirmation email client-side, no backend needed) -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="email-config.js"></script>
-<script src="create.js?v=48"></script>
+<script src="create.js?v=49"></script>
 </body>
 </html>

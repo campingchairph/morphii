@@ -1081,15 +1081,58 @@ function renderProductGrid(){
 function catalogSkeletonHtml(n){
   return Array.from({length:n}).map(()=>'<div class="cr-skeleton-card"></div>').join('');
 }
+// True if there's anything on the artboard worth warning about losing —
+// checked before letting a product switch silently carry (or worse,
+// silently discard) a design. Mirrors the field list resetDesignForTemplate
+// clears, so "has content" and "what gets wiped" always stay in sync.
+function hasDesignContent(){
+  return !!(state.stickers.length || state.shapes.length || state.wordArts.length || state.letters.length ||
+    state.textLines.length || state.character || state.border ||
+    (state.bg.imageOn && state.bg.img) || state.bg.colorOn);
+}
+
+let _pendingProductSwitch = null;
+
 function selectProduct(id){
   const p = PRODUCTS.find(p=>p.id===id);
   if (!p || p.catalogState!=='enabled') return;
+  // Switching to a genuinely different product with an existing design
+  // needs confirmation first — see switchProductWarningOverlay. Re-picking
+  // the same product (or picking one for the first time) just proceeds.
+  if (state.product && state.product.id!==p.id && hasDesignContent()){
+    _pendingProductSwitch = p;
+    document.getElementById('switchProductWarningOverlay').classList.add('show');
+    return;
+  }
+  commitProductSwitch(p);
+}
+window.selectProduct = selectProduct;
+
+function commitProductSwitch(p){
+  // Every product's design lives in the same shared state fields — without
+  // this, a design started under one product (e.g. Lapel Pin) would still
+  // be sitting there (stickers, text, character, etc.) when a different
+  // product is opened, and could even get submitted under the wrong type.
+  if (state.product && state.product.id!==p.id) resetDesignForTemplate();
   state.product = p;
   applyAssetGroup(currentAssetGroup());
   renderSizeGrid();
   goStep('size');
 }
-window.selectProduct = selectProduct;
+
+function closeSwitchProductWarning(){
+  document.getElementById('switchProductWarningOverlay').classList.remove('show');
+  _pendingProductSwitch = null;
+}
+window.closeSwitchProductWarning = closeSwitchProductWarning;
+
+function confirmSwitchProduct(){
+  const p = _pendingProductSwitch;
+  _pendingProductSwitch = null;
+  document.getElementById('switchProductWarningOverlay').classList.remove('show');
+  if (p) commitProductSwitch(p);
+}
+window.confirmSwitchProduct = confirmSwitchProduct;
 
 /* ── STEP 2: SIZE ─────────────────────────────── */
 function renderSizeGrid(){
