@@ -186,7 +186,7 @@
     <input type="file" id="bgFileInput" accept="image/*" onchange="onBgFileChosen(event)" class="cr-visually-hidden">
     <input type="file" id="stickerFileInput" accept="image/png" onchange="onStickerFileChosen(event)" class="cr-visually-hidden">
     <input type="file" id="characterFileInput" accept="image/png" onchange="onCharacterFileChosen(event)" class="cr-visually-hidden">
-    <input type="file" id="borderFileInput" accept="image/png" onchange="onBorderFileChosen(event)" class="cr-visually-hidden">
+    <input type="file" id="borderFileInput" accept="image/png" onchange="onPlacedFileChosen('border', event)" class="cr-visually-hidden">
     <input type="file" id="shapeFileInput" accept="image/png" onchange="onPlacedFileChosen('shape', event)" class="cr-visually-hidden">
     <input type="file" id="wordartFileInput" accept="image/png" onchange="onPlacedFileChosen('wordart', event)" class="cr-visually-hidden">
     <input type="file" id="letterFileInput" accept="image/png" onchange="onPlacedFileChosen('letter', event)" class="cr-visually-hidden">
@@ -420,6 +420,6 @@
 <!-- EmailJS (sends the confirmation email client-side, no backend needed) -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="email-config.js"></script>
-<script src="create.js?v=50"></script>
+<script src="create.js?v=51"></script>
 </body>
 </html>
