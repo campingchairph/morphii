@@ -250,6 +250,44 @@ async function deletePinTemplate(id) {
   return DB.collection('morphii_pin_templates').doc(id).delete();
 }
 
+/* ── SHOPEE: PRICING (morphii_shopee/pricing doc) ──
+   { sizes: [ { id, label, marketPrice, premiumPct, price, costPerPc,
+                perSheet, minSheets }, ... ],
+     discountTiers: [ { minSheets, discountPct }, ... ],
+     shopeeFeesPct, rushAddonPct }
+   `price` is the admin's final selling price — pre-filled from
+   marketPrice*(1+premiumPct/100) (Morphii's app-premium rationale, see
+   morphii-shopee-casestudy.html) but editable so it can be rounded to a
+   clean number. Admin-only — never read by the public-facing pin
+   designer, unlike morphii_config. */
+async function getShopeePricing() {
+  if (!DB) return null;
+  try {
+    const doc = await DB.collection('morphii_shopee').doc('pricing').get();
+    return (doc.exists && doc.data()) || null;
+  } catch (e) { return null; }
+}
+async function saveShopeePricing(cfg) {
+  if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
+  return DB.collection('morphii_shopee').doc('pricing').set(cfg);
+}
+
+/* ── SHOPEE: INQUIRY SCRIPTS (morphii_shopee/scripts doc) ──
+   { list: [ { id, title, body, tags:[...] }, ... ] }
+   Copy-paste Shopee chat reply templates; `[BRACKET_CAPS]` in the body are
+   highlighted as placeholders in the admin UI. Admin-only. */
+async function getShopeeScripts() {
+  if (!DB) return null;
+  try {
+    const doc = await DB.collection('morphii_shopee').doc('scripts').get();
+    return (doc.exists && doc.data().list) || null;
+  } catch (e) { return null; }
+}
+async function saveShopeeScripts(list) {
+  if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
+  return DB.collection('morphii_shopee').doc('scripts').set({ list });
+}
+
 /* ── GITHUB TOKEN (morphii_secrets/github doc) ──
    { token: "github_pat_..." }
    Lets the admin's "Add Sticker" tool (orders-admin.html) push a pasted PNG
@@ -332,6 +370,10 @@ async function pushFileToGithub(repoPath, base64Content, commitMessage) {
            && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
        }
        match /morphii_secrets/{docId} {
+         allow read, write: if request.auth != null
+           && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+       }
+       match /morphii_shopee/{docId} {
          allow read, write: if request.auth != null
            && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
        }

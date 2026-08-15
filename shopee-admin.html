@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shopee Admin — Morphii</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --navy:#0B2E4E; --pink:#FF6FAE; --yellow:#FFFF00; --sky:#4DC8F0; --green:#55EFC4;
+  --panel:#0d3557; --border:rgba(255,255,255,0.14); --ink-dim:rgba(255,255,255,0.55);
+}
+body{font-family:'Nunito',sans-serif;background:var(--navy);color:white;min-height:100vh;}
+button,input,textarea,select{font-family:inherit;}
+h1,.logo{font-family:'Fredoka One',cursive;}
+
+/* ── LOGIN (same pattern as orders-admin.html) ── */
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-card{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:36px 32px;max-width:360px;width:100%;text-align:center;}
+.login-card .logo{font-size:26px;margin-bottom:4px;}
+.login-card .logo span{color:var(--pink);}
+.login-sub{font-size:12.5px;color:var(--ink-dim);font-weight:700;margin-bottom:22px;}
+.login-input{width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);background:rgba(255,255,255,0.06);color:white;font-size:16px;font-weight:700;margin-bottom:10px;outline:none;}
+.login-input:focus{border-color:var(--pink);}
+.login-btn{width:100%;padding:12px;border-radius:50px;border:none;background:var(--pink);color:white;font-family:'Fredoka One',cursive;font-size:15px;cursor:pointer;margin-top:6px;box-shadow:0 4px 0 #c0437e;}
+.login-err{margin-top:10px;font-size:12px;font-weight:700;color:#ff9b98;min-height:16px;}
+
+/* ── SHELL ── */
+#adminScreen{display:none;}
+.shp-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:16px 24px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20;}
+.shp-header .logo{font-size:20px;}
+.shp-header .logo span{color:var(--pink);}
+.shp-user{font-size:12px;color:var(--ink-dim);font-weight:700;}
+.shp-signout,.shp-back{background:rgba(255,255,255,0.08);border:1px solid var(--border);color:white;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-block;}
+
+.shp-main{max-width:1000px;margin:0 auto;padding:24px;}
+
+.shp-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+.shp-tab{padding:9px 18px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:white;font-size:13px;font-weight:800;cursor:pointer;}
+.shp-tab.active{background:var(--sky);border-color:var(--sky);}
+.shp-panel{display:none;}
+.shp-panel.active{display:block;}
+
+.shp-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:16px;}
+.shp-card-title{font-family:'Fredoka One',cursive;font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.shp-hint{font-size:11.5px;color:var(--ink-dim);font-weight:700;line-height:1.6;margin-bottom:14px;}
+
+.shp-field-label{font-size:9px;font-weight:800;color:var(--ink-dim);margin-bottom:3px;display:block;text-transform:uppercase;letter-spacing:0.3px;}
+.shp-input,.shp-select,.shp-textarea{
+  width:100%;background:rgba(255,255,255,0.06);border:1.5px solid var(--border);border-radius:8px;
+  color:white;padding:8px 10px;font-size:13.5px;font-weight:700;outline:none;
+}
+.shp-input:focus,.shp-select:focus,.shp-textarea:focus{border-color:var(--sky);}
+.shp-select option{color:#000;}
+.shp-textarea{font-weight:600;line-height:1.6;resize:vertical;font-family:inherit;}
+
+/* ── PRICING SIZE ROWS ── */
+.shp-size-row{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px;}
+.shp-size-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:10px;}
+.shp-size-stats{display:flex;gap:14px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--border);font-size:11.5px;}
+.shp-size-stat{display:flex;flex-direction:column;gap:1px;}
+.shp-size-stat b{font-family:'Fredoka One',cursive;font-size:14px;}
+.shp-size-stat span{color:var(--ink-dim);font-weight:800;text-transform:uppercase;font-size:8.5px;letter-spacing:0.3px;}
+.shp-size-stat.good b{color:var(--green);}
+.shp-size-stat.warn b{color:var(--yellow);}
+.shp-suggest-row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink-dim);font-weight:700;margin-top:-2px;margin-bottom:10px;}
+.shp-suggest-row button{background:none;border:1px solid var(--sky);color:var(--sky);border-radius:20px;padding:2px 10px;font-size:10.5px;font-weight:800;cursor:pointer;}
+.shp-size-row-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.shp-size-remove{background:none;border:none;color:#ff9b98;font-size:18px;font-weight:900;cursor:pointer;padding:0 4px;}
+.shp-add-size-btn{background:rgba(255,255,255,0.06);border:1.5px dashed var(--border);color:var(--ink-dim);border-radius:12px;padding:10px;width:100%;font-weight:800;font-size:12.5px;cursor:pointer;}
+.shp-add-size-btn:hover{border-color:var(--sky);color:var(--sky);}
+
+.shp-tier-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.shp-tier-row .shp-input{max-width:90px;}
+.shp-tier-row span{font-size:12px;font-weight:700;color:var(--ink-dim);white-space:nowrap;}
+
+.shp-save-btn{padding:11px 26px;border-radius:50px;border:none;background:var(--pink);color:white;font-family:'Fredoka One',cursive;font-size:14px;cursor:pointer;box-shadow:0 4px 0 #c0437e;margin-top:6px;}
+
+/* ── QUOTE GENERATOR ── */
+.shp-calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media (max-width:760px){.shp-calc-grid{grid-template-columns:1fr;}}
+.shp-form-group{margin-bottom:12px;}
+.shp-checkbox-row{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--ink-dim);margin-bottom:12px;}
+.shp-checkbox-row input{width:16px;height:16px;accent-color:var(--sky);}
+.shp-warn-inline{background:rgba(255,94,91,0.15);border:1px solid rgba(255,94,91,0.4);color:#ff9b98;border-radius:8px;padding:8px 12px;font-size:11.5px;font-weight:700;margin-bottom:10px;}
+.shp-result-box{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-top:14px;}
+.shp-result-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px;border-bottom:1px solid var(--border);}
+.shp-result-row:last-child{border-bottom:none;}
+.shp-result-row.total{padding-top:10px;margin-top:2px;}
+.shp-result-row.total .shp-rlabel{font-weight:800;font-size:14px;color:white;}
+.shp-result-row.total .shp-rval{font-family:'Fredoka One',cursive;font-size:19px;color:var(--green);}
+.shp-rlabel{color:var(--ink-dim);font-weight:700;}
+.shp-rval{font-weight:800;}
+.shp-quote-text{width:100%;min-height:120px;margin-top:10px;background:rgba(0,0,0,0.2);border:1px solid var(--border);border-radius:8px;padding:10px;color:white;font-size:12.5px;font-weight:600;line-height:1.6;resize:vertical;font-family:inherit;}
+.shp-copy-btn{margin-top:8px;padding:8px 16px;border-radius:20px;border:1.5px solid var(--sky);background:transparent;color:var(--sky);font-size:12px;font-weight:800;cursor:pointer;}
+.shp-copy-btn:hover{background:var(--sky);color:var(--navy);}
+.shp-mixed-line-input{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.shp-mixed-line-input label{flex:1;font-size:12.5px;font-weight:700;color:var(--ink-dim);}
+.shp-mixed-line-input input{max-width:100px;}
+
+/* ── SCRIPTS ── */
+.shp-script-card{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:14px;}
+.shp-script-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap;}
+.shp-script-title{font-family:'Fredoka One',cursive;font-size:14.5px;}
+.shp-script-tags{display:flex;gap:5px;flex-wrap:wrap;}
+.shp-tag{font-size:8.5px;font-weight:900;padding:2px 8px;border-radius:20px;background:rgba(77,200,240,0.18);color:var(--sky);text-transform:uppercase;letter-spacing:0.3px;}
+.shp-script-body{background:rgba(0,0,0,0.2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.7;white-space:pre-wrap;font-weight:600;margin-bottom:10px;}
+.shp-placeholder{background:rgba(255,255,0,0.28);color:var(--yellow);border-radius:3px;padding:0 3px;font-weight:800;}
+.shp-script-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.shp-mini-btn{padding:6px 14px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:white;font-size:11px;font-weight:800;cursor:pointer;}
+.shp-mini-btn.copy{border-color:var(--sky);color:var(--sky);}
+.shp-mini-btn.copy:hover{background:var(--sky);color:var(--navy);}
+.shp-mini-btn.edit{border-color:var(--yellow);color:var(--yellow);}
+.shp-mini-btn.edit:hover{background:var(--yellow);color:var(--navy);}
+.shp-mini-btn.del{border-color:#ff9b98;color:#ff9b98;}
+.shp-mini-btn.del:hover{background:#ff9b98;color:var(--navy);}
+.shp-mini-btn.dup{border-color:var(--green);color:var(--green);}
+.shp-mini-btn.dup:hover{background:var(--green);color:var(--navy);}
+.shp-mini-btn.save{border-color:var(--pink);color:var(--pink);}
+.shp-mini-btn.save:hover{background:var(--pink);color:white;}
+.shp-add-script-btn{background:rgba(255,255,255,0.06);border:1.5px dashed var(--border);color:var(--ink-dim);border-radius:12px;padding:14px;width:100%;font-weight:800;font-size:13px;cursor:pointer;}
+.shp-add-script-btn:hover{border-color:var(--sky);color:var(--sky);}
+
+/* ── TOAST ── */
+.shp-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--panel);border:1.5px solid var(--sky);color:white;padding:11px 22px;border-radius:50px;font-weight:800;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,0.4);opacity:0;pointer-events:none;transition:all 0.25s ease;z-index:200;}
+.shp-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="logo">morphii<span>.</span> Shopee</div>
+    <div class="login-sub">Pricing calculator &amp; scripts — sign in to continue</div>
+    <input type="email" id="loginEmail" class="login-input" placeholder="Admin email">
+    <input type="password" id="loginPass" class="login-input" placeholder="Password">
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="adminScreen">
+  <div class="shp-header">
+    <div class="logo">morphii<span>.</span> Shopee</div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <a class="shp-back" href="orders-admin.html">← Order Admin</a>
+      <div class="shp-user" id="admUserEmail"></div>
+      <button class="shp-signout" onclick="doSignOut()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="shp-main">
+    <div class="shp-tabs" id="shpTabs">
+      <button class="shp-tab active" onclick="setShpTab('pricing')" data-tab="pricing">💰 Pricing</button>
+      <button class="shp-tab" onclick="setShpTab('quote')" data-tab="quote">🧮 Quote Generator</button>
+      <button class="shp-tab" onclick="setShpTab('scripts')" data-tab="scripts">💬 Scripts</button>
+    </div>
+
+    <!-- ══ PRICING PANEL ══ -->
+    <div class="shp-panel active" id="shpPanel-pricing">
+      <div class="shp-card">
+        <div class="shp-card-title">💰 Pin Sizes &amp; Pricing</div>
+        <div class="shp-hint">
+          Enter what <b>regular sellers charge</b> (market price) for each size — Morphii's app premium is added on top, since buyers are paying for the design-it-yourself tool, not just the pin. The suggested price updates live; the final price is yours to round however you like.
+        </div>
+        <div id="shpSizesList"></div>
+        <button class="shp-add-size-btn" onclick="addSize()">+ Add Pin Size</button>
+      </div>
+
+      <div class="shp-card">
+        <div class="shp-card-title">📉 Bulk Discount Tiers</div>
+        <div id="shpTiersList"></div>
+        <button class="shp-add-size-btn" onclick="addTier()">+ Add Tier</button>
+      </div>
+
+      <div class="shp-card">
+        <div class="shp-card-title">⚙️ Global Settings</div>
+        <div class="shp-size-grid">
+          <div>
+            <label class="shp-field-label">Shopee fees (%)</label>
+            <input type="number" class="shp-input" id="shpFeesPct" step="0.1" min="0">
+          </div>
+          <div>
+            <label class="shp-field-label">Rush order add-on (%)</label>
+            <input type="number" class="shp-input" id="shpRushPct" step="1" min="0">
+          </div>
+        </div>
+      </div>
+
+      <button class="shp-save-btn" onclick="savePricing()">💾 Save Pricing</button>
+    </div>
+
+    <!-- ══ QUOTE GENERATOR PANEL ══ -->
+    <div class="shp-panel" id="shpPanel-quote">
+      <div class="shp-calc-grid">
+        <div class="shp-card">
+          <div class="shp-card-title">🧮 Single-Size Order</div>
+          <div class="shp-form-group">
+            <label class="shp-field-label">Pin Size</label>
+            <select class="shp-select" id="qSize" onchange="onQSizeChange()"></select>
+          </div>
+          <div class="shp-form-group">
+            <label class="shp-field-label">Quantity (pieces)</label>
+            <input type="number" class="shp-input" id="qQty" min="1" oninput="calcQuote()">
+          </div>
+          <label class="shp-checkbox-row"><input type="checkbox" id="qRush" onchange="calcQuote()"> Rush order</label>
+          <label class="shp-checkbox-row"><input type="checkbox" id="qPackaging" checked onchange="calcQuote()"> Include packaging in quote message</label>
+          <div id="qWarn"></div>
+          <div class="shp-result-box" id="qResult" style="display:none">
+            <div class="shp-result-row"><span class="shp-rlabel">A4 sheets needed</span><span class="shp-rval" id="q-sheets">—</span></div>
+            <div class="shp-result-row"><span class="shp-rlabel">Gross price</span><span class="shp-rval" id="q-gross">—</span></div>
+            <div class="shp-result-row"><span class="shp-rlabel">Bulk discount</span><span class="shp-rval" id="q-disc">—</span></div>
+            <div class="shp-result-row"><span class="shp-rlabel">Rush add-on</span><span class="shp-rval" id="q-rush">—</span></div>
+            <div class="shp-result-row"><span class="shp-rlabel">Price to buyer</span><span class="shp-rval" id="q-buyer">—</span></div>
+            <div class="shp-result-row"><span class="shp-rlabel">Shopee fees</span><span class="shp-rval" id="q-fee">—</span></div>
+            <div class="shp-result-row"><span class="shp-rlabel">Production cost</span><span class="shp-rval" id="q-cost">—</span></div>
+            <div class="shp-result-row total"><span class="shp-rlabel">💰 Net Profit</span><span class="shp-rval" id="q-profit">—</span></div>
+            <div class="shp-result-row"><span class="shp-rlabel">Profit margin</span><span class="shp-rval" id="q-margin">—</span></div>
+            <textarea class="shp-quote-text" id="q-quote-text" readonly></textarea>
+            <button class="shp-copy-btn" onclick="copyText('q-quote-text', this)">📋 Copy Quote Message</button>
+          </div>
+        </div>
+
+        <div class="shp-card">
+          <div class="shp-card-title">📋 Mixed-Size Order</div>
+          <div class="shp-hint">Quick total for orders spanning multiple sizes — for chat replies.</div>
+          <div id="qMixedInputs"></div>
+          <div class="shp-result-box" id="qMixedResult" style="display:none">
+            <div id="qMixedLines"></div>
+            <div class="shp-result-row total"><span class="shp-rlabel">Grand Total</span><span class="shp-rval" id="qMixedTotal">—</span></div>
+            <textarea class="shp-quote-text" id="qMixedQuoteText" readonly></textarea>
+            <button class="shp-copy-btn" onclick="copyText('qMixedQuoteText', this)">📋 Copy Quote Message</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SCRIPTS PANEL ══ -->
+    <div class="shp-panel" id="shpPanel-scripts">
+      <div class="shp-hint" style="margin-bottom:16px">
+        Ready-to-send Shopee chat replies. <span class="shp-placeholder">[BRACKET_CAPS]</span> are placeholders — fill them in after copying, before you send.
+      </div>
+      <div id="shpScriptsList"></div>
+      <button class="shp-add-script-btn" onclick="addScript()">+ Add New Template</button>
+    </div>
+  </div>
+</div>
+
+<div class="shp-toast" id="shpToast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js?v=5"></script>
+<script>
+/* ── AUTH (same pattern as orders-admin.html) ── */
+function doLogin(){
+  const errEl = document.getElementById('loginErr');
+  errEl.textContent = '';
+  if (!AUTH){ errEl.textContent = 'Firebase not configured yet — see firebase-config.js'; return; }
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPass').value;
+  if (!email || !pass){ errEl.textContent = 'Enter email and password.'; return; }
+  AUTH.signInWithEmailAndPassword(email, pass).catch(err => { errEl.textContent = err.message; });
+}
+window.doLogin = doLogin;
+
+function doSignOut(){ if (AUTH) AUTH.signOut(); }
+window.doSignOut = doSignOut;
+
+if (AUTH){
+  AUTH.onAuthStateChanged(user => {
+    if (user && isAdmin(user)){
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('adminScreen').style.display = 'block';
+      document.getElementById('admUserEmail').textContent = user.email;
+      initShopeeAdmin();
+    } else {
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('adminScreen').style.display = 'none';
+      if (user && !isAdmin(user)){
+        document.getElementById('loginErr').textContent = 'This account is not authorized as an admin.';
+        AUTH.signOut();
+      }
+    }
+  });
+}
+
+/* ── TOAST ── */
+let toastTimer = null;
+function showToast(msg){
+  const el = document.getElementById('shpToast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+function escHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmt(n){
+  n = Number(n)||0;
+  return '₱' + n.toLocaleString('en-PH', { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+function copyText(elId, btn){
+  const el = document.getElementById(elId);
+  const text = el.value !== undefined ? el.value : el.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Copied!');
+    if (btn){
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copied!';
+      setTimeout(() => { btn.textContent = orig; }, 1500);
+    }
+  });
+}
+window.copyText = copyText;
+
+/* ── TABS ── */
+function setShpTab(id){
+  document.querySelectorAll('.shp-tab').forEach(t => t.classList.toggle('active', t.dataset.tab===id));
+  document.querySelectorAll('.shp-panel').forEach(p => p.classList.toggle('active', p.id==='shpPanel-'+id));
+}
+window.setShpTab = setShpTab;
+
+/* ═══════════════════════════════════════════════
+   PRICING
+   ═══════════════════════════════════════════════ */
+let pricing = null;
+let sizeIdCounter = 1;
+let tierIdCounter = 1;
+
+function defaultPricing(){
+  sizeIdCounter = 4; tierIdCounter = 4;
+  return {
+    sizes: [
+      { id:'sz1', label:'25mm', marketPrice:18, premiumPct:30, price:25, costPerPc:6.26, perSheet:35, minSheets:1 },
+      { id:'sz2', label:'32mm', marketPrice:26, premiumPct:30, price:35, costPerPc:7.87, perSheet:24, minSheets:1 },
+      { id:'sz3', label:'58mm', marketPrice:51, premiumPct:30, price:65, costPerPc:13.50, perSheet:6, minSheets:1 },
+    ],
+    discountTiers: [
+      { id:'t1', minSheets:2, discountPct:5 },
+      { id:'t2', minSheets:5, discountPct:10 },
+      { id:'t3', minSheets:10, discountPct:15 },
+    ],
+    shopeeFeesPct: 4,
+    rushAddonPct: 30,
+  };
+}
+
+async function loadPricing(){
+  const saved = await getShopeePricing();
+  pricing = saved || defaultPricing();
+  // Backfill ids for tiers/sizes loaded from older/hand-edited data.
+  pricing.sizes.forEach((s,i) => { if (!s.id) s.id = 'sz'+(i+1); });
+  pricing.discountTiers.forEach((t,i) => { if (!t.id) t.id = 't'+(i+1); });
+  renderPricingPanel();
+}
+
+function suggestedPrice(size){
+  return (Number(size.marketPrice)||0) * (1 + (Number(size.premiumPct)||0)/100);
+}
+
+function renderPricingPanel(){
+  const list = document.getElementById('shpSizesList');
+  list.innerHTML = pricing.sizes.map(s => {
+    const suggested = suggestedPrice(s);
+    const profit = (Number(s.price)||0) - (Number(s.costPerPc)||0);
+    const margin = s.price>0 ? (profit/s.price*100) : 0;
+    const vsMarket = s.marketPrice>0 ? ((s.price-s.marketPrice)/s.marketPrice*100) : 0;
+    return `
+    <div class="shp-size-row" data-id="${s.id}">
+      <div class="shp-size-row-top">
+        <input type="text" class="shp-input" style="max-width:160px;font-family:'Fredoka One',cursive;font-size:14px" value="${escHtml(s.label)}" oninput="updateSizeField('${s.id}','label',this.value)" placeholder="Size label">
+        <button class="shp-size-remove" onclick="removeSize('${s.id}')" title="Remove size">✕</button>
+      </div>
+      <div class="shp-size-grid">
+        <div>
+          <label class="shp-field-label">Market price (₱)</label>
+          <input type="number" class="shp-input" step="0.01" min="0" value="${s.marketPrice}" oninput="updateSizeField('${s.id}','marketPrice',this.value)">
+        </div>
+        <div>
+          <label class="shp-field-label">App premium (%)</label>
+          <input type="number" class="shp-input" step="1" min="0" value="${s.premiumPct}" oninput="updateSizeField('${s.id}','premiumPct',this.value)">
+        </div>
+        <div>
+          <label class="shp-field-label">Cost per piece (₱)</label>
+          <input type="number" class="shp-input" step="0.01" min="0" value="${s.costPerPc}" oninput="updateSizeField('${s.id}','costPerPc',this.value)">
+        </div>
+        <div>
+          <label class="shp-field-label">Pins per A4 sheet</label>
+          <input type="number" class="shp-input" step="1" min="1" value="${s.perSheet}" oninput="updateSizeField('${s.id}','perSheet',this.value)">
+        </div>
+        <div>
+          <label class="shp-field-label">Min. order (sheets)</label>
+          <input type="number" class="shp-input" step="1" min="1" value="${s.minSheets}" oninput="updateSizeField('${s.id}','minSheets',this.value)">
+        </div>
+      </div>
+      <div class="shp-suggest-row">
+        Suggested price: <b style="color:var(--sky)">${fmt(suggested)}</b>
+        <button onclick="applySuggested('${s.id}')">Use this</button>
+      </div>
+      <div class="shp-form-group" style="max-width:200px">
+        <label class="shp-field-label">Final selling price (₱)</label>
+        <input type="number" class="shp-input" step="0.01" min="0" value="${s.price}" oninput="updateSizeField('${s.id}','price',this.value)">
+      </div>
+      <div class="shp-size-stats">
+        <div class="shp-size-stat ${margin>=30?'good':'warn'}"><b>${fmt(profit)}</b><span>Profit / pc</span></div>
+        <div class="shp-size-stat ${margin>=30?'good':'warn'}"><b>${margin.toFixed(1)}%</b><span>Margin</span></div>
+        <div class="shp-size-stat ${vsMarket>=20?'good':'warn'}"><b>${vsMarket>=0?'+':''}${vsMarket.toFixed(0)}%</b><span>vs Market</span></div>
+        <div class="shp-size-stat"><b>${fmt((Number(s.price)||0)*s.perSheet*s.minSheets)}</b><span>Min order revenue</span></div>
+      </div>
+    </div>`;
+  }).join('') || '<div class="shp-hint">No sizes yet — add one below.</div>';
+
+  const tiers = document.getElementById('shpTiersList');
+  tiers.innerHTML = pricing.discountTiers.map(t => `
+    <div class="shp-tier-row" data-id="${t.id}">
+      <input type="number" class="shp-input" min="2" value="${t.minSheets}" oninput="updateTierField('${t.id}','minSheets',this.value)"> <span>+ sheets =</span>
+      <input type="number" class="shp-input" min="0" max="100" value="${t.discountPct}" oninput="updateTierField('${t.id}','discountPct',this.value)"> <span>% off</span>
+      <button class="shp-size-remove" onclick="removeTier('${t.id}')" title="Remove tier">✕</button>
+    </div>`).join('') || '<div class="shp-hint">No tiers — buyers always pay full price.</div>';
+
+  document.getElementById('shpFeesPct').value = pricing.shopeeFeesPct;
+  document.getElementById('shpRushPct').value = pricing.rushAddonPct;
+
+  renderQSizeOptions();
+  renderMixedInputs();
+}
+
+function updateSizeField(id, field, val){
+  const s = pricing.sizes.find(x => x.id===id);
+  if (!s) return;
+  s[field] = (field==='label') ? val : (parseFloat(val)||0);
+  renderPricingPanel();
+}
+window.updateSizeField = updateSizeField;
+
+function applySuggested(id){
+  const s = pricing.sizes.find(x => x.id===id);
+  if (!s) return;
+  s.price = Math.round(suggestedPrice(s)*100)/100;
+  renderPricingPanel();
+}
+window.applySuggested = applySuggested;
+
+function addSize(){
+  pricing.sizes.push({ id:'sz'+(sizeIdCounter++)+'_'+Date.now(), label:'New Size', marketPrice:0, premiumPct:30, price:0, costPerPc:0, perSheet:1, minSheets:1 });
+  renderPricingPanel();
+}
+window.addSize = addSize;
+
+function removeSize(id){
+  if (!confirm('Remove this size? Existing pricing for it will be lost once you save.')) return;
+  pricing.sizes = pricing.sizes.filter(s => s.id!==id);
+  renderPricingPanel();
+}
+window.removeSize = removeSize;
+
+function updateTierField(id, field, val){
+  const t = pricing.discountTiers.find(x => x.id===id);
+  if (!t) return;
+  t[field] = parseFloat(val)||0;
+  renderPricingPanel();
+}
+window.updateTierField = updateTierField;
+
+function addTier(){
+  pricing.discountTiers.push({ id:'t'+(tierIdCounter++)+'_'+Date.now(), minSheets:2, discountPct:5 });
+  renderPricingPanel();
+}
+window.addTier = addTier;
+
+function removeTier(id){
+  pricing.discountTiers = pricing.discountTiers.filter(t => t.id!==id);
+  renderPricingPanel();
+}
+window.removeTier = removeTier;
+
+async function savePricing(){
+  pricing.shopeeFeesPct = parseFloat(document.getElementById('shpFeesPct').value)||0;
+  pricing.rushAddonPct  = parseFloat(document.getElementById('shpRushPct').value)||0;
+  try {
+    await saveShopeePricing(pricing);
+    showToast('Pricing saved!');
+  } catch(e){
+    showToast('Save failed: ' + e.message);
+  }
+}
+window.savePricing = savePricing;
+
+/* ═══════════════════════════════════════════════
+   QUOTE GENERATOR
+   ═══════════════════════════════════════════════ */
+function getDiscountPct(sheets){
+  let pct = 0;
+  pricing.discountTiers.slice().sort((a,b)=>a.minSheets-b.minSheets).forEach(t => {
+    if (sheets >= t.minSheets) pct = Number(t.discountPct)||0;
+  });
+  return pct;
+}
+
+function renderQSizeOptions(){
+  const sel = document.getElementById('qSize');
+  const prevVal = sel.value;
+  sel.innerHTML = pricing.sizes.map(s => `<option value="${s.id}">${escHtml(s.label)} — ${fmt(s.price)}/pc · min ${s.perSheet*s.minSheets} pcs</option>`).join('');
+  if (pricing.sizes.some(s => s.id===prevVal)) sel.value = prevVal;
+  onQSizeChange();
+}
+
+function onQSizeChange(){
+  const s = pricing.sizes.find(x => x.id===document.getElementById('qSize').value);
+  if (s) document.getElementById('qQty').value = s.perSheet * s.minSheets;
+  calcQuote();
+}
+window.onQSizeChange = onQSizeChange;
+
+function calcQuote(){
+  const s = pricing.sizes.find(x => x.id===document.getElementById('qSize').value);
+  const resultBox = document.getElementById('qResult');
+  const warnBox = document.getElementById('qWarn');
+  if (!s){ resultBox.style.display='none'; return; }
+
+  const qty = parseInt(document.getElementById('qQty').value) || 0;
+  const rush = document.getElementById('qRush').checked;
+  const withPackaging = document.getElementById('qPackaging').checked;
+  const minQty = s.perSheet * s.minSheets;
+
+  if (qty < minQty){
+    warnBox.innerHTML = `<div class="shp-warn-inline">Below minimum order for ${escHtml(s.label)}. Min is ${minQty} pcs.</div>`;
+  } else {
+    warnBox.innerHTML = '';
+  }
+  if (qty <= 0){ resultBox.style.display='none'; return; }
+
+  const sheets    = Math.ceil(qty / s.perSheet);
+  const gross     = qty * s.price;
+  const discPct   = getDiscountPct(sheets);
+  const discAmt   = gross * discPct/100;
+  const afterDisc = gross - discAmt;
+  const rushAmt   = rush ? afterDisc * (pricing.rushAddonPct/100) : 0;
+  const buyerTotal = afterDisc + rushAmt;
+  const shopeeFee = buyerTotal * (pricing.shopeeFeesPct/100);
+  const totalCost = qty * s.costPerPc;
+  const profit    = buyerTotal - shopeeFee - totalCost;
+  const margin    = buyerTotal>0 ? (profit/buyerTotal*100) : 0;
+
+  document.getElementById('q-sheets').textContent = sheets + (sheets===1?' sheet':' sheets');
+  document.getElementById('q-gross').textContent = fmt(gross);
+  document.getElementById('q-disc').textContent = discPct>0 ? `-${discPct}% (${fmt(discAmt)})` : 'None';
+  document.getElementById('q-rush').textContent = rush ? `+${pricing.rushAddonPct}% (${fmt(rushAmt)})` : '—';
+  document.getElementById('q-buyer').textContent = fmt(buyerTotal);
+  document.getElementById('q-fee').textContent = fmt(shopeeFee);
+  document.getElementById('q-cost').textContent = fmt(totalCost);
+  document.getElementById('q-profit').textContent = fmt(profit);
+  document.getElementById('q-margin').textContent = margin.toFixed(1) + '%';
+
+  const lines = [
+    `Hello po! Narito na po ang inyong quotation:`,
+    ``,
+    `📌 Size: ${s.label}`,
+    `📦 Quantity: ${qty} pcs (${sheets} A4 sheet${sheets>1?'s':''})`,
+    `💰 Price per piece: ${fmt(s.price)}`,
+  ];
+  if (discPct>0) lines.push(`🎉 Bulk discount: ${discPct}% off`);
+  if (rush) lines.push(`⚡ Rush order add-on: +${pricing.rushAddonPct}%`);
+  lines.push(`✅ TOTAL: ${fmt(buyerTotal)}`);
+  lines.push(``);
+  if (withPackaging) lines.push(`Kasama na po ang packaging (header card, OPP bag, bubble wrap, at box).`);
+  lines.push(`Hindi pa kasama ang shipping fee — makikita ninyo ito sa Shopee checkout based sa inyong location.`);
+  lines.push(``);
+  lines.push(`Gusto na po ba ninyong mag-proceed? 😊`);
+  document.getElementById('q-quote-text').value = lines.join('\n');
+
+  resultBox.style.display = 'block';
+}
+window.calcQuote = calcQuote;
+
+function renderMixedInputs(){
+  const wrap = document.getElementById('qMixedInputs');
+  wrap.innerHTML = pricing.sizes.map(s => `
+    <div class="shp-mixed-line-input">
+      <label>${escHtml(s.label)} qty</label>
+      <input type="number" class="shp-input" min="0" value="0" id="mix_${s.id}" oninput="calcMixed()">
+    </div>`).join('');
+  calcMixed();
+}
+
+function calcMixed(){
+  const resultBox = document.getElementById('qMixedResult');
+  const entries = pricing.sizes
+    .map(s => ({ s, qty: parseInt((document.getElementById('mix_'+s.id)||{}).value)||0 }))
+    .filter(e => e.qty > 0);
+
+  if (entries.length === 0){ resultBox.style.display='none'; return; }
+
+  let grandTotal = 0;
+  let linesHtml = '';
+  let quoteParts = [];
+
+  entries.forEach(({s,qty}) => {
+    const sheets = Math.ceil(qty / s.perSheet);
+    const gross  = qty * s.price;
+    const disc   = getDiscountPct(sheets);
+    const after  = gross * (1 - disc/100);
+    grandTotal  += after;
+    linesHtml   += `<div class="shp-result-row"><span class="shp-rlabel">${escHtml(s.label)} × ${qty} pcs (${sheets} sheet${sheets>1?'s':''}${disc>0?' · '+disc+'% off':''})</span><span class="shp-rval">${fmt(after)}</span></div>`;
+    quoteParts.push(`${qty}pcs ${s.label} = ${fmt(after)}${disc>0?` (${disc}% off)`:''}`);
+  });
+
+  document.getElementById('qMixedLines').innerHTML = linesHtml;
+  document.getElementById('qMixedTotal').textContent = fmt(grandTotal);
+  document.getElementById('qMixedQuoteText').value =
+    `Hello po! Narito po ang quotation para sa mixed order:\n\n${quoteParts.join('\n')}\n\n✅ TOTAL: ${fmt(grandTotal)}\n\nHindi pa kasama ang shipping fee. Gusto na po ba ninyong mag-proceed? 😊`;
+
+  resultBox.style.display = 'block';
+}
+window.calcMixed = calcMixed;
+
+/* ═══════════════════════════════════════════════
+   SCRIPTS
+   ═══════════════════════════════════════════════ */
+let scripts = [];
+let editingScriptId = null;
+
+function defaultScripts(){
+  return [
+    { id:'sc1', title:'Pricing inquiry response', tags:['Pricing'], body:
+`Hello po! 😊 Salamat sa inyong interes sa Morphii custom pins!
+
+Eto po ang aming presyo:
+📌 [SIZE1] — [PRICE1]/pc (min. [MIN1] pcs)
+📌 [SIZE2] — [PRICE2]/pc (min. [MIN2] pcs)
+📌 [SIZE3] — [PRICE3]/pc (min. [MIN3] pcs)
+
+Ang aming pins ay may kasamang sariling design app (Morphii) kung saan kayo mismo ang mag-didisenyo ng inyong pins! Ito ang dahilan kung bakit mas premium ang aming presyo kumpara sa ibang sellers. 🎨
+
+May bulk discounts din po kami:
+✅ 2–4 sheets: 5% off
+✅ 5–9 sheets: 10% off
+✅ 10+ sheets: 15% off
+
+Ano pong size at quantity ang gusto ninyo? Makaka-send ako ng exact quotation! 🙌` },
+    { id:'sc2', title:'Bulk order quotation', tags:['Pricing','Logistics'], body:
+`Hello po! Narito na po ang inyong quotation:
+
+📌 Size: [SIZE]
+📦 Quantity: [QTY] pcs ([SHEETS] A4 sheets)
+💰 Price per piece: [PRICE]
+🎉 Bulk discount: [DISC]% off
+✅ TOTAL: [TOTAL]
+
+Kasama na po ang packaging (header card, OPP bag, bubble wrap, at box).
+
+Hindi pa kasama ang shipping fee — makikita ninyo ito sa Shopee checkout based sa inyong location.
+
+Design process:
+1. I-download ang Morphii app
+2. Gumawa ng design (or send niyo ang inyong artwork sa amin)
+3. I-confirm ang order at bayad
+4. Production: 3–5 business days
+5. Shipping!
+
+Gusto na po ba ninyong mag-proceed? 😊` },
+    { id:'sc3', title:'Haggling / discount limit response', tags:['Pricing'], body:
+`Salamat po sa inyong interes! 🙏
+
+Ang aming presyo po ay already includes ang Morphii app access, premium photo paper, labor, at packaging. Hindi po kami ordinary pin sellers — kayo mismo ang mag-didisenyo ng inyong pins using our app, which we built specifically para sa inyo!
+
+Ang best value po namin ay sa bulk orders:
+✅ Mag-order ng 5+ sheets para makakuha ng 10% discount
+✅ 10+ sheets para sa 15% off!
+
+Kung may specific budget po kayo, sabihin ninyo at titingnan namin kung paano namin matutugunan ang inyong pangangailangan. 😊` },
+    { id:'sc4', title:'Design process explanation', tags:['Process'], body:
+`Hello po! 😊 Ganito po ang aming process:
+
+OPTION A — Morphii App (mas fun! 🎨)
+1. I-download ang Morphii app (libre!)
+2. Pumili ng template o gumawa ng sariling design
+3. I-export ang inyong design at i-send sa amin
+4. Confirm order + bayad
+5. 3–5 business days production
+6. Shipping! 📦
+
+OPTION B — Send your own design
+1. I-send ang inyong artwork (PNG, minimum 300dpi, exact circle format)
+2. I-check namin para sa print quality
+3. Confirm order + bayad
+4. Production + shipping
+
+Para sa best results, recommend namin ang Morphii app — designed specifically para sa pin layouts at may auto-bleed adjustment! 🙌
+
+Ano pong option ang mas convenient sa inyo?` },
+    { id:'sc5', title:'Turnaround time / ETA response', tags:['Logistics'], body:
+`Hello po! 😊 Eto po ang aming timeline:
+
+📅 After confirmation ng design + payment:
+• Production: 3–5 business days
+• Packing: 1 day
+• Shopee shipping (J&T/LBC): 2–5 days depending on location
+
+Total estimated: 6–11 business days from payment.
+
+⚠️ Peak seasons (school year start, fairs, events) — production may take up to 7 business days. Suggest mag-order in advance po!
+
+May rush option din po kami (dagdag bayad) for orders needed within 2 business days. Message niyo kami kung may event kayo! 🙏` },
+  ];
+}
+
+async function loadScripts(){
+  const saved = await getShopeeScripts();
+  scripts = saved || defaultScripts();
+  renderScripts();
+}
+
+function highlightPlaceholders(text){
+  return escHtml(text).replace(/\[[A-Z0-9_]+\]/g, m => `<span class="shp-placeholder">${m}</span>`);
+}
+
+function renderScripts(){
+  const wrap = document.getElementById('shpScriptsList');
+  wrap.innerHTML = scripts.map(sc => {
+    if (sc.id === editingScriptId){
+      return `
+      <div class="shp-script-card" data-id="${sc.id}">
+        <input type="text" class="shp-input" style="margin-bottom:8px;font-family:'Fredoka One',cursive" id="editTitle_${sc.id}" value="${escHtml(sc.title)}" placeholder="Title">
+        <input type="text" class="shp-input" style="margin-bottom:8px" id="editTags_${sc.id}" value="${escHtml((sc.tags||[]).join(', '))}" placeholder="Tags, comma separated">
+        <textarea class="shp-textarea" style="min-height:180px" id="editBody_${sc.id}">${escHtml(sc.body)}</textarea>
+        <div class="shp-script-actions" style="margin-top:10px">
+          <button class="shp-mini-btn save" onclick="saveScriptEdit('${sc.id}')">💾 Save</button>
+          <button class="shp-mini-btn" onclick="cancelScriptEdit()">Cancel</button>
+        </div>
+      </div>`;
+    }
+    return `
+    <div class="shp-script-card" data-id="${sc.id}">
+      <div class="shp-script-top">
+        <div class="shp-script-title">${escHtml(sc.title)}</div>
+        <div class="shp-script-tags">${(sc.tags||[]).map(t=>`<span class="shp-tag">${escHtml(t)}</span>`).join('')}</div>
+      </div>
+      <div class="shp-script-body">${highlightPlaceholders(sc.body)}</div>
+      <div class="shp-script-actions">
+        <button class="shp-mini-btn copy" onclick="copyScriptBody('${sc.id}', this)">📋 Copy</button>
+        <button class="shp-mini-btn edit" onclick="startScriptEdit('${sc.id}')">✎ Edit</button>
+        <button class="shp-mini-btn dup" onclick="duplicateScript('${sc.id}')">⧉ Duplicate</button>
+        <button class="shp-mini-btn del" onclick="deleteScript('${sc.id}')">🗑 Delete</button>
+      </div>
+    </div>`;
+  }).join('') || '<div class="shp-hint">No templates yet — add one below.</div>';
+}
+
+function copyScriptBody(id, btn){
+  const sc = scripts.find(s => s.id===id);
+  if (!sc) return;
+  navigator.clipboard.writeText(sc.body).then(() => {
+    showToast('Copied!');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  });
+}
+window.copyScriptBody = copyScriptBody;
+
+function startScriptEdit(id){ editingScriptId = id; renderScripts(); }
+window.startScriptEdit = startScriptEdit;
+
+function cancelScriptEdit(){ editingScriptId = null; renderScripts(); }
+window.cancelScriptEdit = cancelScriptEdit;
+
+async function saveScriptEdit(id){
+  const sc = scripts.find(s => s.id===id);
+  if (!sc) return;
+  sc.title = document.getElementById('editTitle_'+id).value.trim() || 'Untitled';
+  sc.tags  = document.getElementById('editTags_'+id).value.split(',').map(t=>t.trim()).filter(Boolean);
+  sc.body  = document.getElementById('editBody_'+id).value;
+  editingScriptId = null;
+  renderScripts();
+  try { await saveShopeeScripts(scripts); showToast('Template saved!'); }
+  catch(e){ showToast('Save failed: ' + e.message); }
+}
+window.saveScriptEdit = saveScriptEdit;
+
+async function duplicateScript(id){
+  const sc = scripts.find(s => s.id===id);
+  if (!sc) return;
+  const copy = { ...sc, id: 'sc'+Date.now(), title: sc.title + ' (Copy)' };
+  scripts.push(copy);
+  renderScripts();
+  try { await saveShopeeScripts(scripts); showToast('Duplicated!'); }
+  catch(e){ showToast('Save failed: ' + e.message); }
+}
+window.duplicateScript = duplicateScript;
+
+async function deleteScript(id){
+  if (!confirm('Delete this template? This cannot be undone.')) return;
+  scripts = scripts.filter(s => s.id!==id);
+  renderScripts();
+  try { await saveShopeeScripts(scripts); showToast('Deleted.'); }
+  catch(e){ showToast('Save failed: ' + e.message); }
+}
+window.deleteScript = deleteScript;
+
+async function addScript(){
+  const sc = { id:'sc'+Date.now(), title:'New Template', tags:[], body:'' };
+  scripts.push(sc);
+  editingScriptId = sc.id;
+  renderScripts();
+}
+window.addScript = addScript;
+
+/* ═══════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════ */
+async function initShopeeAdmin(){
+  await Promise.all([loadPricing(), loadScripts()]);
+}
+</script>
+</body>
+</html>
