@@ -1022,8 +1022,39 @@ function goStep(name){
     const wrap = document.querySelector('.cr-canvas-wrap');
     if (wrap) wrap.classList.toggle('memorial-bg', isMemorialProduct());
     renderCanvasBgDecor(); updateCanvasBorderRing(); updateAdminUI(); showPasteHint();
+    const backBtn = document.getElementById('designBackBtn');
+    if (backBtn) backBtn.style.display = LOCKED_MODE ? 'none' : '';
   }
   if (name==='submit'){ renderSubmitSummary(); }
+}
+
+// ── SHOPEE LOCKED-ORDER LINKS ──────────────────────────────────
+// A link like create.html?product=lapel-pin&size=32 skips the Product and
+// Size pickers entirely and drops the customer straight into a blank
+// Design step for that exact product+size, with no way back to change
+// either — for buyers who already paid for a specific size on Shopee and
+// shouldn't be able to switch to a pricier one mid-design. Any premade-
+// template step (Election, or an admin-saved pin template) is skipped
+// too, since "straight to build" means an actual blank canvas, not
+// another picker screen. Generated from shopee-admin.html's Order Links
+// tab. Falls back to the normal Product step if the params are missing,
+// unrecognized, or point at a currently-disabled product/size.
+let LOCKED_MODE = false;
+function tryLockedEntry(){
+  const params = new URLSearchParams(location.search);
+  const productId = params.get('product');
+  const sizeMM = parseInt(params.get('size'), 10);
+  if (!productId || !sizeMM) return false;
+  const p = PRODUCTS.find(x => x.id===productId && x.catalogState==='enabled');
+  const s = SIZES.find(x => x.mm===sizeMM && x.catalogState==='enabled');
+  if (!p || !s) return false;
+  LOCKED_MODE = true;
+  state.product = p;
+  state.size = s.mm;
+  state.paperSize = s.paperMM;
+  applyAssetGroup(currentAssetGroup());
+  goStep('design');
+  return true;
 }
 window.goStep = goStep;
 
@@ -4228,7 +4259,7 @@ async function loadCustomFonts(){
 document.addEventListener('DOMContentLoaded', ()=>{
   applyCachedCatalogConfig(); // last-known admin settings, before the first paint — no flash
   updateThemeToggleIcon();
-  renderProductGrid();
+  if (!tryLockedEntry()) renderProductGrid();
   loadPinAssetManifest();
   loadCustomFonts();
   loadCatalogConfig();

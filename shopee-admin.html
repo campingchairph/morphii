@@ -157,6 +157,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
       <button class="shp-tab active" onclick="setShpTab('pricing')" data-tab="pricing">💰 Pricing</button>
       <button class="shp-tab" onclick="setShpTab('quote')" data-tab="quote">🧮 Quote Generator</button>
       <button class="shp-tab" onclick="setShpTab('scripts')" data-tab="scripts">💬 Scripts</button>
+      <button class="shp-tab" onclick="setShpTab('links')" data-tab="links">🔗 Order Links</button>
     </div>
 
     <!-- ══ PRICING PANEL ══ -->
@@ -245,6 +246,45 @@ h1,.logo{font-family:'Fredoka One',cursive;}
       </div>
       <div id="shpScriptsList"></div>
       <button class="shp-add-script-btn" onclick="addScript()">+ Add New Template</button>
+    </div>
+
+    <!-- ══ ORDER LINKS PANEL ══ -->
+    <div class="shp-panel" id="shpPanel-links">
+      <div class="shp-card">
+        <div class="shp-card-title">🔗 Locked Design Link</div>
+        <div class="shp-hint">
+          For a buyer who already paid on Shopee for a specific pin type and size. This link skips the Product and Size pickers entirely — it drops them straight into a blank design for that exact type/size, with no way to back out and pick a different (possibly pricier) one. Pick the type + size they paid for, then copy the link into your Shopee chat reply.
+        </div>
+        <div class="shp-size-grid" style="margin-bottom:14px">
+          <div>
+            <label class="shp-field-label">Pin Type</label>
+            <select class="shp-select" id="linkProduct" onchange="buildOrderLink()">
+              <option value="lapel-pin">Lapel Pins</option>
+              <option value="challenge-coin">Challenge Coins</option>
+              <option value="medal">Medals</option>
+              <option value="golf-marker">Golf Ball Markers</option>
+              <option value="election">Election Pins</option>
+              <option value="ph-souvenir">Philippine Souvenir Pins</option>
+              <option value="wedding">Wedding Pins</option>
+              <option value="in-loving-memory">In Loving Memory</option>
+            </select>
+          </div>
+          <div>
+            <label class="shp-field-label">Size</label>
+            <select class="shp-select" id="linkSize" onchange="buildOrderLink()">
+              <option value="25">25mm — Smallest</option>
+              <option value="32">32mm — Compact</option>
+              <option value="37">37mm — Popular</option>
+              <option value="44">44mm — Standard</option>
+              <option value="58">58mm — Large</option>
+              <option value="75">75mm — XL</option>
+            </select>
+          </div>
+        </div>
+        <label class="shp-field-label">Generated link</label>
+        <input type="text" class="shp-input" id="orderLinkOutput" readonly style="margin-bottom:8px;font-weight:700">
+        <button class="shp-copy-btn" onclick="copyText('orderLinkOutput', this)">📋 Copy Link</button>
+      </div>
     </div>
   </div>
 </div>
@@ -814,10 +854,30 @@ async function addScript(){
 window.addScript = addScript;
 
 /* ═══════════════════════════════════════════════
+   ORDER LINKS — locked product+size design links for
+   already-paid Shopee orders (create.js reads ?product=&size=
+   and skips straight to a blank Design step, no way back to
+   the pickers — see tryLockedEntry() in create.js).
+   ═══════════════════════════════════════════════ */
+function morphiiBaseUrl(){
+  // Derives from this page's own location so it works whether this is
+  // running on GitHub Pages, a staging copy, or a local test server —
+  // no hardcoded production domain to go stale if the repo ever moves.
+  return location.origin + location.pathname.replace(/shopee-admin\.html.*$/, '');
+}
+function buildOrderLink(){
+  const product = document.getElementById('linkProduct').value;
+  const size = document.getElementById('linkSize').value;
+  document.getElementById('orderLinkOutput').value = `${morphiiBaseUrl()}create.html?product=${product}&size=${size}`;
+}
+window.buildOrderLink = buildOrderLink;
+
+/* ═══════════════════════════════════════════════
    INIT
    ═══════════════════════════════════════════════ */
 async function initShopeeAdmin(){
   await Promise.all([loadPricing(), loadScripts()]);
+  buildOrderLink();
 }
 </script>
 </body>
