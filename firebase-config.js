@@ -249,6 +249,13 @@ async function deletePinTemplate(id) {
   if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
   return DB.collection('morphii_pin_templates').doc(id).delete();
 }
+// Overwrites an existing template in place (admin "Edit" flow in create.js)
+// instead of creating a new document — same shape as savePinTemplate's
+// payload, minus createdAt (left untouched on update).
+async function updatePinTemplate(id, tpl) {
+  if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
+  return DB.collection('morphii_pin_templates').doc(id).update({ ...tpl });
+}
 
 /* ── SHOPEE: PRICING (morphii_shopee/pricing doc) ──
    { sizes: [ { id, label, marketPrice, premiumPct, price, costPerPc,

@@ -468,11 +468,19 @@ function pinTemplateTypesForCurrentProduct(){
 
 function openSaveTemplateModal(){
   if (!currentUserIsAdmin || !state.product) return;
-  document.getElementById('saveTemplateName').value = '';
-  document.getElementById('saveTemplateType').value = '';
+  // Editing an existing template (see editPinTemplate) prefills its name/
+  // type and switches the modal into "Update" mode — still with the option
+  // to save as a new one instead (the checkbox below), for forking.
+  const editing = _editingTemplateId ? PIN_TEMPLATES.find(t=>t.id===_editingTemplateId) : null;
+  document.getElementById('saveTemplateName').value = editing ? editing.name : '';
+  document.getElementById('saveTemplateType').value = editing ? editing.typeLabel : '';
   document.getElementById('saveTemplateTypeList').innerHTML = pinTemplateTypesForCurrentProduct()
     .map(t => `<option value="${escHtml(t)}">`).join('');
   document.getElementById('saveTemplateError').style.display = 'none';
+  document.getElementById('saveTemplateModalTitle').textContent = editing ? 'Update Template' : 'Save as Template';
+  document.getElementById('saveTemplateConfirmBtn').textContent = editing ? 'Update Template' : 'Save Template';
+  document.getElementById('saveAsNewRow').style.display = editing ? 'block' : 'none';
+  document.getElementById('saveAsNewCheckbox').checked = false;
   document.getElementById('saveTemplateOverlay').classList.add('show');
 }
 window.openSaveTemplateModal = openSaveTemplateModal;
@@ -492,8 +500,10 @@ async function confirmSaveTemplate(){
     errEl.style.display = 'block';
     return;
   }
+  const saveAsNew = document.getElementById('saveAsNewCheckbox').checked;
+  const updating = !!_editingTemplateId && !saveAsNew;
   const btn = document.getElementById('saveTemplateConfirmBtn');
-  btn.disabled = true; btn.textContent = 'Saving…';
+  btn.disabled = true; btn.textContent = updating ? 'Updating…' : 'Saving…';
   try {
     const payload = {
       productId: state.product.id,
@@ -510,14 +520,17 @@ async function confirmSaveTemplate(){
     if (JSON.stringify(payload).length > 900*1024){
       throw new Error("This design is too large to save as a template (likely from custom-uploaded photos) — try using library presets instead of uploads.");
     }
-    await savePinTemplate(payload);
+    if (updating) await updatePinTemplate(_editingTemplateId, payload);
+    else await savePinTemplate(payload);
+    _editingTemplateId = null; // either an update or a fresh save ends the editing session
     await loadPinTemplates();
     closeSaveTemplateModal();
+    updateAdminUI();
   } catch(e){
     errEl.textContent = e.message || 'Could not save template.';
     errEl.style.display = 'block';
   } finally {
-    btn.disabled = false; btn.textContent = 'Save Template';
+    btn.disabled = false; btn.textContent = updating ? 'Update Template' : 'Save Template';
   }
 }
 window.confirmSaveTemplate = confirmSaveTemplate;
@@ -551,8 +564,9 @@ function renderPinTemplateGrid(){
     <button class="cr-link-back" style="margin-bottom:12px" onclick="closePinTemplateType()">&larr; Back to template types</button>
     <div class="cr-product-grid">${inType.map(t => `
       <div class="cr-product-card">
+        ${currentUserIsAdmin ? `<button class="cr-template-admin-edit" title="Edit template" onclick="event.stopPropagation();editPinTemplate('${t.id}')">${ICON_EDIT}</button>` : ''}
         ${currentUserIsAdmin ? `<button class="cr-template-admin-del" title="Delete template" onclick="event.stopPropagation();deletePinTemplateConfirm('${t.id}')">${ICON_TRASH}</button>` : ''}
-        <div onclick="usePinTemplate('${t.id}')">
+        <div onclick="previewPinTemplate('${t.id}')">
           ${t.thumbnail ? `<img class="cr-template-thumb" src="${t.thumbnail}" alt="">` : '<div class="cr-product-icon">📌</div>'}
           <div class="cr-product-name">${escHtml(t.name)}</div>
         </div>
@@ -585,18 +599,79 @@ async function usePinTemplate(templateId){
 }
 window.usePinTemplate = usePinTemplate;
 
+// Tapping a template card applies it (so the 3D preview shows the real
+// thing, not just its stored thumbnail) and immediately shows it
+// auto-rotating in 3D before committing — "Choose a Different One" fully
+// discards it and returns to exactly the type grid they were browsing;
+// "Use This Template" just closes the preview, since the design underneath
+// is already applied.
+async function previewPinTemplate(templateId){
+  const t = PIN_TEMPLATES.find(x=>x.id===templateId);
+  if (!t) return;
+  await usePinTemplate(templateId);
+  openTemplateConfirmPreview(t);
+}
+window.previewPinTemplate = previewPinTemplate;
+
+function openTemplateConfirmPreview(t){
+  setPinPreviewActions(discardTemplatePreview, '← Choose a Different One', discardTemplatePreview, '✓ Use This Template', confirmUseTemplate);
+  const canvas = document.getElementById('pinPreviewCanvas');
+  canvas.width = 500; canvas.height = 500;
+  renderFinishedPinFace(canvas, { watermarkOpacity: 0.4 });
+  document.getElementById('pinPreviewTitle').textContent = t.name || 'Template Preview';
+  buildPin3dEdgeWall(samplePinEdgeColor(canvas));
+  _pin3dRot = { ...PIN3D_REST };
+  applyPin3dTransform();
+  document.getElementById('pinPreviewHint').style.display = 'none';
+  document.getElementById('pinPreviewConfirmFooter').classList.add('show');
+  document.getElementById('pinPreviewOverlay').classList.add('show');
+  initPin3dDrag();
+  startPin3dAutoRotate();
+}
+
+function confirmUseTemplate(){
+  closePinPreview(); // the template is already applied — nothing left to do
+}
+window.confirmUseTemplate = confirmUseTemplate;
+
+function discardTemplatePreview(){
+  closePinPreview();
+  resetDesignForTemplate();
+  // goStep('pinTemplates') itself only resets _pinTemplateActiveType at the
+  // normal entry point (see selectSize) — calling it here returns to
+  // exactly the type grid they were browsing, not the top-level type list.
+  goStep('pinTemplates');
+}
+window.discardTemplatePreview = discardTemplatePreview;
+
 async function deletePinTemplateConfirm(templateId){
   if (!currentUserIsAdmin) return;
   if (!confirm('Delete this template? This cannot be undone.')) return;
   try {
     await deletePinTemplate(templateId);
     PIN_TEMPLATES = PIN_TEMPLATES.filter(t=>t.id!==templateId);
+    if (_editingTemplateId === templateId) _editingTemplateId = null; // was mid-edit on the one just deleted
     renderPinTemplateGrid();
   } catch(e){
     alert('Could not delete: ' + e.message);
   }
 }
 window.deletePinTemplateConfirm = deletePinTemplateConfirm;
+
+// Admin-only — applies the template straight to the canvas (skipping the
+// customer-facing 3D preview/confirm step, since the admin wants to start
+// editing immediately) and remembers which template this is so the Save
+// Template modal can offer "Update" instead of only "Save as new".
+let _editingTemplateId = null;
+async function editPinTemplate(templateId){
+  if (!currentUserIsAdmin) return;
+  const t = PIN_TEMPLATES.find(x=>x.id===templateId);
+  if (!t) return;
+  await usePinTemplate(templateId);
+  _editingTemplateId = templateId;
+  updateAdminUI();
+}
+window.editPinTemplate = editPinTemplate;
 
 function pushGeneratedShape(shapeId, color, xFrac, yFrac, scale, rotationDeg){
   return new Promise(resolve => {
@@ -1049,7 +1124,7 @@ function goStep(name){
   });
   window.scrollTo({top:0,behavior:'smooth'});
   if (name==='template'){ renderTemplateGrid(); }
-  if (name==='pinTemplates'){ _pinTemplateActiveType = null; renderPinTemplateGrid(); }
+  if (name==='pinTemplates'){ renderPinTemplateGrid(); }
   if (name==='design'){
     setupCanvas(); drawPreview();
     // In Loving Memory is a funeral/memorial product — the bouncy floating
@@ -1244,7 +1319,7 @@ function selectSize(mm){
   // template" choice generically. Everything else goes straight to a blank
   // canvas exactly as before either of those existed.
   if (state.product && state.product.id==='election') goStep('template');
-  else if (templatesForCurrentProduct().length) goStep('pinTemplates');
+  else if (templatesForCurrentProduct().length){ _pinTemplateActiveType = null; goStep('pinTemplates'); }
   else goStep('design');
 }
 window.selectSize = selectSize;
@@ -3726,8 +3801,25 @@ function buildPin3dEdgeWall(edgeColor){
   wall.innerHTML = html;
 }
 
+// The pin3d overlay is shared by three different moments — a plain look-
+// around (design step FAB), the pre-submit confirmation, and the pre-
+// template confirmation — each with different Close/Back/Action behavior.
+// Re-wiring all three buttons on every open (rather than leaving whatever
+// the previous opener set) means none of them can leak a stale handler
+// from a different mode into the next.
+function setPinPreviewActions(closeFn, backLabel, backFn, actionLabel, actionFn){
+  document.getElementById('pinPreviewCloseBtn').onclick = closeFn;
+  const backBtn = document.getElementById('pinPreviewConfirmBack');
+  backBtn.textContent = backLabel;
+  backBtn.onclick = backFn;
+  const actionBtn = document.getElementById('pinPreviewConfirmAction');
+  actionBtn.textContent = actionLabel;
+  actionBtn.onclick = actionFn;
+}
+
 function openPinPreview(){
   stopPin3dAutoRotate();
+  setPinPreviewActions(closePinPreview, '', null, '', null);
   const canvas = document.getElementById('pinPreviewCanvas');
   canvas.width = 500; canvas.height = 500;
   renderFinishedPinFace(canvas, { watermarkOpacity: 0.4 });
@@ -3947,6 +4039,7 @@ function reviewBeforeSubmit(){
 window.reviewBeforeSubmit = reviewBeforeSubmit;
 
 function openSubmitConfirmPreview(){
+  setPinPreviewActions(closePinPreview, '← Back to Edit', closePinPreview, '✓ Yes, Submit', confirmSubmitDesign);
   const canvas = document.getElementById('pinPreviewCanvas');
   canvas.width = 500; canvas.height = 500;
   renderFinishedPinFace(canvas, { watermarkOpacity: 0.4 });
@@ -4445,7 +4538,10 @@ if (typeof AUTH !== 'undefined' && AUTH){
 }
 function updateAdminUI(){
   const btn = document.getElementById('saveTemplateBtn');
-  if (btn) btn.style.display = currentUserIsAdmin ? '' : 'none';
+  if (btn){
+    btn.style.display = currentUserIsAdmin ? '' : 'none';
+    btn.title = _editingTemplateId ? 'Update this template (admin only)' : 'Save this design as a template (admin only)';
+  }
   const templateStep = document.getElementById('step-pinTemplates');
   if (templateStep && templateStep.classList.contains('active')) renderPinTemplateGrid();
 }

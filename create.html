@@ -12,7 +12,7 @@
 })();
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&family=Luckiest+Guy&family=Shrikhand&family=Carter+One&family=Ceviche+One&family=Kavoon&family=Cherry+Bomb+One&family=Lobster&family=Spicy+Rice&family=Chicle&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="create.css?v=5">
+<link rel="stylesheet" href="create.css?v=6">
 </head>
 <body>
 
@@ -304,7 +304,7 @@
        (print-preview FAB) and the Submit step (pre-submit confirmation). -->
   <div class="cr-modal-overlay" id="pinPreviewOverlay">
     <div class="cr-pin3d-card">
-      <button class="cr-pin3d-close" onclick="closePinPreview()" title="Close">
+      <button class="cr-pin3d-close" id="pinPreviewCloseBtn" onclick="closePinPreview()" title="Close">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
       <div class="cr-modal-title" id="pinPreviewTitle">Print Preview</div>
@@ -326,8 +326,8 @@
       </div>
       <div class="cr-pin3d-hint" id="pinPreviewHint">Drag to tilt</div>
       <div class="cr-pin3d-confirm-footer" id="pinPreviewConfirmFooter">
-        <button class="cr-link-back" onclick="closePinPreview()">&larr; Back to Edit</button>
-        <button class="cr-btn-primary" onclick="confirmSubmitDesign()">✓ Yes, Submit</button>
+        <button class="cr-link-back" id="pinPreviewConfirmBack">&larr; Back</button>
+        <button class="cr-btn-primary" id="pinPreviewConfirmAction">Continue</button>
       </div>
     </div>
   </div>
@@ -349,13 +349,16 @@
        the Firestore rule on morphii_pin_templates is. -->
   <div class="cr-modal-overlay" id="saveTemplateOverlay">
     <div class="cr-modal" style="max-width:380px">
-      <div class="cr-modal-title">Save as Template</div>
+      <div class="cr-modal-title" id="saveTemplateModalTitle">Save as Template</div>
       <div class="cr-field-label">Template Name</div>
       <input type="text" class="cr-text-input" id="saveTemplateName" placeholder="e.g. Blue Star Badge">
       <div class="cr-field-label" style="margin-top:12px">Type</div>
       <input type="text" class="cr-text-input" id="saveTemplateType" list="saveTemplateTypeList" placeholder="e.g. Sporty, Elegant, Minimalist">
       <datalist id="saveTemplateTypeList"></datalist>
       <div class="cr-hint">Customers browse templates for this product grouped by type. Type a new one to create it, or reuse an existing one.</div>
+      <label class="cr-checkbox-row" id="saveAsNewRow" style="display:none;margin-top:10px">
+        <input type="checkbox" id="saveAsNewCheckbox">Save as a new template instead of updating this one
+      </label>
       <div id="saveTemplateError" class="cr-warning" style="display:none"></div>
       <button class="cr-btn-primary" id="saveTemplateConfirmBtn" style="margin-top:16px" onclick="confirmSaveTemplate()">Save Template</button>
       <button class="cr-link-back" style="display:block;margin:10px auto 0" onclick="closeSaveTemplateModal()">Cancel</button>
@@ -436,10 +439,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js?v=5"></script>
+<script src="firebase-config.js?v=6"></script>
 <!-- EmailJS (sends the confirmation email client-side, no backend needed) -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="email-config.js"></script>
-<script src="create.js?v=57"></script>
+<script src="create.js?v=58"></script>
 </body>
 </html>
