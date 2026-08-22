@@ -295,6 +295,7 @@ window.generateFromTemplateForm = generateFromTemplateForm;
 // a different template) never mixes leftovers from a previous attempt.
 function resetDesignForTemplate(){
   state.bg = { colorOn:false, color:null, imageOn:false, img:null, tainted:false, opacity:defaultBgOpacity(), offsetXFrac:0, offsetYFrac:0, scale:1, locked:false };
+  state.bgColorHistory = [];
   state.textLines = [];
   state.stickers = [];
   state.shapes = [];
@@ -748,6 +749,28 @@ const GRADIENTS = [
   {label:'Lullaby',  grad4:['#E8D5FF','#B3E5FF','#FFD6E0','#FFFACD']},
 ];
 
+// In Loving Memory's own background palette — muted/desaturated instead of
+// the playful colors above: black/grey neutrals, soft skin-tone/flesh
+// pinks (for matting a portrait), and dull, gentle gradients. Swapped in
+// wherever isMemorialProduct() is true (see bgToolPanelHtml).
+const MEMORIAL_GRADIENTS = [
+  {label:'Onyx',         grad:['#1C1C1E','#2E2E30']},
+  {label:'Charcoal',     grad:['#333335','#4A4A4D']},
+  {label:'Slate',        grad:['#5B5F66','#7C818A']},
+  {label:'Dove Grey',    grad:['#9BA0A6','#C2C6CB']},
+  {label:'Silver Mist',  grad:['#C9CDD2','#E4E7EA']},
+  {label:'Pearl',        grad:['#EDEAE3','#F7F5F0']},
+  {label:'Warm Ivory',   grad:['#E6DECE','#F2ECDF']},
+  {label:'Soft Beige',   grad:['#D9CBB8','#EAE0D2']},
+  {label:'Blush Flesh',  grad:['#E3C3B4','#F0DAD0']},
+  {label:'Dusty Rose',   grad:['#CBA9A6','#E2C7C4']},
+  {label:'Muted Mauve',  grad:['#B49AA0','#D3BFC4']},
+  {label:'Soft Lavender',grad:['#C3B9CC','#E0D9E8']},
+  {label:'Sage',         grad:['#A9AF9E','#C9CFC0']},
+  {label:'Requiem', grad4:['#2E2E30','#7C818A','#B49AA0','#EDEAE3']},
+  {label:'Solace',  grad4:['#C3B9CC','#C2C6CB','#E3C3B4','#F7F5F0']},
+];
+
 // Preset libraries — populated at runtime from assets/pins/manifest.json
 // (see loadPinAssetManifest below). Uploading your own PNG always works
 // regardless of what's in these lists.
@@ -966,13 +989,19 @@ const state = {
   size: null,       // finished/cut diameter, mm
   paperSize: null,  // full print/PVC-wrap sheet diameter incl. bleed, mm — fixed per size, not a customer choice
   bg: {
-    // Color and image are independent layers that can be mixed (color shows
-    // through wherever the image doesn't fully cover, or through transparent
-    // PNG areas) — each has its own on/off checkbox.
-    colorOn:false, color:null,             // one of GRADIENTS
+    // Color and image each have their own on/off checkbox. In Loving Memory
+    // lets both be on together (a soft color matte behind a portrait photo
+    // — see isMemorialProduct() in drawBackgroundContent); every other
+    // product keeps them mutually exclusive, same as always.
+    colorOn:false, color:null,             // one of GRADIENTS (or MEMORIAL_GRADIENTS for In Loving Memory)
     imageOn:false, img:null, tainted:false, opacity:0.7,
     offsetXFrac:0, offsetYFrac:0, scale:1, locked:false,
   },
+  // Colors the customer has actually picked this design, newest first — see
+  // pushBgColorHistory. Shown as "Previously used" swatches on every
+  // product except In Loving Memory, which has its own curated preset grid
+  // instead (see bgToolPanelHtml).
+  bgColorHistory: [],
   textLines: [],
   stickers: [],             // [{id, img, xFrac, yFrac, scale, rotation}]
   shapes: [],                // same shape as stickers — decorative shapes/holders
@@ -1324,7 +1353,10 @@ const ICON_ARC        = '<svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 const ICON_CURVE_STRAIGHT = '<svg viewBox="0 0 40 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="4" y1="12" x2="36" y2="12"/></svg>';
 const ICON_CURVE_TOP     = '<svg viewBox="0 0 40 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 20 Q20 2 36 20"/></svg>';
 const ICON_CURVE_BOTTOM  = '<svg viewBox="0 0 40 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 4 Q20 22 36 4"/></svg>';
-const ICON_PICKER_WHEEL  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 019 9M12 3a4.5 4.5 0 000 9 4.5 4.5 0 010 9"/></svg>';
+// Eyedropper — replaced the old wheel/spiral glyph, which read as a blurry
+// blob at the small size this renders at rather than communicating "pick a
+// custom color".
+const ICON_PICKER_WHEEL  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/></svg>';
 const TEXT_COLOR_SWATCHES = ['#FFFFFF','#000000','#FF3B30','#FF9500','#FFCC00','#34C759','#007AFF','#5856D6','#FF2D92','#8B5A2B'];
 const ICON_SWATCH     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/></svg>';
 const ICON_SHADOW     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M9 9h12v12H9z" opacity="0.45"/></svg>';
@@ -1640,20 +1672,25 @@ function bgToolPanelHtml(tool){
     const g = state.bg.color;
     const isSolid = !!(g && g.grad && g.grad[0]===g.grad[1]);
     const safeBgColor = (isSolid && /^#[0-9a-fA-F]{6}$/.test(g.grad[0])) ? g.grad[0] : '#F5F1DE';
+    const memorial = isMemorialProduct();
+    const swatchButton = (c, i, onclick) =>
+      `<button class="cr-gradient-swatch ${state.bg.color===c?'active':''}" style="background:${gradientCss(c)}" title="${escHtml(c.label||'')}" onclick="${onclick}(${i})"></button>`;
     return `
-      <div class="cr-gradient-grid">${GRADIENTS.map((g,i)=>{
-        const css = g.grad4
-          ? `conic-gradient(from 45deg, ${g.grad4[0]}, ${g.grad4[1]}, ${g.grad4[3]}, ${g.grad4[2]}, ${g.grad4[0]})`
-          : `linear-gradient(135deg, ${g.grad[0]}, ${g.grad[1]})`;
-        return `<button class="cr-gradient-swatch ${state.bg.color===g?'active':''}" style="background:${css}" title="${g.label}" onclick="selectGradient(${i})"></button>`;
-      }).join('')}</div>
+      ${memorial ? `
+        <div class="cr-gradient-grid">${MEMORIAL_GRADIENTS.map((c,i)=>swatchButton(c,i,'selectGradient')).join('')}</div>
+      ` : state.bgColorHistory.length ? `
+        <div class="cr-field-label" style="margin-top:0">Previously used</div>
+        <div class="cr-gradient-grid">${state.bgColorHistory.map((c,i)=>swatchButton(c,i,'selectHistoryColor')).join('')}</div>
+      ` : ''}
       <div class="cr-field-label" style="margin-top:10px">Or a blank color</div>
       <label class="cr-color-swatch cr-color-swatch-picker ${isSolid?'active':''}" style="width:40px;height:40px" title="Custom solid color">
         <input type="color" value="${safeBgColor}" oninput="setBgSolidColorLive(this.value)" onchange="setBgSolidColor(this.value)">
         ${ICON_PICKER_WHEEL}
       </label>
       ${state.bg.color ? `<label class="cr-checkbox-row"><input type="checkbox" ${state.bg.colorOn?'checked':''} onchange="toggleColorLayer(this.checked)">Show this color</label>` : ''}
-      <div class="cr-hint">Only used when no photo is active — turn off "Show the photo" to reveal a color instead.</div>`;
+      <div class="cr-hint">${memorial
+        ? 'Shows as a soft matte behind your photo — or on its own if no photo is set.'
+        : 'Only used when no photo is active — turn off "Show the photo" to reveal a color instead.'}</div>`;
   }
   if (tool==='opacity'){
     return `
@@ -1664,15 +1701,49 @@ function bgToolPanelHtml(tool){
   return '';
 }
 
+// Shared by the preset grid (GRADIENTS/MEMORIAL_GRADIENTS) and the
+// "Previously used" history swatches — same 2-stop linear / 4-stop conic
+// rendering either way.
+function gradientCss(g){
+  return g.grad4
+    ? `conic-gradient(from 45deg, ${g.grad4[0]}, ${g.grad4[1]}, ${g.grad4[3]}, ${g.grad4[2]}, ${g.grad4[0]})`
+    : `linear-gradient(135deg, ${g.grad[0]}, ${g.grad[1]})`;
+}
+
+// Newest-first, deduped by color value, capped so the row can't grow into
+// unusable clutter — see the "Previously used" swatches in bgToolPanelHtml
+// (every product except In Loving Memory, which has its own preset grid).
+function pushBgColorHistory(color){
+  if (!color) return;
+  const key = c => c.grad4 ? c.grad4.join('|') : (c.grad||[]).join('|');
+  state.bgColorHistory = state.bgColorHistory.filter(c => key(c) !== key(color));
+  state.bgColorHistory.unshift(color);
+  if (state.bgColorHistory.length > 10) state.bgColorHistory.length = 10;
+}
+
 function selectGradient(i){
-  state.bg.color = GRADIENTS[i];
+  state.bg.color = (isMemorialProduct() ? MEMORIAL_GRADIENTS : GRADIENTS)[i];
   state.bg.colorOn = true;
+  pushBgColorHistory(state.bg.color);
   renderDock();
   renderToolPanelContent();
   drawPreview();
   updateSubmitAvailability();
 }
 window.selectGradient = selectGradient;
+
+function selectHistoryColor(i){
+  const c = state.bgColorHistory[i];
+  if (!c) return;
+  state.bg.color = c;
+  state.bg.colorOn = true;
+  pushBgColorHistory(c); // bumps it back to the front
+  renderDock();
+  renderToolPanelContent();
+  drawPreview();
+  updateSubmitAvailability();
+}
+window.selectHistoryColor = selectHistoryColor;
 
 // Live (oninput, fires continuously while dragging the native color
 // picker's spectrum/sliders) vs commit (onchange, fires once when the
@@ -1690,6 +1761,7 @@ window.setBgSolidColorLive = setBgSolidColorLive;
 function setBgSolidColor(hex){
   state.bg.color = { grad:[hex,hex], label:'Custom' };
   state.bg.colorOn = true;
+  pushBgColorHistory(state.bg.color);
   renderDock();
   renderToolPanelContent();
   drawPreview();
@@ -3087,9 +3159,13 @@ function drawForegroundElements(ctx, artboardPx){
 function drawBackgroundContent(ctx, artboardPx){
   const imageActive = state.bg.imageOn && state.bg.img;
 
-  // Photo and color background are mutually exclusive — an active photo
-  // always draws over the plain white floor, never a color/gradient layer.
-  if (!imageActive && state.bg.colorOn && state.bg.color){
+  // In Loving Memory allows the color/gradient to show as a matte behind
+  // the photo (drawn first, photo on top) — a common memorial-portrait
+  // look, especially with the photo's own opacity brought back down.
+  // Every other product keeps color and photo mutually exclusive: an
+  // active photo always draws over the plain white floor instead.
+  const colorActive = state.bg.colorOn && state.bg.color && (isMemorialProduct() || !imageActive);
+  if (colorActive){
     // Same diagonal-gradient algorithm as the kiosk avatar builder (morphii.js)
     const g = state.bg.color;
     const grad = ctx.createLinearGradient(0,0,artboardPx,artboardPx);
