@@ -472,7 +472,6 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
   background:var(--cream);border:1px solid var(--border);border-radius:12px;
   transition:transform 0.15s ease;
 }
-.cr-layer-row.fixed{opacity:0.75;background:var(--cream-deep);}
 .cr-layer-row.dragging{
   position:relative;z-index:50;transition:none;background:var(--card);
   box-shadow:0 10px 24px rgba(0,0,0,0.22);
@@ -501,8 +500,6 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 }
 .cr-layer-row-delete svg{width:12px;height:12px;}
 .cr-layer-row-delete:hover{background:var(--coral-light);border-color:var(--coral);color:var(--coral);}
-.cr-layer-row-tag{flex-shrink:0;font-size:9px;font-weight:800;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.4px;}
-.cr-layers-fixed-label{font-size:9.5px;font-weight:800;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.4px;margin:10px 0 6px;}
 
 /* ── 3D PRINT PREVIEW ── */
 .cr-pin3d-card{

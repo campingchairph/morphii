@@ -12,7 +12,7 @@
 })();
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&family=Luckiest+Guy&family=Shrikhand&family=Carter+One&family=Ceviche+One&family=Kavoon&family=Cherry+Bomb+One&family=Lobster&family=Spicy+Rice&family=Chicle&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="create.css?v=4">
+<link rel="stylesheet" href="create.css?v=5">
 </head>
 <body>
 
@@ -217,13 +217,13 @@
       </div>
     </div>
 
-    <!-- LAYERS TAB (drag to reorder; background is always fixed at the back) -->
+    <!-- LAYERS TAB (drag to reorder — background is a normal draggable row
+         like everything else, not pinned to the back) -->
     <div class="cr-modal-overlay" id="layersOverlay">
       <div class="cr-modal cr-layers-modal">
         <div class="cr-modal-title">Layers</div>
         <div class="cr-modal-body" style="margin-bottom:8px">Drag <svg class="cr-icon" style="width:12px;height:12px;vertical-align:-1px" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg> to reorder — higher in the list means closer to the front.</div>
         <div class="cr-layers-list" id="layersDragList"></div>
-        <div class="cr-layers-fixed" id="layersFixedList"></div>
         <button class="cr-btn-primary" style="margin-top:16px" onclick="closeLayersModal()">Done</button>
       </div>
     </div>
@@ -417,6 +417,19 @@
     </div>
   </div>
 
+  <!-- B&W FILTER HINT — In Loving Memory only, shown every time a customer
+       sets (or replaces) their Person photo, via upload or paste — see
+       setCharacterFromBlob in create.js. -->
+  <div class="cr-modal-overlay" id="bwHintOverlay">
+    <div class="cr-modal" style="max-width:360px">
+      <div class="cr-modal-title">Black &amp; White Filter Available</div>
+      <div class="cr-modal-body">
+        We have a black &amp; white filter for this photo — tap the <b>B&amp;W</b> button on the Person tool to switch it, or tap again to bring the color back.
+      </div>
+      <button class="cr-btn-primary" style="margin-top:16px" onclick="closeBwHintModal()">Got it</button>
+    </div>
+  </div>
+
 </main>
 
 <!-- Firebase SDK (compat mode — no build step needed) -->
@@ -427,6 +440,6 @@
 <!-- EmailJS (sends the confirmation email client-side, no backend needed) -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="email-config.js"></script>
-<script src="create.js?v=53"></script>
+<script src="create.js?v=55"></script>
 </body>
 </html>

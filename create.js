@@ -294,7 +294,7 @@ window.generateFromTemplateForm = generateFromTemplateForm;
 // before a template generates, so re-generating (or backing out and trying
 // a different template) never mixes leftovers from a previous attempt.
 function resetDesignForTemplate(){
-  state.bg = { colorOn:false, color:null, imageOn:false, img:null, tainted:false, opacity:0.7, offsetXFrac:0, offsetYFrac:0, scale:1, locked:false };
+  state.bg = { colorOn:false, color:null, imageOn:false, img:null, tainted:false, opacity:defaultBgOpacity(), offsetXFrac:0, offsetYFrac:0, scale:1, locked:false };
   state.textLines = [];
   state.stickers = [];
   state.shapes = [];
@@ -369,7 +369,7 @@ async function applyPinTemplateSnapshot(snap){
 
   state.bg.colorOn = !!snap.bg.colorOn;
   state.bg.color = snap.bg.color || null;
-  state.bg.opacity = snap.bg.opacity != null ? snap.bg.opacity : 0.7;
+  state.bg.opacity = snap.bg.opacity != null ? snap.bg.opacity : defaultBgOpacity();
   state.bg.offsetXFrac = snap.bg.offsetXFrac || 0;
   state.bg.offsetYFrac = snap.bg.offsetYFrac || 0;
   state.bg.scale = snap.bg.scale || 1;
@@ -420,6 +420,11 @@ async function applyPinTemplateSnapshot(snap){
   // every id and silently dropping any entry whose image failed to load.
   state.layerOrder = (snap.layerOrder||[]).map(d => {
     if (d.kind==='character') return state.character ? { kind:'character' } : null;
+    // No id (singleton, like character) — ensureBackgroundLayerSync (called
+    // on the next render) strips this back out if the saved background
+    // ended up inactive (e.g. its image failed to load above), so it's
+    // safe to just pass the position through here.
+    if (d.kind==='background') return { kind:'background' };
     if (d.kind==='text') return textIdMap[d.id]!=null ? { kind:'text', id:textIdMap[d.id] } : null;
     if (idMaps[d.kind] && idMaps[d.kind][d.id]!=null) return { kind:d.kind, id:idMaps[d.kind][d.id] };
     return null;
@@ -995,7 +1000,10 @@ function removeLayerFromOrder(kind, id){
   state.layerOrder = state.layerOrder.filter(d => !(d.kind===kind && d.id===id));
 }
 // Topmost-first, for display in the Layers list (reverse of draw/z-order).
-function layersVisualList(){ return state.layerOrder.slice().reverse(); }
+// Syncs first (see ensureBackgroundLayerSync) so a background just turned
+// on/off shows up correctly immediately, instead of lagging one render
+// behind the next drawPreview() call.
+function layersVisualList(){ ensureBackgroundLayerSync(); return state.layerOrder.slice().reverse(); }
 function setLayersFromVisual(visualList){ state.layerOrder = visualList.slice().reverse(); }
 
 /* ── STEP NAVIGATION ─────────────────────────── */
@@ -1052,6 +1060,7 @@ function tryLockedEntry(){
   state.product = p;
   state.size = s.mm;
   state.paperSize = s.paperMM;
+  state.bg.opacity = defaultBgOpacity();
   applyAssetGroup(currentAssetGroup());
   goStep('design');
   return true;
@@ -1078,6 +1087,20 @@ function closePasteHintModal(){
   document.getElementById('pasteHintOverlay').classList.remove('show');
 }
 window.closePasteHintModal = closePasteHintModal;
+
+// Reminds the customer the B&W filter exists every time they set (or
+// replace) their Person photo — upload or paste, see setCharacterFromBlob.
+// Character is In Loving Memory-exclusive, so this never shows elsewhere.
+// Deliberately not one-time/localStorage-tracked, same reasoning as
+// showPasteHint above: better to repeat it than have someone miss it once
+// and never see it again.
+function showBwHintModal(){
+  document.getElementById('bwHintOverlay').classList.add('show');
+}
+function closeBwHintModal(){
+  document.getElementById('bwHintOverlay').classList.remove('show');
+}
+window.closeBwHintModal = closeBwHintModal;
 
 /* ── STEP 1: PRODUCT ─────────────────────────── */
 // catalogResolved goes true the moment PRODUCTS/SIZES reflect real truth —
@@ -1137,6 +1160,12 @@ function commitProductSwitch(p){
   // product is opened, and could even get submitted under the wrong type.
   if (state.product && state.product.id!==p.id) resetDesignForTemplate();
   state.product = p;
+  // resetDesignForTemplate() already applies the right default when it
+  // runs, but the very first product pick in a session skips it entirely
+  // (the `if` above is false) — set it explicitly here too so that case
+  // still gets ILM's 100%-opacity default instead of resetDesignForTemplate's
+  // stale pre-switch value.
+  state.bg.opacity = defaultBgOpacity();
   applyAssetGroup(currentAssetGroup());
   renderSizeGrid();
   goStep('size');
@@ -1441,6 +1470,11 @@ window.duplicateSelectedSticker = duplicateSelectedSticker;
 // label, so a memorial customer's photo slot and their sticker library
 // don't read as two overlapping, confusing tools.
 function isMemorialProduct(){ return !!(state.product && state.product.id==='in-loving-memory'); }
+// In Loving Memory pins are usually a photo laid straight over the whole
+// pin — a faded/translucent default (fine for a decorative backdrop on
+// every other product) just makes a memorial photo look washed out, so
+// this product starts fully opaque instead of the usual 70%.
+function defaultBgOpacity(){ return isMemorialProduct() ? 1 : 0.7; }
 // "Emblems" mirrors the existing plural-dock-label convention (Shapes,
 // Letters are plural even though their individual layers are numbered
 // "Shape 1"/"Letter 1") — stickerNoun() is the singular form for that
@@ -1830,7 +1864,7 @@ function confirmUploadHint(){
 }
 window.confirmUploadHint = confirmUploadHint;
 
-/* ── LAYERS TAB (drag to reorder; background is always fixed at the back) ──
+/* ── LAYERS TAB (drag to reorder — background is a normal row here too) ──
    Reorderable rows use document-level pointermove/pointerup listeners rather
    than setPointerCapture, so the list can safely re-render on every step of
    the drag (capture is silently dropped once its element leaves the DOM). */
@@ -1847,11 +1881,21 @@ window.closeLayersModal = closeLayersModal;
 const PLACED_ICON = { sticker: ICON_STICKER, shape: ICON_SHAPE, wordart: ICON_WORDART, letter: ICON_LETTER, border: ICON_BORDER };
 function layerThumbFor(d){
   if (d.kind==='character') return state.character ? `<img src="${state.character.img.src}" alt="">` : ICON_CHARACTER;
+  if (d.kind==='background'){
+    if (state.bg.imageOn && state.bg.img) return `<img src="${state.bg.img.src}" alt="">`;
+    if (state.bg.colorOn && state.bg.color){
+      const g = state.bg.color;
+      const css = g.grad4 ? `linear-gradient(135deg,${g.grad4[0]},${g.grad4[3]})` : `linear-gradient(135deg,${g.grad[0]},${g.grad[1]})`;
+      return `<span style="display:block;width:100%;height:100%;background:${css}"></span>`;
+    }
+    return ICON_BG;
+  }
   if (PLACED_META[d.kind]){ const el=placedArray(d.kind).find(x=>x.id===d.id); return el ? `<img src="${el.img.src}" alt="">` : PLACED_ICON[d.kind]; }
   return ICON_TEXT;
 }
 function layerLabelFor(d){
   if (d.kind==='character') return isMemorialProduct() ? 'Person' : 'Character';
+  if (d.kind==='background') return (state.bg.imageOn && state.bg.img) ? 'Background Photo' : 'Background Color';
   if (d.kind==='sticker'){ const idx=placedArray('sticker').findIndex(x=>x.id===d.id); return capitalize(stickerNoun())+' '+(idx+1); }
   if (PLACED_META[d.kind]){ const idx=placedArray(d.kind).findIndex(x=>x.id===d.id); return PLACED_META[d.kind].label+' '+(idx+1); }
   const t = state.textLines.find(x=>x.id===d.id);
@@ -1859,6 +1903,7 @@ function layerLabelFor(d){
 }
 function layerLockedFor(d){
   if (d.kind==='character') return !!(state.character && state.character.locked);
+  if (d.kind==='background') return !!state.bg.locked;
   if (PLACED_META[d.kind]){ const el=placedArray(d.kind).find(x=>x.id===d.id); return !!(el && el.locked); }
   const t = state.textLines.find(x=>x.id===d.id);
   return !!(t && t.locked);
@@ -1899,8 +1944,7 @@ window.onElementStripTap = onElementStripTap;
 
 function renderLayersModal(){
   const list = document.getElementById('layersDragList');
-  const fixed = document.getElementById('layersFixedList');
-  if (!list || !fixed) return;
+  if (!list) return;
   const visual = layersVisualList();
   list.innerHTML = visual.length ? visual.map((d,i)=>`
     <div class="cr-layer-row draggable">
@@ -1910,35 +1954,20 @@ function renderLayersModal(){
       <button class="cr-layer-row-lock ${layerLockedFor(d)?'locked':''}" onclick='toggleLock("${d.kind}"${d.id!=null?','+d.id:''});renderLayersModal()'>${layerLockedFor(d)?ICON_LOCK:ICON_UNLOCK}</button>
       <button class="cr-layer-row-delete" title="Delete layer" onclick='removeLayerFromModal(${JSON.stringify(d)})'>${ICON_TRASH}</button>
     </div>`).join('') : `<div class="cr-empty-hint">No layers yet — add text, a sticker, or a character to see them here.</div>`;
-
-  const fixedRows = [];
-  const bgImageActive = state.bg.imageOn && state.bg.img;
-  if (bgImageActive) fixedRows.push({ label:'Background Photo', thumb:`<img src="${state.bg.img.src}" alt="">` });
-  if (!bgImageActive && state.bg.colorOn && state.bg.color){
-    const g = state.bg.color;
-    const css = g.grad4 ? `linear-gradient(135deg,${g.grad4[0]},${g.grad4[3]})` : `linear-gradient(135deg,${g.grad[0]},${g.grad[1]})`;
-    fixedRows.push({ label:'Background Color', thumb:`<span style="display:block;width:100%;height:100%;background:${css}"></span>` });
-  }
-  fixed.innerHTML = fixedRows.length ? `
-    <div class="cr-layers-fixed-label">Always at the back</div>
-    ${fixedRows.map(r=>`
-      <div class="cr-layer-row fixed">
-        <span class="cr-layer-row-thumb">${r.thumb}</span>
-        <span class="cr-layer-row-label">${r.label}</span>
-        <span class="cr-layer-row-tag">Fixed</span>
-      </div>`).join('')}` : '';
 }
 
 window.selectLayerFromModal = function(d){
   closeLayersModal();
-  selectLayer(d.kind==='character' ? { kind:'character' } : { kind:d.kind, id:d.id });
+  selectLayer((d.kind==='character' || d.kind==='background') ? { kind:d.kind } : { kind:d.kind, id:d.id });
 };
 
 function removeLayerFromModal(d){
   if (d.kind==='character') removeCharacter();
+  else if (d.kind==='background'){ state.bg.colorOn = false; state.bg.imageOn = false; }
   else if (d.kind==='text') removeTextLine(d.id);
   else if (PLACED_META[d.kind]) removePlaced(d.kind, d.id);
   renderLayersModal();
+  drawPreview();
 }
 window.removeLayerFromModal = removeLayerFromModal;
 
@@ -2418,6 +2447,7 @@ function setCharacterFromBlob(blob){
       if (isNew) pushLayer({ kind:'character' });
       selectLayer({kind:'character'});
       if (isNew) renderCanvasBgDecor();
+      showBwHintModal();
     };
     img.src = ev.target.result;
   };
@@ -2978,48 +3008,87 @@ function normalizeAngle(a){
 // clipElements=false (live editor only — see drawPreview) skips the circular
 // clip for the foreground pass so a sticker/text/etc dragged out toward the
 // canvas edge stays visible instead of silently vanishing, making it easy to
-// grab and pull back. Background stays clipped either way (it's the only
-// layer that's structurally fixed at the back — border is now a normal
-// reorderable layer, see drawForegroundElements). Exports and the
-// submit-step review thumbnail always keep the default (clipped) so the
-// finished-look preview is accurate.
+// grab and pull back. The background is a normal reorderable layer now (see
+// drawForegroundElements) and re-clips itself locally so it never bleeds
+// past the cut line even during that unclipped pass — only the plain white
+// structural floor beneath everything (drawBaseFill) stays unconditional.
+// Exports and the submit-step review thumbnail always keep the default
+// (clipped) so the finished-look preview is accurate.
 function drawDesignLayer(ctx, sizePx, opts){
   const clipElements = !opts || opts.clipElements !== false;
   const artboardPx = sizePx; // canvas itself represents the full artboard (incl bleed)
   ctx.clearRect(0,0,sizePx,sizePx);
 
   // Everything printable is physically round — clip the design layer
-  // (background, and — when clipElements — everything else too) to the
+  // (the base fill, and — when clipElements — everything else too) to the
   // pin's circular shape.
   ctx.save();
   ctx.beginPath();
   ctx.arc(artboardPx/2, artboardPx/2, artboardPx/2, 0, Math.PI*2);
   ctx.clip();
 
-  drawBackground(ctx, artboardPx);  // the one truly fixed back-most layer
+  drawBaseFill(ctx, artboardPx);  // unconditional plain-white floor, not a layer the customer controls
   if (clipElements) drawForegroundElements(ctx, artboardPx);
 
   ctx.restore();
   if (!clipElements) drawForegroundElements(ctx, artboardPx);
 }
 
-// Everything except the background draws in the user-defined stacking order
-// (state.layerOrder, back-to-front), managed via the Layers tab — border
-// included, same as any other element.
+// Plain white fill so the canvas is never transparent — the structural
+// floor everything (including the customer's own background layer) draws
+// onto, not a layer itself.
+function drawBaseFill(ctx, artboardPx){
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0,0,artboardPx,artboardPx);
+}
+
+// Keeps exactly one {kind:'background'} entry in layerOrder whenever a
+// background (color or image) is active — inserted at the very back the
+// first time it appears, so existing designs don't visually jump, but from
+// then on it's a normal row the customer can drag anywhere in the Layers
+// modal, same as every other element. Self-healing: called on every render
+// pass (see drawForegroundElements) rather than at each of the several
+// places colorOn/imageOn get toggled on, so it can't drift out of sync.
+function ensureBackgroundLayerSync(){
+  const active = (state.bg.colorOn && state.bg.color) || (state.bg.imageOn && state.bg.img);
+  const idx = state.layerOrder.findIndex(d => d.kind==='background');
+  if (active && idx===-1) state.layerOrder.unshift({ kind:'background' });
+  else if (!active && idx!==-1) state.layerOrder.splice(idx,1);
+}
+
+// Everything draws in the user-defined stacking order (state.layerOrder,
+// back-to-front), managed via the Layers tab — background included, same as
+// border/character/every placed kind.
 function drawForegroundElements(ctx, artboardPx){
+  ensureBackgroundLayerSync();
   state.layerOrder.forEach(d => {
-    if (d.kind==='character') drawOneCharacter(ctx, artboardPx);
+    if (d.kind==='background'){
+      // Always stays clipped to the circle, even during the deliberately
+      // unclipped live-editor pass (clipElements:false) — re-applying the
+      // clip locally here means a dragged sticker can still escape the cut
+      // line in that pass without the background bleeding out too.
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(artboardPx/2, artboardPx/2, artboardPx/2, 0, Math.PI*2);
+      ctx.clip();
+      drawBackgroundContent(ctx, artboardPx);
+      ctx.restore();
+    }
+    else if (d.kind==='character') drawOneCharacter(ctx, artboardPx);
     else if (d.kind==='border') drawBorder(ctx, artboardPx, placedArray('border').find(x=>x.id===d.id));
     else if (d.kind==='sticker' || d.kind==='shape' || d.kind==='wordart' || d.kind==='letter') drawOnePlaced(ctx, artboardPx, placedArray(d.kind).find(x=>x.id===d.id));
     else if (d.kind==='text') drawOneTextLine(ctx, artboardPx, state.textLines.find(t=>t.id===d.id));
   });
 }
 
-function drawBackground(ctx, artboardPx){
+// The customer's actual background content (solid/gradient color, or a
+// photo) — a normal reorderable layer (see ensureBackgroundLayerSync)
+// instead of being structurally locked to the very back.
+function drawBackgroundContent(ctx, artboardPx){
   const imageActive = state.bg.imageOn && state.bg.img;
 
   // Photo and color background are mutually exclusive — an active photo
-  // always draws over a plain white base, never a color/gradient layer.
+  // always draws over the plain white floor, never a color/gradient layer.
   if (!imageActive && state.bg.colorOn && state.bg.color){
     // Same diagonal-gradient algorithm as the kiosk avatar builder (morphii.js)
     const g = state.bg.color;
@@ -3031,9 +3100,6 @@ function drawBackground(ctx, artboardPx){
       grad.addColorStop(0,g.grad[0]); grad.addColorStop(1,g.grad[1]);
     }
     ctx.fillStyle = grad;
-    ctx.fillRect(0,0,artboardPx,artboardPx);
-  } else {
-    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0,0,artboardPx,artboardPx);
   }
 
