@@ -295,7 +295,7 @@ window.generateFromTemplateForm = generateFromTemplateForm;
 // a different template) never mixes leftovers from a previous attempt.
 function resetDesignForTemplate(){
   state.bg = { colorOn:false, color:null, imageOn:false, img:null, tainted:false, opacity:defaultBgOpacity(), offsetXFrac:0, offsetYFrac:0, scale:1, locked:false };
-  state.bgColorHistory = [];
+  state.colorHistory = [];
   state.textLines = [];
   state.stickers = [];
   state.shapes = [];
@@ -997,11 +997,13 @@ const state = {
     imageOn:false, img:null, tainted:false, opacity:0.7,
     offsetXFrac:0, offsetYFrac:0, scale:1, locked:false,
   },
-  // Colors the customer has actually picked this design, newest first — see
-  // pushBgColorHistory. Shown as "Previously used" swatches on every
-  // product except In Loving Memory, which has its own curated preset grid
-  // instead (see bgToolPanelHtml).
-  bgColorHistory: [],
+  // Solid hex colors the customer has actually picked this design, newest
+  // first — see pushColorHistory. Shared across every color picker
+  // (background, shape, text) as "Previously used" swatches, EXCEPT In
+  // Loving Memory's background panel, which has its own curated preset
+  // grid instead (see bgToolPanelHtml). Only solid picks go in here — a
+  // multi-stop gradient preset doesn't reduce to one representative hex.
+  colorHistory: [],
   textLines: [],
   stickers: [],             // [{id, img, xFrac, yFrac, scale, rotation}]
   shapes: [],                // same shape as stickers — decorative shapes/holders
@@ -1673,15 +1675,12 @@ function bgToolPanelHtml(tool){
     const isSolid = !!(g && g.grad && g.grad[0]===g.grad[1]);
     const safeBgColor = (isSolid && /^#[0-9a-fA-F]{6}$/.test(g.grad[0])) ? g.grad[0] : '#F5F1DE';
     const memorial = isMemorialProduct();
-    const swatchButton = (c, i, onclick) =>
-      `<button class="cr-gradient-swatch ${state.bg.color===c?'active':''}" style="background:${gradientCss(c)}" title="${escHtml(c.label||'')}" onclick="${onclick}(${i})"></button>`;
     return `
       ${memorial ? `
-        <div class="cr-gradient-grid">${MEMORIAL_GRADIENTS.map((c,i)=>swatchButton(c,i,'selectGradient')).join('')}</div>
-      ` : state.bgColorHistory.length ? `
-        <div class="cr-field-label" style="margin-top:0">Previously used</div>
-        <div class="cr-gradient-grid">${state.bgColorHistory.map((c,i)=>swatchButton(c,i,'selectHistoryColor')).join('')}</div>
-      ` : ''}
+        <div class="cr-gradient-grid">${MEMORIAL_GRADIENTS.map((c,i)=>
+          `<button class="cr-gradient-swatch ${state.bg.color===c?'active':''}" style="background:${gradientCss(c)}" title="${escHtml(c.label||'')}" onclick="selectGradient(${i})"></button>`
+        ).join('')}</div>
+      ` : colorHistorySwatchesHtml(isSolid?safeBgColor:null, hex=>`selectHistoryColor('${hex}')`)}
       <div class="cr-field-label" style="margin-top:10px">Or a blank color</div>
       <label class="cr-color-swatch cr-color-swatch-picker ${isSolid?'active':''}" style="width:40px;height:40px" title="Custom solid color">
         <input type="color" value="${safeBgColor}" oninput="setBgSolidColorLive(this.value)" onchange="setBgSolidColor(this.value)">
@@ -1701,30 +1700,48 @@ function bgToolPanelHtml(tool){
   return '';
 }
 
-// Shared by the preset grid (GRADIENTS/MEMORIAL_GRADIENTS) and the
-// "Previously used" history swatches — same 2-stop linear / 4-stop conic
-// rendering either way.
+// Shared by the background preset grids (GRADIENTS/MEMORIAL_GRADIENTS) —
+// same 2-stop linear / 4-stop conic rendering either way. Not used for
+// colorHistory swatches, which are always plain solid hex (see below).
 function gradientCss(g){
   return g.grad4
     ? `conic-gradient(from 45deg, ${g.grad4[0]}, ${g.grad4[1]}, ${g.grad4[3]}, ${g.grad4[2]}, ${g.grad4[0]})`
     : `linear-gradient(135deg, ${g.grad[0]}, ${g.grad[1]})`;
 }
 
-// Newest-first, deduped by color value, capped so the row can't grow into
-// unusable clutter — see the "Previously used" swatches in bgToolPanelHtml
-// (every product except In Loving Memory, which has its own preset grid).
-function pushBgColorHistory(color){
-  if (!color) return;
-  const key = c => c.grad4 ? c.grad4.join('|') : (c.grad||[]).join('|');
-  state.bgColorHistory = state.bgColorHistory.filter(c => key(c) !== key(color));
-  state.bgColorHistory.unshift(color);
-  if (state.bgColorHistory.length > 10) state.bgColorHistory.length = 10;
+// Newest-first, deduped, capped so the row can't grow into unusable
+// clutter — feeds the shared "Previously used" swatches in the
+// background/shape/text color pickers (every product except In Loving
+// Memory's background panel, which has its own curated preset grid).
+function pushColorHistory(hex){
+  if (!hex || !/^#[0-9a-fA-F]{6}$/.test(hex)) return;
+  hex = hex.toLowerCase();
+  state.colorHistory = state.colorHistory.filter(h => h !== hex);
+  state.colorHistory.unshift(hex);
+  if (state.colorHistory.length > 10) state.colorHistory.length = 10;
+}
+
+// `buildOnclick(hex)` returns the onclick expression for that swatch —
+// callers close over whatever extra args their own setter needs (element
+// id, etc). `currentHex` (if any) highlights the swatch matching what's
+// already applied. gridClass/swatchClass default to the background
+// panel's grid; shape/text pass their own (cr-color-swatch-grid/
+// cr-color-swatch) so the swatches match the rest of their picker.
+function colorHistorySwatchesHtml(currentHex, buildOnclick, gridClass, swatchClass){
+  if (!state.colorHistory.length) return '';
+  gridClass = gridClass || 'cr-gradient-grid';
+  swatchClass = swatchClass || 'cr-gradient-swatch';
+  const cur = (currentHex||'').toLowerCase();
+  return `
+    <div class="cr-field-label" style="margin-top:0">Previously used</div>
+    <div class="${gridClass}">${state.colorHistory.map(hex =>
+      `<button class="${swatchClass} ${hex===cur?'active':''}" style="background:${hex}" title="${hex}" onclick="${buildOnclick(hex)}"></button>`
+    ).join('')}</div>`;
 }
 
 function selectGradient(i){
   state.bg.color = (isMemorialProduct() ? MEMORIAL_GRADIENTS : GRADIENTS)[i];
   state.bg.colorOn = true;
-  pushBgColorHistory(state.bg.color);
   renderDock();
   renderToolPanelContent();
   drawPreview();
@@ -1732,12 +1749,13 @@ function selectGradient(i){
 }
 window.selectGradient = selectGradient;
 
-function selectHistoryColor(i){
-  const c = state.bgColorHistory[i];
-  if (!c) return;
-  state.bg.color = c;
+// Re-applies a "Previously used" swatch to the background — the shared
+// colorHistory stores plain hex, but state.bg.color always needs the
+// gradient-shaped {grad:[a,b]} form (solid = both stops equal).
+function selectHistoryColor(hex){
+  state.bg.color = { grad:[hex,hex], label:'Custom' };
   state.bg.colorOn = true;
-  pushBgColorHistory(c); // bumps it back to the front
+  pushColorHistory(hex); // bumps it back to the front
   renderDock();
   renderToolPanelContent();
   drawPreview();
@@ -1761,7 +1779,7 @@ window.setBgSolidColorLive = setBgSolidColorLive;
 function setBgSolidColor(hex){
   state.bg.color = { grad:[hex,hex], label:'Custom' };
   state.bg.colorOn = true;
-  pushBgColorHistory(state.bg.color);
+  pushColorHistory(hex);
   renderDock();
   renderToolPanelContent();
   drawPreview();
@@ -2249,7 +2267,9 @@ function placedToolPanelHtml(kind, tool, id){
   if (tool==='color' && isShape && el.vectorShapeId){
     const cur = (el.color||'').toLowerCase();
     const safeColor = /^#[0-9a-fA-F]{6}$/.test(el.color) ? el.color : SHAPE_DEFAULT_COLOR;
-    return `<div class="cr-color-swatch-grid">
+    return `
+      ${colorHistorySwatchesHtml(el.color, hex=>`setShapeColor(${el.id},'${hex}')`, 'cr-color-swatch-grid', 'cr-color-swatch')}
+      <div class="cr-color-swatch-grid">
       ${TEXT_COLOR_SWATCHES.map(c=>
         `<button class="cr-color-swatch ${cur===c.toLowerCase()?'active':''}" style="background:${c}" onclick="setShapeColor(${el.id},'${c}')" title="${c}"></button>`
       ).join('')}
@@ -2377,6 +2397,7 @@ window.setShapeColorLive = setShapeColorLive;
 function setShapeColor(id, hex){
   const el = state.shapes.find(x=>x.id===id);
   if (!el || !el.vectorShapeId) return;
+  pushColorHistory(hex);
   const img = new Image();
   img.onload = () => {
     el.img = img; el.color = hex;
@@ -2617,6 +2638,7 @@ function updateTextLine(id, field, value){
       if (slider) slider.value = line.size;
     }
   }
+  if (field==='color') pushColorHistory(value);
   if (field==='font' || field==='placement' || field==='color') renderToolPanelContent();
   drawPreview();
   // A font can be linked (its @font-face rule exists) without its actual
@@ -2667,7 +2689,9 @@ function textToolPanelHtml(tool, id){
   if (tool==='color'){
     const safeColor = /^#[0-9a-fA-F]{6}$/.test(t.color) ? t.color : '#000000';
     const cur = (t.color||'').toLowerCase();
-    return `<div class="cr-color-swatch-grid">
+    return `
+      ${colorHistorySwatchesHtml(t.color, hex=>`updateTextLine(${t.id},'color','${hex}')`, 'cr-color-swatch-grid', 'cr-color-swatch')}
+      <div class="cr-color-swatch-grid">
       ${TEXT_COLOR_SWATCHES.map(c=>
         `<button class="cr-color-swatch ${cur===c.toLowerCase()?'active':''}" style="background:${c}" onclick="updateTextLine(${t.id},'color','${c}')" title="${c}"></button>`
       ).join('')}
