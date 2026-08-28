@@ -4530,10 +4530,18 @@ document.addEventListener('DOMContentLoaded', ()=>{
 // via Firebase Auth's persisted session, which is all "Save as Template"
 // needs: it's a design-step button, not a separate admin area.
 let currentUserIsAdmin = false;
+let _visitRecorded = false; // guards against recordVisit firing more than once per page load
 if (typeof AUTH !== 'undefined' && AUTH){
   AUTH.onAuthStateChanged(user => {
     currentUserIsAdmin = typeof isAdmin === 'function' && isAdmin(user);
     updateAdminUI();
+    // Waits for auth to resolve so admin staff testing/using the builder
+    // don't inflate the customer visitor count — see recordVisit in
+    // firebase-config.js. Fires exactly once per load either way.
+    if (!_visitRecorded){
+      _visitRecorded = true;
+      if (!currentUserIsAdmin && typeof recordVisit === 'function') recordVisit();
+    }
   });
 }
 function updateAdminUI(){

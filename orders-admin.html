@@ -118,12 +118,12 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 .adm-delete-selected-btn:hover{background:#ff9b98;color:#0B2E4E;}
 
 /* ── PRINT LAYOUT MODAL (ported from the kiosk) ── */
-#printModal, #fontsModal, #assetsModal, #catalogModal, #financeModal, #helpModal{
+#printModal, #fontsModal, #assetsModal, #catalogModal, #financeModal, #helpModal, #visitorsModal{
   display:none;position:fixed;inset:0;z-index:200;
   background:rgba(7,25,41,0.92);backdrop-filter:blur(8px);
   flex-direction:column;align-items:center;overflow-y:auto;padding:24px;
 }
-#printModal.open, #fontsModal.open, #assetsModal.open, #catalogModal.open, #financeModal.open, #helpModal.open{display:flex;}
+#printModal.open, #fontsModal.open, #assetsModal.open, #catalogModal.open, #financeModal.open, #helpModal.open, #visitorsModal.open{display:flex;}
 .help-modal-inner{background:var(--navy);border-radius:16px;max-width:640px;width:100%;padding:24px 26px;margin:20px 0;color:white;border:2px solid var(--border);}
 .help-section{margin-bottom:20px;}
 .help-section h3{font-size:14px;margin:0 0 8px;color:var(--yellow);}
@@ -252,6 +252,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
     <div class="logo">morphii<span>.</span> Order Admin</div>
     <div style="display:flex;align-items:center;gap:12px">
       <button class="adm-signout" onclick="openHelpModal()">❓ Help</button>
+      <button class="adm-signout" onclick="openVisitorsModal()">📊 Visitors</button>
       <button class="adm-signout" onclick="openFinanceModal()">💰 Finance</button>
       <button class="adm-signout" onclick="openCatalogModal()">📦 Catalog</button>
       <button class="adm-signout" onclick="openAssetsModal()">🖼 Assets</button>
@@ -378,6 +379,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
     <div class="help-section">
       <h3>The other buttons up top</h3>
       <ul>
+        <li><b>📊 Visitors</b> — how many unique devices have opened the pin builder, and roughly where from.</li>
         <li><b>💰 Finance</b> — track costs, set pricing per product/size, and see margin/ROI, unrelated to individual orders.</li>
         <li><b>📦 Catalog</b> — turn a product or size on/off shop-wide, e.g. when you're out of stock, no code changes needed.</li>
         <li><b>🖼 Assets</b> — see every sticker/border/background/etc. available in the builder and rename how it's labeled.</li>
@@ -464,6 +466,33 @@ h1,.logo{font-family:'Fredoka One',cursive;}
       <div id="catalogProductsList"></div>
       <div class="catalog-section-title">Sizes</div>
       <div id="catalogSizesList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ VISITORS MODAL — unique-device counter + approximate locations ══ -->
+<div id="visitorsModal">
+  <div class="print-modal-inner" style="max-width:560px">
+    <div class="pmi-header">
+      <div class="pmi-title">📊 Visitors</div>
+      <button class="pmi-close" onclick="closeVisitorsModal()">✕</button>
+    </div>
+    <div class="pmi-body" style="flex-direction:column;flex-wrap:nowrap">
+      <div style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-bottom:8px;line-height:1.5;">
+        One count per device (cached in that browser) — a repeat visitor on the same phone/computer doesn't count twice. Locations are approximate (from IP, looked up once per device) and only shown to admins.
+      </div>
+      <div class="fin-summary-row">
+        <div class="fin-summary-card"><b id="visitorsUniqueCount">—</b><span>Unique Devices</span></div>
+        <div class="fin-summary-card"><b id="visitorsTotalCount">—</b><span>Total Visits</span></div>
+      </div>
+      <div class="fin-section-title">By Location</div>
+      <div class="fin-table-wrap">
+        <table class="fin-table">
+          <thead><tr><th>Location</th><th>Devices</th></tr></thead>
+          <tbody id="visitorsLocationBody"></tbody>
+        </table>
+      </div>
+      <div id="visitorsEmpty" class="fin-empty" style="display:none">No visits recorded yet.</div>
     </div>
   </div>
 </div>
@@ -600,7 +629,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js?v=6"></script>
+<script src="firebase-config.js?v=7"></script>
 <!-- jsPDF — used by doPrint() to write the exact page size directly into the
      PDF file itself, so the export is correct regardless of any browser
      print-dialog "Scale" setting (which is what was causing the 3% mismatch
@@ -1160,6 +1189,41 @@ function closeCatalogModal(){
   document.getElementById('catalogModal').classList.remove('open');
 }
 window.closeCatalogModal = closeCatalogModal;
+
+async function openVisitorsModal(){
+  document.getElementById('visitorsModal').classList.add('open');
+  document.getElementById('visitorsUniqueCount').textContent = '…';
+  document.getElementById('visitorsTotalCount').textContent = '…';
+  document.getElementById('visitorsLocationBody').innerHTML = '';
+  document.getElementById('visitorsEmpty').style.display = 'none';
+  const [uniqueCount, devices] = await Promise.all([getVisitCount(), getRecentVisits(500)]);
+  renderVisitorsModal(uniqueCount, devices);
+}
+window.openVisitorsModal = openVisitorsModal;
+
+function closeVisitorsModal(){
+  document.getElementById('visitorsModal').classList.remove('open');
+}
+window.closeVisitorsModal = closeVisitorsModal;
+
+function renderVisitorsModal(uniqueCount, devices){
+  document.getElementById('visitorsUniqueCount').textContent = uniqueCount.toLocaleString();
+  const totalVisits = devices.reduce((sum, d) => sum + (d.visitCount || 1), 0);
+  document.getElementById('visitorsTotalCount').textContent = totalVisits.toLocaleString();
+
+  // Groups by whatever location detail is actually known — city+region+
+  // country when the geolocation lookup succeeded, down to "Unknown" for
+  // devices where it failed/was blocked.
+  const groups = new Map();
+  devices.forEach(d => {
+    const label = [d.city, d.region, d.country].filter(Boolean).join(', ') || 'Unknown';
+    groups.set(label, (groups.get(label) || 0) + 1);
+  });
+  const rows = [...groups.entries()].sort((a, b) => b[1] - a[1]);
+  document.getElementById('visitorsLocationBody').innerHTML = rows.map(([label, count]) =>
+    `<tr><td>${escHtml(label)}</td><td>${count}</td></tr>`).join('');
+  document.getElementById('visitorsEmpty').style.display = devices.length ? 'none' : 'block';
+}
 
 // A saved value can be the old boolean shape (true/false, from before
 // "hidden" existed) or the new tri-state string — normalize either into

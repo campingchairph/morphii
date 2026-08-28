@@ -74,6 +74,79 @@ async function submitOrder(order) {
   });
 }
 
+/* ── VISITOR COUNTER (morphii_visits collection) ──
+   One doc per DEVICE, keyed by a random id generated once and cached in
+   localStorage — so "how many visitors" means unique devices, not raw page
+   loads. Doc shape:
+   {
+     deviceId, visitCount, firstSeen, lastSeen (server timestamps),
+     country, region, city  — approximate, from a free IP-geolocation
+       lookup (ipapi.co), looked up ONLY on a device's first-ever visit
+       (never again for that device) to stay well inside its free-tier
+       rate limit and avoid re-asking for something that rarely changes.
+       Left null if the lookup fails/is blocked — the visit still counts.
+   }
+   Public create/update (anyone visiting writes only their own device doc,
+   same trust model as morphii_orders) — admin-only read, since even
+   approximate visitor locations are mildly sensitive. Called from
+   create.html on load; never awaited/blocking and every failure is
+   swallowed, so a Firestore or geolocation hiccup can never break the
+   pin builder itself. ─────────────────────────────────────────────── */
+async function recordVisit() {
+  if (!DB) return;
+  try {
+    let deviceId = localStorage.getItem('morphii_device_id');
+    const isNewDevice = !deviceId;
+    if (isNewDevice) {
+      deviceId = (crypto.randomUUID ? crypto.randomUUID() : 'dev-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+      localStorage.setItem('morphii_device_id', deviceId);
+    }
+    const ref = DB.collection('morphii_visits').doc(deviceId);
+    if (isNewDevice) {
+      let geo = {};
+      try {
+        const res = await fetch('https://ipapi.co/json/');
+        if (res.ok) {
+          const data = await res.json();
+          if (!data.error) geo = { country: data.country_name || null, region: data.region || null, city: data.city || null };
+        }
+      } catch (e) { /* geolocation lookup failed/blocked — visit still counts, just without location */ }
+      await ref.set({
+        deviceId, ...geo,
+        firstSeen: firebase.firestore.FieldValue.serverTimestamp(),
+        lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+        visitCount: 1,
+      });
+    } else {
+      await ref.set({
+        lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+        visitCount: firebase.firestore.FieldValue.increment(1),
+      }, { merge: true });
+    }
+  } catch (e) { /* analytics must never break the app */ }
+}
+
+// Total unique devices — a server-side aggregate count, not a full doc
+// download, so this stays cheap no matter how large the collection grows.
+async function getVisitCount() {
+  if (!DB) return 0;
+  try {
+    const snap = await DB.collection('morphii_visits').count().get();
+    return snap.data().count;
+  } catch (e) { return 0; }
+}
+
+// Per-device rows (most recently active first) for the admin's location
+// breakdown — capped since the admin UI only ever summarizes/lists these,
+// never needs the full history.
+async function getRecentVisits(limit) {
+  if (!DB) return [];
+  try {
+    const snap = await DB.collection('morphii_visits').orderBy('lastSeen', 'desc').limit(limit || 500).get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) { return []; }
+}
+
 /* ── CUSTOM FONTS (morphii_config/fonts doc) ───
    { list: [ { name:'Bangers', url:'...', scope:'all' }, ... ] }
    scope is 'all' (default, every product) or 'in-loving-memory' (only
@@ -382,6 +455,11 @@ async function pushFileToGithub(repoPath, base64Content, commitMessage) {
        }
        match /morphii_shopee/{docId} {
          allow read, write: if request.auth != null
+           && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+       }
+       match /morphii_visits/{deviceId} {
+         allow create, update: if true;
+         allow read, delete: if request.auth != null
            && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
        }
      }
