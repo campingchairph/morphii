@@ -206,16 +206,23 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 .font-row-name{flex:1;font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .font-row-badge{font-size:10px;font-weight:800;color:var(--ink-dim);background:var(--bg-alt,rgba(255,255,255,0.08));border-radius:6px;padding:3px 7px;flex-shrink:0;white-space:nowrap;}
 .font-row-remove{background:none;border:none;color:#ff9b98;font-size:11px;font-weight:800;cursor:pointer;flex-shrink:0;}
-.print-modal-inner{background:var(--navy);border-radius:24px;width:100%;max-width:900px;border:2px solid var(--border);overflow:hidden;margin:auto;}
-.pmi-header{padding:18px 24px;background:#071929;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--border);}
+/* max-height + flex column here, with overflow-y:auto on .pmi-body below,
+   is what actually makes these modals scrollable — a flex item with
+   overflow:hidden (this card, inside the overlay's flex column) computes
+   its automatic min-height from its OWN content instead of the container,
+   which silently defeated the overlay's own overflow-y:auto and clipped
+   anything below the fold with no way to reach it. Capping this card's
+   height and scrolling .pmi-body internally sidesteps that entirely. */
+.print-modal-inner{background:var(--navy);border-radius:24px;width:100%;max-width:900px;max-height:90vh;border:2px solid var(--border);overflow:hidden;margin:auto;display:flex;flex-direction:column;}
+.pmi-header{padding:18px 24px;background:#071929;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--border);flex-shrink:0;}
 .pmi-title{font-family:'Fredoka One',cursive;font-size:20px;color:white;}
 .pmi-close{background:none;border:none;color:var(--ink-dim);font-size:22px;cursor:pointer;padding:4px 8px;}
-.pmi-controls{padding:14px 24px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-bottom:2px solid var(--border);}
+.pmi-controls{padding:14px 24px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-bottom:2px solid var(--border);flex-shrink:0;}
 .pmi-label{font-size:11px;font-weight:800;color:var(--ink-dim);text-transform:uppercase;letter-spacing:1px;}
 .pmi-select{padding:7px 12px;border-radius:10px;background:rgba(255,255,255,0.08);border:1.5px solid var(--border);color:white;font-family:'Fredoka One',cursive;font-size:16px;outline:none;cursor:pointer;}
 .pmi-select option{color:#000;}
 .pmi-pack-btn{margin-left:auto;padding:8px 20px;background:var(--sky);color:#0B2E4E;border:none;border-radius:12px;font-family:'Fredoka One',cursive;font-size:13px;cursor:pointer;box-shadow:0 3px 0 #2BA8D8;}
-.pmi-body{padding:20px 24px;display:flex;gap:20px;flex-wrap:wrap;}
+.pmi-body{padding:20px 24px;display:flex;gap:20px;flex-wrap:wrap;overflow-y:auto;flex:1;min-height:0;}
 .paper-preview-wrap{flex:1;min-width:280px;display:flex;flex-direction:column;align-items:center;gap:10px;}
 .paper-canvas-wrap{border:2px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.4);background:white;max-width:100%;}
 #paperCanvas{display:block;max-width:100%;cursor:grab;}
