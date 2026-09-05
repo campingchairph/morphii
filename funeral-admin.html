@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Funeral Home Admin — Morphii</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --navy:#0B2E4E; --pink:#FF6FAE; --yellow:#FFFF00; --sky:#4DC8F0; --green:#55EFC4; --coral:#ff9b98;
+  --panel:#0d3557; --border:rgba(255,255,255,0.14); --ink-dim:rgba(255,255,255,0.55);
+}
+body{font-family:'Nunito',sans-serif;background:var(--navy);color:white;min-height:100vh;}
+button,input,textarea,select{font-family:inherit;}
+h1,.logo{font-family:'Fredoka One',cursive;}
+
+/* ── LOGIN (same pattern as orders-admin.html) ── */
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-card{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:36px 32px;max-width:360px;width:100%;text-align:center;}
+.login-card .logo{font-size:26px;margin-bottom:4px;}
+.login-card .logo span{color:var(--pink);}
+.login-sub{font-size:12.5px;color:var(--ink-dim);font-weight:700;margin-bottom:22px;}
+.login-input{width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);background:rgba(255,255,255,0.06);color:white;font-size:16px;font-weight:700;margin-bottom:10px;outline:none;}
+.login-input:focus{border-color:var(--pink);}
+.login-btn{width:100%;padding:12px;border-radius:50px;border:none;background:var(--pink);color:white;font-family:'Fredoka One',cursive;font-size:15px;cursor:pointer;margin-top:6px;box-shadow:0 4px 0 #c0437e;}
+.login-err{margin-top:10px;font-size:12px;font-weight:700;color:#ff9b98;min-height:16px;}
+
+/* ── SHELL ── */
+#adminScreen{display:none;}
+.fn-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:16px 24px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20;}
+.fn-header .logo{font-size:20px;}
+.fn-header .logo span{color:var(--pink);}
+.fn-user{font-size:12px;color:var(--ink-dim);font-weight:700;}
+.fn-signout,.fn-back{background:rgba(255,255,255,0.08);border:1px solid var(--border);color:white;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-block;}
+
+.fn-main{max-width:1000px;margin:0 auto;padding:24px;}
+
+.fn-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+.fn-tab{padding:9px 18px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:white;font-size:13px;font-weight:800;cursor:pointer;}
+.fn-tab.active{background:var(--sky);border-color:var(--sky);}
+.fn-panel{display:none;}
+.fn-panel.active{display:block;}
+
+.fn-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:16px;}
+.fn-card-title{font-family:'Fredoka One',cursive;font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.fn-hint{font-size:11.5px;color:var(--ink-dim);font-weight:700;line-height:1.6;margin-bottom:14px;}
+
+.fn-field-label{font-size:9px;font-weight:800;color:var(--ink-dim);margin-bottom:3px;display:block;text-transform:uppercase;letter-spacing:0.3px;}
+.fn-input,.fn-select,.fn-textarea{
+  width:100%;background:rgba(255,255,255,0.06);border:1.5px solid var(--border);border-radius:8px;
+  color:white;padding:8px 10px;font-size:13.5px;font-weight:700;outline:none;
+}
+.fn-input:focus,.fn-select:focus,.fn-textarea:focus{border-color:var(--sky);}
+.fn-select option{color:#000;}
+.fn-textarea{font-weight:600;line-height:1.6;resize:vertical;font-family:inherit;}
+
+/* ── DASHBOARD STRIP ── */
+.fn-stats-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.fn-stat{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 16px;text-align:center;flex:1;min-width:100px;}
+.fn-stat b{display:block;font-family:'Fredoka One',cursive;font-size:20px;}
+.fn-stat span{font-size:9.5px;color:var(--ink-dim);font-weight:800;text-transform:uppercase;letter-spacing:0.3px;}
+
+/* ── CONTACT FORM ── */
+.fn-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:10px;}
+.fn-add-btn{padding:9px 18px;border-radius:20px;border:none;background:var(--sky);color:#0B2E4E;font-weight:800;font-size:12px;cursor:pointer;}
+.fn-add-toggle-btn{background:rgba(255,255,255,0.06);border:1.5px dashed var(--border);color:var(--ink-dim);border-radius:12px;padding:10px;width:100%;font-weight:800;font-size:12.5px;cursor:pointer;margin-bottom:16px;}
+.fn-add-toggle-btn:hover{border-color:var(--sky);color:var(--sky);}
+
+/* ── STATUS FILTER + BADGES ── */
+.fn-status-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.fn-status-tab{padding:6px 14px;border-radius:16px;border:1.5px solid var(--border);background:transparent;color:var(--ink-dim);font-size:11px;font-weight:800;cursor:pointer;}
+.fn-status-tab.active{background:rgba(255,255,255,0.12);color:white;border-color:white;}
+.fn-badge{display:inline-block;font-size:9.5px;font-weight:900;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap;}
+.fn-badge-not_contacted{background:rgba(255,255,255,0.1);color:var(--ink-dim);}
+.fn-badge-sent{background:rgba(77,200,240,0.18);color:var(--sky);}
+.fn-badge-replied{background:rgba(255,255,0,0.15);color:var(--yellow);}
+.fn-badge-negotiating{background:rgba(255,165,64,0.18);color:#ffa540;}
+.fn-badge-won{background:rgba(85,239,196,0.18);color:var(--green);}
+.fn-badge-declined{background:rgba(255,155,152,0.18);color:var(--coral);}
+
+/* ── CONTACT ROWS ── */
+.fn-contact-card{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px;}
+.fn-contact-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
+.fn-contact-name{font-family:'Fredoka One',cursive;font-size:15px;}
+.fn-contact-meta{font-size:11.5px;color:var(--ink-dim);font-weight:700;margin-top:2px;}
+.fn-contact-dates{font-size:10px;color:var(--ink-dim);font-weight:700;margin-top:6px;display:flex;gap:12px;flex-wrap:wrap;}
+.fn-contact-notes{font-size:11.5px;color:var(--ink-dim);font-weight:600;margin-top:8px;font-style:italic;}
+.fn-contact-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center;}
+.fn-mini-btn{padding:6px 14px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:white;font-size:11px;font-weight:800;cursor:pointer;}
+.fn-mini-btn.compose{border-color:var(--sky);color:var(--sky);}
+.fn-mini-btn.compose:hover{background:var(--sky);color:var(--navy);}
+.fn-mini-btn.edit{border-color:var(--yellow);color:var(--yellow);}
+.fn-mini-btn.edit:hover{background:var(--yellow);color:var(--navy);}
+.fn-mini-btn.del{border-color:var(--coral);color:var(--coral);}
+.fn-mini-btn.del:hover{background:var(--coral);color:var(--navy);}
+
+/* ── COMPOSE PANEL (inline, appears under a contact when "Compose" is tapped) ── */
+.fn-compose-box{background:rgba(0,0,0,0.2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-top:10px;}
+.fn-compose-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;}
+.fn-compose-preview{font-size:11.5px;font-weight:600;line-height:1.6;color:var(--ink-dim);background:rgba(255,255,255,0.03);border-radius:8px;padding:10px;white-space:pre-wrap;max-height:220px;overflow-y:auto;margin-bottom:8px;}
+.fn-placeholder{background:rgba(255,255,0,0.28);color:var(--yellow);border-radius:3px;padding:0 3px;font-weight:800;}
+
+/* ── TEMPLATES TAB (mirrors shopee-admin.html's Scripts tab) ── */
+.fn-tpl-card{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:14px;}
+.fn-tpl-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap;}
+.fn-tpl-title{font-family:'Fredoka One',cursive;font-size:14.5px;}
+.fn-tpl-tags{display:flex;gap:5px;flex-wrap:wrap;}
+.fn-tag{font-size:8.5px;font-weight:900;padding:2px 8px;border-radius:20px;background:rgba(77,200,240,0.18);color:var(--sky);text-transform:uppercase;letter-spacing:0.3px;}
+.fn-tpl-body{background:rgba(0,0,0,0.2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.7;white-space:pre-wrap;font-weight:600;margin-bottom:10px;}
+.fn-tpl-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.fn-mini-btn.dup{border-color:var(--green);color:var(--green);}
+.fn-mini-btn.dup:hover{background:var(--green);color:var(--navy);}
+.fn-mini-btn.save{border-color:var(--pink);color:var(--pink);}
+.fn-mini-btn.save:hover{background:var(--pink);color:white;}
+.fn-add-tpl-btn{background:rgba(255,255,255,0.06);border:1.5px dashed var(--border);color:var(--ink-dim);border-radius:12px;padding:14px;width:100%;font-weight:800;font-size:13px;cursor:pointer;}
+.fn-add-tpl-btn:hover{border-color:var(--sky);color:var(--sky);}
+
+.fn-empty-msg{text-align:center;color:var(--ink-dim);font-size:12px;padding:20px 0;}
+
+/* ── FUNERAL HOME ORDER CALCULATOR (moved in verbatim from orders-admin.html —
+   same fc-prefixed classes, same FC namespace, unrelated to fn- above) ── */
+#calcRoot{
+  --fc-bg:#14141f; --fc-surface:#1e1e2e; --fc-border:#2e2e40; --fc-text:#e8e8f0; --fc-muted:#8888a8;
+  --fc-accent:#c9914f; --fc-accent-light:#2a200f;
+  --fc-green:#4caf80; --fc-green-bg:#0d2b1a; --fc-red:#e05a4e; --fc-red-bg:#2a0f0d; --fc-yellow:#d4933a; --fc-yellow-bg:#241508;
+}
+.fc-hint{font-size:11px;font-weight:700;color:var(--fc-muted);margin-bottom:14px;line-height:1.5;}
+.fc-inputs-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.fc-input-card{background:var(--fc-surface);border:1.5px solid var(--fc-border);border-radius:10px;padding:14px;transition:border-color .2s;min-width:0;}
+.fc-input-card.active{border-color:var(--fc-accent);}
+.fc-ic-tag{font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--fc-muted);}
+.fc-ic-size{font-size:22px;font-weight:800;line-height:1.1;}
+.fc-ic-meta{font-size:11px;color:var(--fc-muted);margin-bottom:10px;overflow-wrap:break-word;}
+.fc-qty-row{display:flex;align-items:center;gap:5px;}
+.fc-qty-btn{width:28px;height:28px;border:1.5px solid var(--fc-border);background:var(--fc-bg);border-radius:6px;font-size:15px;font-weight:600;cursor:pointer;color:var(--fc-text);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.fc-qty-btn:hover{background:var(--fc-border);}
+.fc-qty-inp{flex:1;height:28px;border:1.5px solid var(--fc-border);border-radius:6px;text-align:center;font-size:14px;font-weight:700;background:var(--fc-surface);color:var(--fc-text);}
+.fc-qty-inp:focus{outline:none;border-color:var(--fc-accent);}
+.fc-ic-subtotal{font-size:13px;font-weight:800;color:var(--fc-accent);text-align:right;margin-top:7px;}
+.fc-ic-contrib{font-size:10px;color:var(--fc-muted);text-align:right;}
+.fc-pages-section{background:var(--fc-surface);border:1.5px solid var(--fc-border);border-radius:12px;padding:16px;margin-bottom:12px;}
+.fc-ps-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px;}
+.fc-ps-title{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--fc-muted);}
+.fc-ps-load{font-size:12px;font-weight:700;}
+.fc-load-ok{color:var(--fc-green);}
+.fc-load-warn{color:var(--fc-red);}
+.fc-load-partial{color:var(--fc-yellow);}
+.fc-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:10px;color:var(--fc-muted);margin-bottom:12px;}
+.fc-leg-item{display:flex;align-items:center;gap:5px;}
+.fc-leg-dot{width:8px;height:8px;border-radius:50%;}
+.fc-pages-scroll{display:flex;gap:14px;overflow-x:auto;padding-bottom:4px;align-items:flex-start;}
+.fc-pages-scroll::-webkit-scrollbar{height:4px;}
+.fc-pages-scroll::-webkit-scrollbar-thumb{background:var(--fc-border);border-radius:2px;}
+.fc-page-card{flex-shrink:0;}
+.fc-page-label{font-size:10px;font-weight:700;color:var(--fc-muted);text-align:center;margin-bottom:5px;letter-spacing:.5px;text-transform:uppercase;}
+.fc-page-svg-wrap{border:1px solid var(--fc-border);border-radius:6px;overflow:hidden;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.fc-page-svg-wrap svg{display:block;}
+.fc-page-info{font-size:10px;color:var(--fc-muted);text-align:center;margin-top:5px;}
+.fc-page-info.warn{color:var(--fc-red);}
+.fc-page-info.ok{color:var(--fc-green);}
+.fc-no-visual-msg{color:var(--fc-muted);font-size:12px;text-align:center;padding:40px 0;font-style:italic;}
+.fc-fill-meter{margin-top:10px;}
+.fc-fm-label{font-size:10px;color:var(--fc-muted);margin-bottom:4px;display:flex;justify-content:space-between;}
+.fc-fm-track{height:7px;background:var(--fc-border);border-radius:4px;overflow:hidden;position:relative;}
+.fc-fm-bar{height:100%;border-radius:4px;transition:width .3s;}
+.fc-fm-bar.ok{background:var(--fc-green);}
+.fc-fm-bar.warn{background:var(--fc-red);}
+.fc-fm-bar.partial{background:var(--fc-yellow);}
+.fc-status-banner{display:flex;align-items:flex-start;gap:10px;padding:13px 15px;border-radius:10px;font-size:13px;font-weight:600;margin-bottom:12px;}
+.fc-status-banner.ok{background:var(--fc-green-bg);color:var(--fc-green);}
+.fc-status-banner.warn{background:var(--fc-red-bg);color:var(--fc-red);}
+.fc-status-banner.partial{background:var(--fc-yellow-bg);color:var(--fc-yellow);}
+.fc-status-banner.empty{background:var(--fc-border);color:var(--fc-muted);}
+.fc-b-icon{font-size:17px;flex-shrink:0;margin-top:1px;}
+.fc-b-body{flex:1;}
+.fc-b-title{font-weight:700;}
+.fc-b-msg{font-weight:400;font-size:12px;line-height:1.5;margin-top:3px;}
+.fc-b-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+.fc-b-chip{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--fc-surface);border:1px solid var(--fc-border);cursor:pointer;color:var(--fc-text);}
+.fc-b-chip:hover{background:var(--fc-accent-light);border-color:var(--fc-accent);}
+.fc-summary-card{background:var(--fc-surface);border:1.5px solid var(--fc-border);border-radius:12px;padding:16px;margin-bottom:12px;}
+.fc-sec-title{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--fc-muted);margin-bottom:12px;}
+.fc-t-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;font-size:13px;border-bottom:1px solid var(--fc-border);}
+.fc-t-row:last-of-type{border-bottom:none;}
+.fc-t-row.dim{color:var(--fc-muted);}
+.fc-t-row.grand{font-size:19px;font-weight:800;padding-top:10px;border-top:2px solid var(--fc-border);border-bottom:none;margin-top:4px;}
+.fc-t-row.grand .fc-tl{color:var(--fc-muted);font-size:11px;}
+.fc-partner-card{background:var(--fc-surface);border:1.5px solid var(--fc-border);border-radius:12px;padding:16px;}
+.fc-p-head{font-size:14px;font-weight:700;margin-bottom:2px;}
+.fc-p-sub{font-size:12px;color:var(--fc-muted);margin-bottom:12px;}
+.fc-toggle-row{display:flex;background:var(--fc-bg);border-radius:8px;padding:3px;gap:3px;margin-bottom:14px;}
+.fc-t-btn{flex:1;padding:7px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:var(--fc-muted);}
+.fc-t-btn.active{background:var(--fc-surface);color:var(--fc-text);box-shadow:0 1px 4px rgba(0,0,0,.1);}
+.fc-p-lines{display:flex;flex-direction:column;gap:6px;}
+.fc-p-line{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:8px 11px;background:var(--fc-bg);border-radius:7px;}
+.fc-p-line-lbl{color:var(--fc-muted);}
+.fc-p-line-val{font-weight:700;font-size:13px;}
+.fc-p-line.hi{background:var(--fc-accent-light);}
+.fc-p-line.hi .fc-p-line-val{color:var(--fc-accent);font-size:16px;}
+.fc-empty-msg{text-align:center;color:var(--fc-muted);font-size:12px;padding:14px 0;}
+@media(max-width:600px){.fc-inputs-row{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="logo">morphii<span>.</span> Funeral Home</div>
+    <div class="login-sub">Partnerships &amp; order calculator — sign in to continue</div>
+    <input type="email" id="loginEmail" class="login-input" placeholder="Admin email">
+    <input type="password" id="loginPass" class="login-input" placeholder="Password">
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="adminScreen">
+  <div class="fn-header">
+    <div class="logo">morphii<span>.</span> Funeral Home</div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <a class="fn-back" href="orders-admin.html">← Order Admin</a>
+      <div class="fn-user" id="admUserEmail"></div>
+      <button class="fn-signout" onclick="doSignOut()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="fn-main">
+    <div class="fn-tabs" id="fnTabs">
+      <button class="fn-tab active" onclick="setFnTab('tracker')" data-tab="tracker">📋 Outreach Tracker</button>
+      <button class="fn-tab" onclick="setFnTab('templates')" data-tab="templates">💬 Templates</button>
+      <button class="fn-tab" onclick="setFnTab('calc')" data-tab="calc">🧮 Order Calculator</button>
+    </div>
+
+    <!-- ══ OUTREACH TRACKER ══ -->
+    <div class="fn-panel active" id="fnPanel-tracker">
+      <div class="fn-stats-row" id="fnStatsRow"></div>
+
+      <button class="fn-add-toggle-btn" onclick="toggleAddContactForm()">+ Add Funeral Home</button>
+      <div class="fn-card" id="fnAddForm" style="display:none">
+        <div class="fn-card-title">New Funeral Home</div>
+        <div class="fn-form-grid">
+          <div><label class="fn-field-label">Funeral Home Name</label><input type="text" class="fn-input" id="newFnName" placeholder="e.g. St. Peter Memorial Chapels"></div>
+          <div><label class="fn-field-label">Contact Person</label><input type="text" class="fn-input" id="newFnContact" placeholder="e.g. Maria Santos"></div>
+          <div><label class="fn-field-label">Email</label><input type="email" class="fn-input" id="newFnEmail" placeholder="name@funeralhome.com"></div>
+          <div><label class="fn-field-label">Phone</label><input type="text" class="fn-input" id="newFnPhone" placeholder="0917 123 4567"></div>
+          <div style="grid-column:1/-1"><label class="fn-field-label">Address</label><input type="text" class="fn-input" id="newFnAddress" placeholder="City / area"></div>
+          <div style="grid-column:1/-1"><label class="fn-field-label">Notes</label><input type="text" class="fn-input" id="newFnNotes" placeholder="Optional"></div>
+        </div>
+        <div id="newFnError" class="fn-hint" style="color:var(--coral);display:none"></div>
+        <button class="fn-add-btn" onclick="submitNewContact()">Add</button>
+      </div>
+
+      <div class="fn-status-tabs" id="fnStatusTabs"></div>
+      <div id="fnContactsList"></div>
+    </div>
+
+    <!-- ══ TEMPLATES ══ -->
+    <div class="fn-panel" id="fnPanel-templates">
+      <div class="fn-hint" style="margin-bottom:16px">
+        Ready-to-send proposal, follow-up, thank-you, and win-back messages. <span class="fn-placeholder">[BRACKET_CAPS]</span> are placeholders — auto-filled from the contact record when you Compose from the tracker, or fill them in by hand.
+      </div>
+      <div id="fnTemplatesList"></div>
+      <button class="fn-add-tpl-btn" onclick="addTemplate()">+ Add New Template</button>
+    </div>
+
+    <!-- ══ ORDER CALCULATOR (moved in from orders-admin.html) ══ -->
+    <div class="fn-panel" id="fnPanel-calc">
+      <div id="calcRoot">
+        <div class="fn-hint">Assorted order · shared A4 page fill · funeral home partner commissions.</div>
+
+        <div class="fc-inputs-row" id="fcInputsRow"></div>
+
+        <div class="fc-pages-section">
+          <div class="fc-ps-header">
+            <span class="fc-ps-title">📄 A4 Page Fill — all sizes share one page</span>
+            <span class="fc-ps-load" id="fcLoadLabel"></span>
+          </div>
+          <div class="fc-legend" id="fcLegend"></div>
+          <div id="fcPageVisual"><div class="fc-no-visual-msg">Enter quantities above to see the page layout</div></div>
+          <div class="fc-fill-meter" id="fcFillMeter" style="display:none">
+            <div class="fc-fm-label"><span id="fcFillLabelLeft"></span><span id="fcFillLabelRight"></span></div>
+            <div class="fc-fm-track"><div class="fc-fm-bar" id="fcFillBar"></div></div>
+          </div>
+        </div>
+
+        <div class="fc-status-banner empty" id="fcStatusBanner">
+          <span class="fc-b-icon">📋</span>
+          <div class="fc-b-body"><div class="fc-b-title">Enter quantities above</div><div class="fc-b-msg">The minimum order fills one complete A4 page worth of mixed pins.</div></div>
+        </div>
+
+        <div class="fc-summary-card">
+          <div class="fc-sec-title">Order Summary</div>
+          <div id="fcSummaryRows"><div class="fc-empty-msg">No items yet</div></div>
+        </div>
+
+        <div class="fc-partner-card">
+          <div class="fc-p-head">⚰️ Funeral Home Partner</div>
+          <div class="fc-p-sub">Commission calculator for referring funeral homes</div>
+          <div class="fc-toggle-row">
+            <button class="fc-t-btn active" id="fcBtnR" onclick="FC.setMode('r')">Referral — ₱50 flat</button>
+            <button class="fc-t-btn" id="fcBtnW" onclick="FC.setMode('w')">Package Inclusion — 15% off</button>
+          </div>
+          <div id="fcPartnerResult"><div class="fc-empty-msg">Add an order above</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="fnToast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--panel);border:1.5px solid var(--sky);color:white;padding:11px 22px;border-radius:50px;font-weight:800;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,0.4);opacity:0;pointer-events:none;transition:all 0.25s ease;z-index:200;"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js?v=8"></script>
+<script>
+/* ── AUTH (same pattern as orders-admin.html) ── */
+function doLogin(){
+  const errEl = document.getElementById('loginErr');
+  errEl.textContent = '';
+  if (!AUTH){ errEl.textContent = 'Firebase not configured yet — see firebase-config.js'; return; }
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPass').value;
+  if (!email || !pass){ errEl.textContent = 'Enter email and password.'; return; }
+  AUTH.signInWithEmailAndPassword(email, pass).catch(err => { errEl.textContent = err.message; });
+}
+window.doLogin = doLogin;
+
+function doSignOut(){ if (AUTH) AUTH.signOut(); }
+window.doSignOut = doSignOut;
+
+if (AUTH){
+  AUTH.onAuthStateChanged(user => {
+    if (user && isAdmin(user)){
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('adminScreen').style.display = 'block';
+      document.getElementById('admUserEmail').textContent = user.email;
+      initFuneralAdmin();
+    } else {
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('adminScreen').style.display = 'none';
+      if (user && !isAdmin(user)){
+        document.getElementById('loginErr').textContent = 'This account is not authorized as an admin.';
+        AUTH.signOut();
+      }
+    }
+  });
+}
+
+/* ── TOAST ── */
+let fnToastTimer = null;
+function showFnToast(msg){
+  const el = document.getElementById('fnToast');
+  el.textContent = msg;
+  el.style.opacity = '1';
+  el.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(fnToastTimer);
+  fnToastTimer = setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(-50%) translateY(20px)'; }, 2200);
+}
+
+function escHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ── TABS ── */
+function setFnTab(id){
+  document.querySelectorAll('.fn-tab').forEach(t => t.classList.toggle('active', t.dataset.tab===id));
+  document.querySelectorAll('.fn-panel').forEach(p => p.classList.toggle('active', p.id==='fnPanel-'+id));
+}
+window.setFnTab = setFnTab;
+
+/* ═══════════════════════════════════════════════
+   OUTREACH TRACKER
+   ═══════════════════════════════════════════════ */
+const STATUS_META = {
+  not_contacted: { label:'Not Contacted' },
+  sent:          { label:'Proposal Sent' },
+  replied:       { label:'Replied' },
+  negotiating:   { label:'Negotiating' },
+  won:           { label:'Partner ✓' },
+  declined:      { label:'Declined' },
+};
+const STATUS_ORDER = ['not_contacted','sent','replied','negotiating','won','declined'];
+
+let contacts = [];
+let templates = [];
+let fnStatusFilter = 'all';
+let composingContactId = null; // which contact card currently has its Compose box open
+
+async function loadContacts(){
+  contacts = await getFuneralContacts();
+  renderStats();
+  renderStatusTabs();
+  renderContacts();
+}
+
+function renderStats(){
+  const counts = { total: contacts.length };
+  STATUS_ORDER.forEach(s => counts[s] = 0);
+  contacts.forEach(c => { if (counts[c.status] != null) counts[c.status]++; });
+  const tiles = [
+    { key:'total', label:'Total' },
+    { key:'not_contacted', label:'Not Contacted' },
+    { key:'sent', label:'Sent' },
+    { key:'replied', label:'Replied' },
+    { key:'negotiating', label:'Negotiating' },
+    { key:'won', label:'Partners' },
+    { key:'declined', label:'Declined' },
+  ];
+  document.getElementById('fnStatsRow').innerHTML = tiles.map(t =>
+    `<div class="fn-stat"><b>${counts[t.key]||0}</b><span>${t.label}</span></div>`).join('');
+}
+
+function renderStatusTabs(){
+  const tabs = [{ key:'all', label:'All' }, ...STATUS_ORDER.map(s => ({ key:s, label:STATUS_META[s].label }))];
+  document.getElementById('fnStatusTabs').innerHTML = tabs.map(t =>
+    `<button class="fn-status-tab ${fnStatusFilter===t.key?'active':''}" onclick="setFnStatusFilter('${t.key}')">${t.label}</button>`).join('');
+}
+function setFnStatusFilter(key){ fnStatusFilter = key; renderStatusTabs(); renderContacts(); }
+window.setFnStatusFilter = setFnStatusFilter;
+
+function toggleAddContactForm(){
+  const el = document.getElementById('fnAddForm');
+  el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+window.toggleAddContactForm = toggleAddContactForm;
+
+async function submitNewContact(){
+  const errEl = document.getElementById('newFnError');
+  errEl.style.display = 'none';
+  const name = document.getElementById('newFnName').value.trim();
+  if (!name){ errEl.textContent = 'Funeral home name is required.'; errEl.style.display = 'block'; return; }
+  const payload = {
+    name,
+    contactPerson: document.getElementById('newFnContact').value.trim(),
+    email: document.getElementById('newFnEmail').value.trim(),
+    phone: document.getElementById('newFnPhone').value.trim(),
+    address: document.getElementById('newFnAddress').value.trim(),
+    notes: document.getElementById('newFnNotes').value.trim(),
+    status: 'not_contacted',
+  };
+  try {
+    await saveFuneralContact(payload);
+    ['newFnName','newFnContact','newFnEmail','newFnPhone','newFnAddress','newFnNotes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('fnAddForm').style.display = 'none';
+    await loadContacts();
+    showFnToast('Added!');
+  } catch(e){
+    errEl.textContent = e.message || 'Could not add.';
+    errEl.style.display = 'block';
+  }
+}
+window.submitNewContact = submitNewContact;
+
+function todayStr(){
+  return new Date().toISOString().slice(0,10);
+}
+
+// Changing status auto-stamps the matching date the first time it's
+// reached, without overwriting one already set (e.g. re-opening a
+// declined contact and marking it "replied" again shouldn't erase the
+// original dateReplied).
+async function setContactStatus(id, status){
+  const c = contacts.find(x => x.id===id);
+  if (!c) return;
+  const payload = { id, status };
+  if (status==='sent' && !c.dateContacted) payload.dateContacted = todayStr();
+  if (status==='replied' && !c.dateReplied) payload.dateReplied = todayStr();
+  if ((status==='won' || status==='declined')) payload.dateClosed = todayStr();
+  try {
+    await saveFuneralContact(payload);
+    await loadContacts();
+  } catch(e){ showFnToast('Could not update: ' + e.message); }
+}
+window.setContactStatus = setContactStatus;
+
+async function deleteContact(id){
+  if (!confirm('Delete this funeral home from the tracker? This cannot be undone.')) return;
+  try {
+    await deleteFuneralContact(id);
+    await loadContacts();
+    showFnToast('Deleted.');
+  } catch(e){ showFnToast('Could not delete: ' + e.message); }
+}
+window.deleteContact = deleteContact;
+
+// Simple inline "edit" — reuses the same fields as Add, prompts one at a
+// time via a lightweight approach: re-show the add form pre-filled and
+// repurpose it as an editor when editingContactId is set.
+let editingContactId = null;
+function startEditContact(id){
+  const c = contacts.find(x => x.id===id);
+  if (!c) return;
+  editingContactId = id;
+  document.getElementById('newFnName').value = c.name || '';
+  document.getElementById('newFnContact').value = c.contactPerson || '';
+  document.getElementById('newFnEmail').value = c.email || '';
+  document.getElementById('newFnPhone').value = c.phone || '';
+  document.getElementById('newFnAddress').value = c.address || '';
+  document.getElementById('newFnNotes').value = c.notes || '';
+  document.getElementById('fnAddForm').style.display = 'block';
+  document.querySelector('#fnAddForm .fn-card-title').textContent = 'Edit ' + c.name;
+  document.querySelector('#fnAddForm .fn-add-btn').textContent = 'Save Changes';
+  document.querySelector('#fnAddForm .fn-add-btn').setAttribute('onclick', 'submitEditContact()');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+window.startEditContact = startEditContact;
+
+async function submitEditContact(){
+  const errEl = document.getElementById('newFnError');
+  errEl.style.display = 'none';
+  const name = document.getElementById('newFnName').value.trim();
+  if (!name){ errEl.textContent = 'Funeral home name is required.'; errEl.style.display = 'block'; return; }
+  try {
+    await saveFuneralContact({
+      id: editingContactId,
+      name,
+      contactPerson: document.getElementById('newFnContact').value.trim(),
+      email: document.getElementById('newFnEmail').value.trim(),
+      phone: document.getElementById('newFnPhone').value.trim(),
+      address: document.getElementById('newFnAddress').value.trim(),
+      notes: document.getElementById('newFnNotes').value.trim(),
+    });
+    resetAddForm();
+    await loadContacts();
+    showFnToast('Saved!');
+  } catch(e){
+    errEl.textContent = e.message || 'Could not save.';
+    errEl.style.display = 'block';
+  }
+}
+window.submitEditContact = submitEditContact;
+
+function resetAddForm(){
+  editingContactId = null;
+  ['newFnName','newFnContact','newFnEmail','newFnPhone','newFnAddress','newFnNotes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fnAddForm').style.display = 'none';
+  document.querySelector('#fnAddForm .fn-card-title').textContent = 'New Funeral Home';
+  document.querySelector('#fnAddForm .fn-add-btn').textContent = 'Add';
+  document.querySelector('#fnAddForm .fn-add-btn').setAttribute('onclick', 'submitNewContact()');
+}
+
+// Best-guess default template for wherever a contact currently sits in
+// the pipeline — the admin can still pick a different one from the
+// dropdown before sending.
+function suggestedTemplateTag(status){
+  if (status==='not_contacted') return 'Proposal';
+  if (status==='sent') return 'Follow-up';
+  if (status==='won') return 'Thank You';
+  if (status==='declined') return 'Win-back';
+  return 'Proposal';
+}
+
+function fillPlaceholders(body, contact){
+  return body
+    .replace(/\[FUNERAL_HOME_NAME\]/g, contact.name || '[FUNERAL_HOME_NAME]')
+    .replace(/\[CONTACT_NAME\]/g, contact.contactPerson || contact.name || '[CONTACT_NAME]');
+}
+
+function toggleCompose(id){
+  composingContactId = composingContactId===id ? null : id;
+  renderContacts();
+}
+window.toggleCompose = toggleCompose;
+
+function onComposeTemplateChange(id){
+  renderContacts();
+}
+window.onComposeTemplateChange = onComposeTemplateChange;
+
+function sendCompose(id){
+  const c = contacts.find(x => x.id===id);
+  const sel = document.getElementById('composeTplSelect_'+id);
+  const tpl = templates.find(t => t.id===sel.value);
+  if (!c || !tpl) return;
+  const subject = fillPlaceholders(tpl.subject || tpl.title, c);
+  const body = fillPlaceholders(tpl.body, c);
+  const mailto = `mailto:${encodeURIComponent(c.email||'')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailto;
+  // Marking "sent" only makes sense from Not Contacted — every other
+  // status transition (follow-up, thank-you, win-back) is a manual pick
+  // via the status dropdown instead, since those don't map to one status.
+  if (c.status === 'not_contacted') setContactStatus(id, 'sent');
+}
+window.sendCompose = sendCompose;
+
+function renderContacts(){
+  const list = fnStatusFilter==='all' ? contacts : contacts.filter(c => c.status===fnStatusFilter);
+  const el = document.getElementById('fnContactsList');
+  if (!list.length){ el.innerHTML = '<div class="fn-empty-msg">No funeral homes here yet.</div>'; return; }
+
+  el.innerHTML = list.map(c => {
+    const statusOptions = STATUS_ORDER.map(s =>
+      `<option value="${s}" ${c.status===s?'selected':''}>${STATUS_META[s].label}</option>`).join('');
+    const dates = [];
+    if (c.dateContacted) dates.push(`Sent: ${c.dateContacted}`);
+    if (c.dateReplied) dates.push(`Replied: ${c.dateReplied}`);
+    if (c.dateClosed) dates.push(`Closed: ${c.dateClosed}`);
+
+    let composeHtml = '';
+    if (composingContactId === c.id){
+      const suggested = suggestedTemplateTag(c.status);
+      const defaultTpl = templates.find(t => (t.tags||[]).includes(suggested)) || templates[0];
+      const options = templates.map(t =>
+        `<option value="${t.id}" ${defaultTpl && t.id===defaultTpl.id?'selected':''}>${escHtml(t.title)}</option>`).join('');
+      const activeTpl = templates.find(t => t.id === (document.getElementById('composeTplSelect_'+c.id) ? document.getElementById('composeTplSelect_'+c.id).value : (defaultTpl&&defaultTpl.id))) || defaultTpl;
+      const preview = activeTpl ? fillPlaceholders(activeTpl.body, c) : '';
+      composeHtml = `
+        <div class="fn-compose-box">
+          <div class="fn-compose-row">
+            <select class="fn-select" style="max-width:260px" id="composeTplSelect_${c.id}" onchange="onComposeTemplateChange('${c.id}')">${options}</select>
+            <button class="fn-mini-btn compose" onclick="sendCompose('${c.id}')" ${c.email?'':'disabled title="No email on file"'}>✉️ Open in Mail App</button>
+          </div>
+          <div class="fn-compose-preview">${escHtml(preview)}</div>
+        </div>`;
+    }
+
+    return `
+    <div class="fn-contact-card">
+      <div class="fn-contact-top">
+        <div>
+          <div class="fn-contact-name">${escHtml(c.name)}</div>
+          <div class="fn-contact-meta">${[c.contactPerson, c.email, c.phone].filter(Boolean).map(escHtml).join(' · ') || 'No contact details yet'}</div>
+        </div>
+        <select class="fn-select" style="width:auto" onchange="setContactStatus('${c.id}', this.value)">${statusOptions}</select>
+      </div>
+      ${c.address ? `<div class="fn-contact-meta">${escHtml(c.address)}</div>` : ''}
+      ${c.notes ? `<div class="fn-contact-notes">${escHtml(c.notes)}</div>` : ''}
+      ${dates.length ? `<div class="fn-contact-dates">${dates.map(escHtml).join(' · ')}</div>` : ''}
+      <div class="fn-contact-actions">
+        <button class="fn-mini-btn compose" onclick="toggleCompose('${c.id}')">✉️ ${composingContactId===c.id?'Close':'Compose'}</button>
+        <button class="fn-mini-btn edit" onclick="startEditContact('${c.id}')">✎ Edit</button>
+        <button class="fn-mini-btn del" onclick="deleteContact('${c.id}')">🗑 Delete</button>
+      </div>
+      ${composeHtml}
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════
+   TEMPLATES
+   ═══════════════════════════════════════════════ */
+let editingTemplateId = null;
+
+function defaultFuneralTemplates(){
+  return [
+    { id:'ft1', title:'Partnership Proposal', tags:['Proposal'], subject:'Partnership Proposal — Custom Memorial Pins for [FUNERAL_HOME_NAME]', body:
+`Dear [CONTACT_NAME],
+
+Good day! My name is [YOUR_NAME] from Morphii, a custom pin-making service.
+
+We'd like to propose a simple partnership with [FUNERAL_HOME_NAME]. We create personalized memorial pins — each featuring a photo of the departed — that families can wear or give out during wakes and memorial services as a heartfelt keepsake.
+
+How it works:
+📌 We handle all design and printing — your staff doesn't need to do anything extra
+📌 Families order directly with us; you simply refer them
+📌 You earn ₱50 per referred order (or 15% off if you'd rather include it as part of your own memorial packages)
+📌 Most orders are ready within 3–5 business days
+
+We believe this can be a meaningful, low-effort addition to what you already offer grieving families, while creating a small extra revenue stream for [FUNERAL_HOME_NAME].
+
+Would you be open to a short call, or a free sample pin so you can see the quality firsthand?
+
+Looking forward to hearing from you.
+
+Warm regards,
+[YOUR_NAME]
+Morphii
+[YOUR_PHONE] · [YOUR_EMAIL]` },
+    { id:'ft2', title:'Follow-up (No Response)', tags:['Follow-up'], subject:'Following up — Morphii Partnership Proposal', body:
+`Hi [CONTACT_NAME],
+
+I hope this finds you well. I wanted to follow up on the partnership proposal I sent regarding custom memorial pins for [FUNERAL_HOME_NAME].
+
+I understand things get busy, so no worries if you haven't had a chance to look at it yet. I just wanted to check if you have any questions, or if it would help to see a sample pin in person first.
+
+We're genuinely excited about the possibility of working with [FUNERAL_HOME_NAME] and are happy to adjust the arrangement to whatever works best for you.
+
+Please let me know if there's a good time to talk.
+
+Best regards,
+[YOUR_NAME]
+Morphii` },
+    { id:'ft3', title:'Thank You (Accepted)', tags:['Thank You'], subject:'Welcome aboard, [FUNERAL_HOME_NAME]!', body:
+`Dear [CONTACT_NAME],
+
+Thank you so much for partnering with Morphii! We're truly grateful for your trust, and excited to start supporting the families of [FUNERAL_HOME_NAME] with our memorial pins.
+
+What happens next:
+1. We'll send over a short referral guide and sample materials for your staff
+2. Whenever a family is interested, simply share our contact details with them
+3. We'll handle the rest — design, printing, and delivery
+
+If you ever need anything from us — more samples, printed flyers, or adjustments to how referrals are tracked — just reach out anytime.
+
+Thank you again for the opportunity to work together.
+
+Warmly,
+[YOUR_NAME]
+Morphii` },
+    { id:'ft4', title:'Win-back (After a Decline)', tags:['Win-back'], subject:'Totally understand — the door stays open', body:
+`Hi [CONTACT_NAME],
+
+Thank you for taking the time to consider our proposal, and for letting us know. I completely understand, and I appreciate your honesty.
+
+If it's helpful to know — this isn't a one-time offer. Should your needs change, or if you'd simply like to revisit this down the line, we'd be happy to talk again, no pressure at all.
+
+If there was a specific concern — pricing, process, timing — that made this not the right fit, I'd genuinely welcome the feedback. It helps us improve, and we might be able to find an arrangement that works better for [FUNERAL_HOME_NAME].
+
+Wishing you and your team all the best.
+
+Warm regards,
+[YOUR_NAME]
+Morphii` },
+  ];
+}
+
+async function loadTemplates(){
+  const saved = await getFuneralTemplates();
+  templates = saved || defaultFuneralTemplates();
+  renderTemplates();
+}
+
+function highlightPlaceholders(text){
+  return escHtml(text).replace(/\[[A-Z0-9_]+\]/g, m => `<span class="fn-placeholder">${m}</span>`);
+}
+
+function renderTemplates(){
+  const wrap = document.getElementById('fnTemplatesList');
+  wrap.innerHTML = templates.map(t => {
+    if (t.id === editingTemplateId){
+      return `
+      <div class="fn-tpl-card" data-id="${t.id}">
+        <input type="text" class="fn-input" style="margin-bottom:8px;font-family:'Fredoka One',cursive" id="editTitle_${t.id}" value="${escHtml(t.title)}" placeholder="Title">
+        <input type="text" class="fn-input" style="margin-bottom:8px" id="editSubject_${t.id}" value="${escHtml(t.subject||'')}" placeholder="Email subject">
+        <input type="text" class="fn-input" style="margin-bottom:8px" id="editTags_${t.id}" value="${escHtml((t.tags||[]).join(', '))}" placeholder="Tags, comma separated">
+        <textarea class="fn-textarea" style="min-height:220px" id="editBody_${t.id}">${escHtml(t.body)}</textarea>
+        <div class="fn-tpl-actions" style="margin-top:10px">
+          <button class="fn-mini-btn save" onclick="saveTemplateEdit('${t.id}')">💾 Save</button>
+          <button class="fn-mini-btn" onclick="cancelTemplateEdit()">Cancel</button>
+        </div>
+      </div>`;
+    }
+    return `
+    <div class="fn-tpl-card" data-id="${t.id}">
+      <div class="fn-tpl-top">
+        <div class="fn-tpl-title">${escHtml(t.title)}</div>
+        <div class="fn-tpl-tags">${(t.tags||[]).map(tag=>`<span class="fn-tag">${escHtml(tag)}</span>`).join('')}</div>
+      </div>
+      ${t.subject ? `<div class="fn-hint" style="margin-bottom:6px">Subject: ${escHtml(t.subject)}</div>` : ''}
+      <div class="fn-tpl-body">${highlightPlaceholders(t.body)}</div>
+      <div class="fn-tpl-actions">
+        <button class="fn-mini-btn compose" onclick="copyTemplateBody('${t.id}', this)">📋 Copy</button>
+        <button class="fn-mini-btn edit" onclick="startTemplateEdit('${t.id}')">✎ Edit</button>
+        <button class="fn-mini-btn dup" onclick="duplicateTemplate('${t.id}')">⧉ Duplicate</button>
+        <button class="fn-mini-btn del" onclick="deleteTemplate('${t.id}')">🗑 Delete</button>
+      </div>
+    </div>`;
+  }).join('') || '<div class="fn-empty-msg">No templates yet — add one below.</div>';
+}
+
+function copyTemplateBody(id, btn){
+  const t = templates.find(x => x.id===id);
+  if (!t) return;
+  navigator.clipboard.writeText(t.body).then(() => {
+    showFnToast('Copied!');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  });
+}
+window.copyTemplateBody = copyTemplateBody;
+
+function startTemplateEdit(id){ editingTemplateId = id; renderTemplates(); }
+window.startTemplateEdit = startTemplateEdit;
+function cancelTemplateEdit(){ editingTemplateId = null; renderTemplates(); }
+window.cancelTemplateEdit = cancelTemplateEdit;
+
+async function saveTemplateEdit(id){
+  const t = templates.find(x => x.id===id);
+  if (!t) return;
+  t.title = document.getElementById('editTitle_'+id).value.trim() || 'Untitled';
+  t.subject = document.getElementById('editSubject_'+id).value.trim();
+  t.tags = document.getElementById('editTags_'+id).value.split(',').map(s=>s.trim()).filter(Boolean);
+  t.body = document.getElementById('editBody_'+id).value;
+  editingTemplateId = null;
+  renderTemplates();
+  try { await saveFuneralTemplates(templates); showFnToast('Template saved!'); }
+  catch(e){ showFnToast('Save failed: ' + e.message); }
+}
+window.saveTemplateEdit = saveTemplateEdit;
+
+async function duplicateTemplate(id){
+  const t = templates.find(x => x.id===id);
+  if (!t) return;
+  templates.push({ ...t, id:'ft'+Date.now(), title: t.title + ' (Copy)' });
+  renderTemplates();
+  try { await saveFuneralTemplates(templates); showFnToast('Duplicated!'); }
+  catch(e){ showFnToast('Save failed: ' + e.message); }
+}
+window.duplicateTemplate = duplicateTemplate;
+
+async function deleteTemplate(id){
+  if (!confirm('Delete this template? This cannot be undone.')) return;
+  templates = templates.filter(t => t.id!==id);
+  renderTemplates();
+  try { await saveFuneralTemplates(templates); showFnToast('Deleted.'); }
+  catch(e){ showFnToast('Save failed: ' + e.message); }
+}
+window.deleteTemplate = deleteTemplate;
+
+async function addTemplate(){
+  const t = { id:'ft'+Date.now(), title:'New Template', subject:'', tags:[], body:'' };
+  templates.push(t);
+  editingTemplateId = t.id;
+  renderTemplates();
+}
+window.addTemplate = addTemplate;
+
+/* ═══════════════════════════════════════════════
+   FUNERAL HOME ORDER CALCULATOR — moved in verbatim from orders-admin.html
+   (see the commit history there for the original standalone-tool source);
+   still self-contained under its own FC namespace and fc-* classes.
+   ═══════════════════════════════════════════════ */
+const FC = (function(){
+  const CFG = {
+    '58mm': { key:'58mm', label:'58mm', desc:'Large — Immediate Family',  perSheet:6,  cols:2, perPiece:41, color:'#7a5c38', colorBg:'rgba(122,92,56,0.08)' },
+    '32mm': { key:'32mm', label:'32mm', desc:'Medium — Close Relatives',  perSheet:24, cols:4, perPiece:29, color:'#3a6e40', colorBg:'rgba(58,110,64,0.08)'  },
+    '25mm': { key:'25mm', label:'25mm', desc:'Small — Extended & Friends',perSheet:35, cols:5, perPiece:22, color:'#2a4a8a', colorBg:'rgba(42,74,138,0.08)' },
+  };
+  const SIZES = ['58mm','32mm','25mm'];
+  const MIN_VALUE  = 350;
+  const REFERRAL   = 50;
+  const WHOLESALE  = 0.15;
+  const SVG_W = 138, SVG_H = 195; // rendered size; viewBox ratio ≈ 210:297
+
+  let qtys = {'58mm':0,'32mm':0,'25mm':0};
+  let mode = 'r';
+
+  function getPages(){
+    const rem = {};
+    SIZES.forEach(k => rem[k] = qtys[k]||0);
+    if (SIZES.every(k => rem[k] === 0)) return [];
+    const pages = [];
+    while (SIZES.some(k => rem[k] > 0)){
+      let pageLoad = 0;
+      const allocs = {};
+      for (const k of SIZES){
+        if (rem[k] <= 0) continue;
+        const space = 1.0 - pageLoad;
+        const maxPins = Math.min(rem[k], Math.floor(space * CFG[k].perSheet + 1e-9));
+        if (maxPins > 0){
+          allocs[k] = maxPins;
+          pageLoad += maxPins / CFG[k].perSheet;
+          rem[k] -= maxPins;
+        }
+      }
+      if (Object.keys(allocs).length === 0) break;
+      pages.push({ allocs, load: pageLoad });
+    }
+    return pages;
+  }
+  function totalLoad(){ return SIZES.reduce((s,k) => s + (qtys[k]||0)/CFG[k].perSheet, 0); }
+  function totalPrice(){ return SIZES.reduce((s,k) => s + (qtys[k]||0)*CFG[k].perPiece, 0); }
+  function totalQty(){ return SIZES.reduce((s,k) => s + (qtys[k]||0), 0); }
+
+  function buildPageSVG(page){
+    const VW = 210, VH = 297;
+    let bands = [];
+    let yOff = 0;
+    for (const k of SIZES){
+      const qty = page.allocs[k] || 0;
+      if (qty === 0) continue;
+      const c = CFG[k];
+      const load = qty / c.perSheet;
+      const bandH = load * VH;
+      bands.push({ k, qty, load, bandH, yOff, c });
+      yOff += bandH;
+    }
+    const emptyH = VH - yOff;
+    let inner = `<rect width="${VW}" height="${VH}" fill="#fafaf8"/>`;
+    for (const b of bands){
+      const { qty, bandH, yOff: y, c } = b;
+      const cols = c.cols;
+      const rowsUsed = Math.ceil(qty / cols);
+      inner += `<rect x="0" y="${y.toFixed(2)}" width="${VW}" height="${bandH.toFixed(2)}" fill="${c.colorBg}"/>`;
+      if (y > 0){
+        inner += `<line x1="0" y1="${y.toFixed(2)}" x2="${VW}" y2="${y.toFixed(2)}" stroke="${c.color}" stroke-width="0.3" stroke-dasharray="4,3" opacity="0.4"/>`;
+      }
+      const cellW = VW / cols;
+      const cellH = bandH / rowsUsed;
+      const rMax  = Math.min(cellW, cellH) * 0.4;
+      for (let i = 0; i < qty; i++){
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const cx = (col + 0.5) * cellW;
+        const cy = y + (row + 0.5) * cellH;
+        inner += `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${(rMax*1.25).toFixed(2)}" fill="${c.color}" opacity="0.12"/>`;
+        inner += `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${rMax.toFixed(2)}" fill="${c.color}" opacity="0.85"/>`;
+      }
+      const filledInLastRow = qty % cols;
+      if (filledInLastRow > 0){
+        const lastRow = rowsUsed - 1;
+        for (let col = filledInLastRow; col < cols; col++){
+          const cx = (col + 0.5) * cellW;
+          const cy = y + (lastRow + 0.5) * cellH;
+          inner += `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${rMax.toFixed(2)}" fill="none" stroke="${c.color}" stroke-width="0.5" stroke-dasharray="2,1.5" opacity="0.4"/>`;
+        }
+      }
+      const labelY = (y + bandH - 2).toFixed(2);
+      inner += `<text x="3" y="${labelY}" font-size="5" fill="${c.color}" font-weight="bold" opacity="0.65">${c.label} ×${qty}</text>`;
+    }
+    if (emptyH > 2){
+      const ey = yOff.toFixed(2);
+      inner += `<rect x="0" y="${ey}" width="${VW}" height="${emptyH.toFixed(2)}" fill="#ededea"/>`;
+      if (emptyH > 14){
+        const midY = (yOff + emptyH/2).toFixed(2);
+        inner += `<text x="${VW/2}" y="${midY}" font-size="7" fill="#aaa" text-anchor="middle" dominant-baseline="middle">empty — ${(emptyH/VH*100).toFixed(0)}% remaining</text>`;
+      }
+    }
+    inner += `<rect width="${VW}" height="${VH}" fill="none" stroke="#ccc" stroke-width="1"/>`;
+    return `<svg viewBox="0 0 ${VW} ${VH}" width="${SVG_W}" height="${SVG_H}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+  }
+
+  function validate(){
+    if (totalQty() === 0) return { status:'empty' };
+    const pages  = getPages();
+    const load   = totalLoad();
+    const price  = totalPrice();
+    const last   = pages[pages.length - 1];
+    const isLastFull = last && Math.abs(last.load - 1.0) < 0.0001;
+
+    if (load < 1.0){
+      const need = 1.0 - load;
+      const chips = [];
+      const sorted = SIZES.slice().sort((a,b) => CFG[a].perPiece - CFG[b].perPiece);
+      for (const k of sorted){
+        const addPins = Math.ceil(need * CFG[k].perSheet);
+        if (addPins > 0) chips.push({ label:`+${addPins} pcs ${CFG[k].label}`, key:k, add:addPins });
+        if (chips.length >= 3) break;
+      }
+      return { status:'warn', title:'Below minimum',
+        msg:`Page 1 is ${(load*100).toFixed(0)}% full — need ${(need).toFixed(2)} more page-worth to meet minimum (= one full A4).`,
+        chips };
+    }
+    if (!isLastFull && pages.length > 1){
+      const partialLoad = last.load;
+      const need = 1.0 - partialLoad;
+      const chips = [];
+      const sorted = SIZES.slice().sort((a,b) => CFG[a].perPiece - CFG[b].perPiece);
+      for (const k of sorted){
+        const addPins = Math.ceil(need * CFG[k].perSheet);
+        if (addPins > 0) chips.push({ label:`+${addPins} pcs ${CFG[k].label}`, key:k, add:addPins });
+        if (chips.length >= 3) break;
+      }
+      return { status:'partial', title:`Page ${pages.length} is incomplete`,
+        msg:`Page ${pages.length} is only ${(partialLoad*100).toFixed(0)}% full. Add more pins to fill it, or reduce to ${pages.length-1} complete page${pages.length-1!==1?'s':''}.`,
+        chips };
+    }
+    if (price < MIN_VALUE){
+      return { status:'partial', title:'Below ₱'+MIN_VALUE+' value floor',
+        msg:`Order fills ${pages.length} complete page${pages.length!==1?'s':''} but total ₱${price} is below the ₱${MIN_VALUE} minimum order value.`,
+        chips:[] };
+    }
+    return { status:'ok', title:`${pages.length} complete page${pages.length!==1?'s':''} — minimum met`,
+      msg:`All ${pages.length} A4 page${pages.length!==1?'s are':' is'} fully filled. Order total ₱${price.toLocaleString()} is above the ₱${MIN_VALUE} minimum.` };
+  }
+
+  function renderInputs(){
+    document.getElementById('fcInputsRow').innerHTML = SIZES.map(k => {
+      const c = CFG[k], q = qtys[k]||0;
+      const contrib = q > 0 ? `${(q/c.perSheet*100).toFixed(1)}% of a page` : '';
+      return `<div class="fc-input-card ${q>0?'active':''}">
+        <div class="fc-ic-tag">${c.desc}</div>
+        <div class="fc-ic-size" style="color:${c.color}">${c.label}</div>
+        <div class="fc-ic-meta">₱${c.perPiece}/pc · ${c.perSheet} pcs = 1 full page</div>
+        <div class="fc-qty-row">
+          <button class="fc-qty-btn" onclick="FC.chg('${k}',-1)">−</button>
+          <input class="fc-qty-inp" type="number" min="0" value="${q}" oninput="FC.setQ('${k}',this.value)"/>
+          <button class="fc-qty-btn" onclick="FC.chg('${k}',1)">+</button>
+        </div>
+        ${q>0?`<div class="fc-ic-subtotal">₱${(q*c.perPiece).toLocaleString()}</div><div class="fc-ic-contrib">${contrib}</div>`:''}
+      </div>`;
+    }).join('');
+  }
+
+  function renderPageVisual(){
+    const pages  = getPages();
+    const load   = totalLoad();
+    const v      = validate();
+    const loadPct = (load * 100).toFixed(1);
+    const cls = v.status==='ok'?'fc-load-ok':v.status==='warn'?'fc-load-warn':'fc-load-partial';
+    document.getElementById('fcLoadLabel').innerHTML = totalQty()>0
+      ? `<span class="${cls}">${loadPct}% page fill · ${pages.length} page${pages.length!==1?'s':''}</span>`
+      : '';
+    const active = SIZES.filter(k=>(qtys[k]||0)>0);
+    document.getElementById('fcLegend').innerHTML = active.map(k =>
+      `<div class="fc-leg-item"><div class="fc-leg-dot" style="background:${CFG[k].color}"></div>${CFG[k].label} — ${CFG[k].desc} (₱${CFG[k].perPiece}/pc)</div>`
+    ).join('') + (active.length?`<div class="fc-leg-item"><div class="fc-leg-dot" style="background:#ededea;border:1px dashed #aaa"></div>Empty space</div>`:'');
+
+    const vis = document.getElementById('fcPageVisual');
+    if (!pages.length){
+      vis.innerHTML = '<div class="fc-no-visual-msg">Enter quantities above to see the page layout</div>';
+      document.getElementById('fcFillMeter').style.display = 'none';
+      return;
+    }
+    let html = '<div class="fc-pages-scroll">';
+    pages.forEach((p, i) => {
+      const isFull = Math.abs(p.load-1)<0.0001;
+      const pctTxt = isFull ? 'Full ✓' : `${(p.load*100).toFixed(0)}% full`;
+      const infoCls = isFull ? 'ok' : 'warn';
+      html += `<div class="fc-page-card">
+        <div class="fc-page-label">Page ${i+1}</div>
+        <div class="fc-page-svg-wrap">${buildPageSVG(p)}</div>
+        <div class="fc-page-info ${infoCls}">${pctTxt}</div>
+      </div>`;
+    });
+    html += '</div>';
+    vis.innerHTML = html;
+
+    const fm = document.getElementById('fcFillMeter');
+    fm.style.display = '';
+    const totalPct = Math.min(load / Math.ceil(Math.max(load,1)) * 100, 100);
+    const barCls = v.status==='ok'?'ok':v.status==='warn'?'warn':'partial';
+    document.getElementById('fcFillBar').style.width = totalPct.toFixed(1)+'%';
+    document.getElementById('fcFillBar').className = 'fc-fm-bar '+barCls;
+    document.getElementById('fcFillLabelLeft').textContent = `Total page fill: ${loadPct}%`;
+    document.getElementById('fcFillLabelRight').textContent =
+      v.status==='ok' ? '✓ All pages full' :
+      v.status==='warn' ? `Need ${((1-load)*100).toFixed(0)}% more` :
+      `Page ${pages.length} needs ${((1-(pages[pages.length-1].load))*100).toFixed(0)}% more`;
+  }
+
+  function renderStatus(){
+    const v = validate();
+    const el = document.getElementById('fcStatusBanner');
+    const icons = { ok:'✅', warn:'⚠️', partial:'📋', empty:'📋' };
+    el.className = `fc-status-banner ${v.status}`;
+    let chips = '';
+    if (v.chips && v.chips.length){
+      chips = `<div class="fc-b-chips">${v.chips.map(c =>
+        `<button class="fc-b-chip" onclick="FC.applyChip('${c.key}',${c.add})">${c.label}</button>`
+      ).join('')}</div>`;
+    }
+    el.innerHTML = `<span class="fc-b-icon">${icons[v.status]}</span>
+      <div class="fc-b-body">
+        <div class="fc-b-title">${v.title||'Enter quantities above'}</div>
+        <div class="fc-b-msg">${v.msg||'The minimum order fills one complete A4 page worth of mixed pins.'}</div>
+        ${chips}
+      </div>`;
+  }
+
+  function renderSummary(){
+    const ord = SIZES.filter(k=>(qtys[k]||0)>0);
+    const el  = document.getElementById('fcSummaryRows');
+    if (!ord.length){ el.innerHTML='<div class="fc-empty-msg">No items yet</div>'; return; }
+    const price = totalPrice();
+    const pages = getPages();
+    let html = ord.map(k => {
+      const c=CFG[k],q=qtys[k];
+      return `<div class="fc-t-row dim">
+        <span style="color:${c.color};font-weight:600">${c.label}</span>
+        <span>${q} pcs = ${(q/c.perSheet).toFixed(2)} page (₱${(q*c.perPiece).toLocaleString()})</span>
+      </div>`;
+    }).join('');
+    html += `<div class="fc-t-row" style="font-weight:600">
+      <span>Pages needed</span>
+      <span>${pages.length} A4 page${pages.length!==1?'s':''} (${totalLoad().toFixed(2)} total load)</span>
+    </div>`;
+    html += `<div class="fc-t-row grand">
+      <span class="fc-tl">Order Total</span>
+      <span>₱${price.toLocaleString()}</span>
+    </div>`;
+    el.innerHTML = html;
+  }
+
+  function renderPartner(){
+    const ord = SIZES.filter(k=>(qtys[k]||0)>0);
+    const el  = document.getElementById('fcPartnerResult');
+    if (!ord.length){ el.innerHTML='<div class="fc-empty-msg">Add an order above</div>'; return; }
+    const total = totalPrice();
+    if (mode==='r'){
+      el.innerHTML=`<div class="fc-p-lines">
+        <div class="fc-p-line"><span class="fc-p-line-lbl">Customer pays (full rate)</span><span class="fc-p-line-val">₱${total.toLocaleString()}</span></div>
+        <div class="fc-p-line"><span class="fc-p-line-lbl">Your revenue after referral</span><span class="fc-p-line-val">₱${(total-REFERRAL).toLocaleString()}</span></div>
+        <div class="fc-p-line hi"><span class="fc-p-line-lbl">🏥 Funeral home gets</span><span class="fc-p-line-val">₱${REFERRAL}</span></div>
+        <div style="font-size:11px;color:var(--fc-muted);padding:2px 4px">Flat ₱50 per referred order regardless of size.</div>
+      </div>`;
+    } else {
+      const ws     = Math.round(total*(1-WHOLESALE));
+      const margin = total-ws;
+      el.innerHTML=`<div class="fc-p-lines">
+        <div class="fc-p-line hi"><span class="fc-p-line-lbl">💼 Funeral home pays you</span><span class="fc-p-line-val">₱${ws.toLocaleString()}</span></div>
+        <div class="fc-p-line"><span class="fc-p-line-lbl">Their suggested retail</span><span class="fc-p-line-val">₱${total.toLocaleString()}</span></div>
+        <div class="fc-p-line"><span class="fc-p-line-lbl">Their margin (15%)</span><span class="fc-p-line-val">₱${margin.toLocaleString()}</span></div>
+        <div style="font-size:11px;color:var(--fc-muted);padding:2px 4px">15% wholesale for package inclusion. They set their own retail price.</div>
+      </div>`;
+    }
+  }
+
+  function update(){
+    renderInputs(); renderPageVisual(); renderStatus(); renderSummary(); renderPartner();
+  }
+  function chg(k,d){ qtys[k]=Math.max(0,(qtys[k]||0)+d); update(); }
+  function setQ(k,v){ qtys[k]=Math.max(0,parseInt(v)||0); update(); }
+  function applyChip(k,add){ qtys[k]=(qtys[k]||0)+add; update(); }
+  function setMode(m){
+    mode=m;
+    document.getElementById('fcBtnR').classList.toggle('active',m==='r');
+    document.getElementById('fcBtnW').classList.toggle('active',m==='w');
+    renderPartner();
+  }
+
+  return { chg, setQ, applyChip, setMode, update };
+})();
+window.FC = FC;
+
+/* ═══════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════ */
+async function initFuneralAdmin(){
+  await Promise.all([loadContacts(), loadTemplates()]);
+  FC.update();
+}
+</script>
+</body>
+</html>

@@ -147,6 +147,57 @@ async function getRecentVisits(limit) {
   } catch (e) { return []; }
 }
 
+/* ── FUNERAL HOME PARTNERSHIPS (funeral-admin.html) ──
+
+   morphii_funeral_contacts collection — one doc per funeral home:
+   {
+     name, contactPerson, email, phone, address, notes,
+     status: 'not_contacted' | 'sent' | 'replied' | 'negotiating' | 'won' | 'declined',
+     dateContacted, dateReplied, dateClosed (plain 'YYYY-MM-DD' strings —
+       admin-entered/auto-stamped, not server timestamps, so they read
+       naturally as "the day this happened" regardless of timezone),
+     createdAt, updatedAt (server timestamps)
+   }
+   Admin-only — this is internal outreach/CRM data, never read by the
+   public-facing site.
+
+   morphii_funeral/templates doc — { list: [ { id, title, body, tags }, ... ] }
+   Copy-paste (or mailto-compose) message templates for proposals, follow-
+   ups, thank-yous, and win-back replies to a decline. `[BRACKET_CAPS]` in
+   the body are placeholders auto-filled from the contact record where the
+   name matches (e.g. [FUNERAL_HOME_NAME], [CONTACT_NAME]) when composing;
+   anything else stays literal for the admin to fill in by hand. ── */
+async function getFuneralContacts() {
+  if (!DB) return [];
+  try {
+    const snap = await DB.collection('morphii_funeral_contacts').orderBy('updatedAt', 'desc').get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) { return []; }
+}
+async function saveFuneralContact(contact) {
+  if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
+  const { id, ...data } = contact;
+  data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+  if (id) return DB.collection('morphii_funeral_contacts').doc(id).set(data, { merge: true });
+  data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+  return DB.collection('morphii_funeral_contacts').add(data);
+}
+async function deleteFuneralContact(id) {
+  if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
+  return DB.collection('morphii_funeral_contacts').doc(id).delete();
+}
+async function getFuneralTemplates() {
+  if (!DB) return null;
+  try {
+    const doc = await DB.collection('morphii_funeral').doc('templates').get();
+    return (doc.exists && doc.data().list) || null;
+  } catch (e) { return null; }
+}
+async function saveFuneralTemplates(list) {
+  if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
+  return DB.collection('morphii_funeral').doc('templates').set({ list });
+}
+
 /* ── CUSTOM FONTS (morphii_config/fonts doc) ───
    { list: [ { name:'Bangers', url:'...', scope:'all' }, ... ] }
    scope is 'all' (default, every product) or 'in-loving-memory' (only
@@ -460,6 +511,14 @@ async function pushFileToGithub(repoPath, base64Content, commitMessage) {
        match /morphii_visits/{deviceId} {
          allow create, update: if true;
          allow read, delete: if request.auth != null
+           && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+       }
+       match /morphii_funeral_contacts/{contactId} {
+         allow read, write: if request.auth != null
+           && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+       }
+       match /morphii_funeral/{docId} {
+         allow read, write: if request.auth != null
            && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
        }
      }

@@ -118,12 +118,12 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 .adm-delete-selected-btn:hover{background:#ff9b98;color:#0B2E4E;}
 
 /* ── PRINT LAYOUT MODAL (ported from the kiosk) ── */
-#printModal, #fontsModal, #assetsModal, #catalogModal, #financeModal, #helpModal, #visitorsModal, #funeralCalcModal{
+#printModal, #fontsModal, #assetsModal, #catalogModal, #financeModal, #helpModal, #visitorsModal{
   display:none;position:fixed;inset:0;z-index:200;
   background:rgba(7,25,41,0.92);backdrop-filter:blur(8px);
   flex-direction:column;align-items:center;overflow-y:auto;padding:24px;
 }
-#printModal.open, #fontsModal.open, #assetsModal.open, #catalogModal.open, #financeModal.open, #helpModal.open, #visitorsModal.open, #funeralCalcModal.open{display:flex;}
+#printModal.open, #fontsModal.open, #assetsModal.open, #catalogModal.open, #financeModal.open, #helpModal.open, #visitorsModal.open{display:flex;}
 .help-modal-inner{background:var(--navy);border-radius:16px;max-width:640px;width:100%;padding:24px 26px;margin:20px 0;color:white;border:2px solid var(--border);}
 .help-section{margin-bottom:20px;}
 .help-section h3{font-size:14px;margin:0 0 8px;color:var(--yellow);}
@@ -238,90 +238,6 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 .pmi-qty-input:focus{border-color:var(--sky);}
 .print-action-btn{width:100%;padding:12px;background:var(--yellow);color:#0B2E4E;border:none;border-radius:14px;font-family:'Fredoka One',cursive;font-size:16px;cursor:pointer;box-shadow:0 5px 0 #B8B800;margin-top:12px;}
 
-/* ── FUNERAL HOME ORDER CALCULATOR (pasted in from a standalone tool —
-   every class/id below is fc-prefixed and every color scoped to
-   #funeralCalcModal's own custom properties so none of it can collide
-   with or leak into the rest of this page's styling. ── */
-#funeralCalcModal{
-  --fc-bg:#14141f; --fc-surface:#1e1e2e; --fc-border:#2e2e40; --fc-text:#e8e8f0; --fc-muted:#8888a8;
-  --fc-accent:#c9914f; --fc-accent-light:#2a200f;
-  --fc-green:#4caf80; --fc-green-bg:#0d2b1a; --fc-red:#e05a4e; --fc-red-bg:#2a0f0d; --fc-yellow:#d4933a; --fc-yellow-bg:#241508;
-}
-.fc-hint{font-size:11px;font-weight:700;color:var(--fc-muted);margin-bottom:14px;line-height:1.5;}
-.fc-inputs-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
-.fc-input-card{background:var(--fc-surface);border:1.5px solid var(--fc-border);border-radius:10px;padding:14px;transition:border-color .2s;min-width:0;}
-.fc-input-card.active{border-color:var(--fc-accent);}
-.fc-ic-tag{font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--fc-muted);}
-.fc-ic-size{font-size:22px;font-weight:800;line-height:1.1;}
-.fc-ic-meta{font-size:11px;color:var(--fc-muted);margin-bottom:10px;overflow-wrap:break-word;}
-.fc-qty-row{display:flex;align-items:center;gap:5px;}
-.fc-qty-btn{width:28px;height:28px;border:1.5px solid var(--fc-border);background:var(--fc-bg);border-radius:6px;font-size:15px;font-weight:600;cursor:pointer;color:var(--fc-text);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.fc-qty-btn:hover{background:var(--fc-border);}
-.fc-qty-inp{flex:1;height:28px;border:1.5px solid var(--fc-border);border-radius:6px;text-align:center;font-size:14px;font-weight:700;background:var(--fc-surface);color:var(--fc-text);}
-.fc-qty-inp:focus{outline:none;border-color:var(--fc-accent);}
-.fc-ic-subtotal{font-size:13px;font-weight:800;color:var(--fc-accent);text-align:right;margin-top:7px;}
-.fc-ic-contrib{font-size:10px;color:var(--fc-muted);text-align:right;}
-.fc-pages-section{background:var(--fc-surface);border:1.5px solid var(--fc-border);border-radius:12px;padding:16px;margin-bottom:12px;}
-.fc-ps-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px;}
-.fc-ps-title{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--fc-muted);}
-.fc-ps-load{font-size:12px;font-weight:700;}
-.fc-load-ok{color:var(--fc-green);}
-.fc-load-warn{color:var(--fc-red);}
-.fc-load-partial{color:var(--fc-yellow);}
-.fc-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:10px;color:var(--fc-muted);margin-bottom:12px;}
-.fc-leg-item{display:flex;align-items:center;gap:5px;}
-.fc-leg-dot{width:8px;height:8px;border-radius:50%;}
-.fc-pages-scroll{display:flex;gap:14px;overflow-x:auto;padding-bottom:4px;align-items:flex-start;}
-.fc-pages-scroll::-webkit-scrollbar{height:4px;}
-.fc-pages-scroll::-webkit-scrollbar-thumb{background:var(--fc-border);border-radius:2px;}
-.fc-page-card{flex-shrink:0;}
-.fc-page-label{font-size:10px;font-weight:700;color:var(--fc-muted);text-align:center;margin-bottom:5px;letter-spacing:.5px;text-transform:uppercase;}
-.fc-page-svg-wrap{border:1px solid var(--fc-border);border-radius:6px;overflow:hidden;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.08);}
-.fc-page-svg-wrap svg{display:block;}
-.fc-page-info{font-size:10px;color:var(--fc-muted);text-align:center;margin-top:5px;}
-.fc-page-info.warn{color:var(--fc-red);}
-.fc-page-info.ok{color:var(--fc-green);}
-.fc-no-visual-msg{color:var(--fc-muted);font-size:12px;text-align:center;padding:40px 0;font-style:italic;}
-.fc-fill-meter{margin-top:10px;}
-.fc-fm-label{font-size:10px;color:var(--fc-muted);margin-bottom:4px;display:flex;justify-content:space-between;}
-.fc-fm-track{height:7px;background:var(--fc-border);border-radius:4px;overflow:hidden;position:relative;}
-.fc-fm-bar{height:100%;border-radius:4px;transition:width .3s;}
-.fc-fm-bar.ok{background:var(--fc-green);}
-.fc-fm-bar.warn{background:var(--fc-red);}
-.fc-fm-bar.partial{background:var(--fc-yellow);}
-.fc-status-banner{display:flex;align-items:flex-start;gap:10px;padding:13px 15px;border-radius:10px;font-size:13px;font-weight:600;margin-bottom:12px;}
-.fc-status-banner.ok{background:var(--fc-green-bg);color:var(--fc-green);}
-.fc-status-banner.warn{background:var(--fc-red-bg);color:var(--fc-red);}
-.fc-status-banner.partial{background:var(--fc-yellow-bg);color:var(--fc-yellow);}
-.fc-status-banner.empty{background:var(--fc-border);color:var(--fc-muted);}
-.fc-b-icon{font-size:17px;flex-shrink:0;margin-top:1px;}
-.fc-b-body{flex:1;}
-.fc-b-title{font-weight:700;}
-.fc-b-msg{font-weight:400;font-size:12px;line-height:1.5;margin-top:3px;}
-.fc-b-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
-.fc-b-chip{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--fc-surface);border:1px solid var(--fc-border);cursor:pointer;color:var(--fc-text);}
-.fc-b-chip:hover{background:var(--fc-accent-light);border-color:var(--fc-accent);}
-.fc-summary-card{background:var(--fc-surface);border:1.5px solid var(--fc-border);border-radius:12px;padding:16px;margin-bottom:12px;}
-.fc-sec-title{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--fc-muted);margin-bottom:12px;}
-.fc-t-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;font-size:13px;border-bottom:1px solid var(--fc-border);}
-.fc-t-row:last-of-type{border-bottom:none;}
-.fc-t-row.dim{color:var(--fc-muted);}
-.fc-t-row.grand{font-size:19px;font-weight:800;padding-top:10px;border-top:2px solid var(--fc-border);border-bottom:none;margin-top:4px;}
-.fc-t-row.grand .fc-tl{color:var(--fc-muted);font-size:11px;}
-.fc-partner-card{background:var(--fc-surface);border:1.5px solid var(--fc-border);border-radius:12px;padding:16px;}
-.fc-p-head{font-size:14px;font-weight:700;margin-bottom:2px;}
-.fc-p-sub{font-size:12px;color:var(--fc-muted);margin-bottom:12px;}
-.fc-toggle-row{display:flex;background:var(--fc-bg);border-radius:8px;padding:3px;gap:3px;margin-bottom:14px;}
-.fc-t-btn{flex:1;padding:7px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:var(--fc-muted);}
-.fc-t-btn.active{background:var(--fc-surface);color:var(--fc-text);box-shadow:0 1px 4px rgba(0,0,0,.1);}
-.fc-p-lines{display:flex;flex-direction:column;gap:6px;}
-.fc-p-line{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:8px 11px;background:var(--fc-bg);border-radius:7px;}
-.fc-p-line-lbl{color:var(--fc-muted);}
-.fc-p-line-val{font-weight:700;font-size:13px;}
-.fc-p-line.hi{background:var(--fc-accent-light);}
-.fc-p-line.hi .fc-p-line-val{color:var(--fc-accent);font-size:16px;}
-.fc-empty-msg{text-align:center;color:var(--fc-muted);font-size:12px;padding:14px 0;}
-@media(max-width:600px){.fc-inputs-row{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
@@ -345,7 +261,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end">
       <button class="adm-signout" onclick="openHelpModal()">❓ Help</button>
       <button class="adm-signout" onclick="openVisitorsModal()">📊 Visitors</button>
-      <button class="adm-signout" onclick="openFuneralCalcModal()">⚰️ Funeral Calc</button>
+      <a class="adm-signout" href="funeral-admin.html" target="_blank" style="text-decoration:none;display:inline-block">⚰️ Funeral Home</a>
       <button class="adm-signout" onclick="openFinanceModal()">💰 Finance</button>
       <button class="adm-signout" onclick="openCatalogModal()">📦 Catalog</button>
       <button class="adm-signout" onclick="openAssetsModal()">🖼 Assets</button>
@@ -473,7 +389,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
       <h3>The other buttons up top</h3>
       <ul>
         <li><b>📊 Visitors</b> — how many unique devices have opened the pin builder, and roughly where from.</li>
-        <li><b>⚰️ Funeral Calc</b> — mixed-size order calculator with A4 page-fill visuals and referral/wholesale commission math for funeral home partners.</li>
+        <li><b>⚰️ Funeral Home</b> — opens a dedicated page for the order calculator plus a partner outreach tracker (who's been contacted, replied, or closed) and message templates.</li>
         <li><b>💰 Finance</b> — track costs, set pricing per product/size, and see margin/ROI, unrelated to individual orders.</li>
         <li><b>📦 Catalog</b> — turn a product or size on/off shop-wide, e.g. when you're out of stock, no code changes needed.</li>
         <li><b>🖼 Assets</b> — see every sticker/border/background/etc. available in the builder and rename how it's labeled.</li>
@@ -591,55 +507,6 @@ h1,.logo{font-family:'Fredoka One',cursive;}
   </div>
 </div>
 
-<!-- ══ FUNERAL HOME ORDER CALCULATOR — mixed-size assorted order, shared
-     A4 page-fill visual, and a referral/wholesale commission calculator
-     for funeral home partners. ══ -->
-<div id="funeralCalcModal">
-  <div class="print-modal-inner" style="max-width:820px">
-    <div class="pmi-header">
-      <div class="pmi-title">⚰️ Funeral Home Order Calculator</div>
-      <button class="pmi-close" onclick="closeFuneralCalcModal()">✕</button>
-    </div>
-    <div class="pmi-body" style="flex-direction:column;flex-wrap:nowrap">
-      <div class="fc-hint">Assorted order · shared A4 page fill · funeral home partner commissions.</div>
-
-      <div class="fc-inputs-row" id="fcInputsRow"></div>
-
-      <div class="fc-pages-section">
-        <div class="fc-ps-header">
-          <span class="fc-ps-title">📄 A4 Page Fill — all sizes share one page</span>
-          <span class="fc-ps-load" id="fcLoadLabel"></span>
-        </div>
-        <div class="fc-legend" id="fcLegend"></div>
-        <div id="fcPageVisual"><div class="fc-no-visual-msg">Enter quantities above to see the page layout</div></div>
-        <div class="fc-fill-meter" id="fcFillMeter" style="display:none">
-          <div class="fc-fm-label"><span id="fcFillLabelLeft"></span><span id="fcFillLabelRight"></span></div>
-          <div class="fc-fm-track"><div class="fc-fm-bar" id="fcFillBar"></div></div>
-        </div>
-      </div>
-
-      <div class="fc-status-banner empty" id="fcStatusBanner">
-        <span class="fc-b-icon">📋</span>
-        <div class="fc-b-body"><div class="fc-b-title">Enter quantities above</div><div class="fc-b-msg">The minimum order fills one complete A4 page worth of mixed pins.</div></div>
-      </div>
-
-      <div class="fc-summary-card">
-        <div class="fc-sec-title">Order Summary</div>
-        <div id="fcSummaryRows"><div class="fc-empty-msg">No items yet</div></div>
-      </div>
-
-      <div class="fc-partner-card">
-        <div class="fc-p-head">⚰️ Funeral Home Partner</div>
-        <div class="fc-p-sub">Commission calculator for referring funeral homes</div>
-        <div class="fc-toggle-row">
-          <button class="fc-t-btn active" id="fcBtnR" onclick="FC.setMode('r')">Referral — ₱50 flat</button>
-          <button class="fc-t-btn" id="fcBtnW" onclick="FC.setMode('w')">Package Inclusion — 15% off</button>
-        </div>
-        <div id="fcPartnerResult"><div class="fc-empty-msg">Add an order above</div></div>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- ══ FINANCE MODAL — costs, pricing, ROI, savings goals ══ -->
 <div id="financeModal">
@@ -773,7 +640,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js?v=7"></script>
+<script src="firebase-config.js?v=8"></script>
 <!-- jsPDF — used by doPrint() to write the exact page size directly into the
      PDF file itself, so the export is correct regardless of any browser
      print-dialog "Scale" setting (which is what was causing the 3% mismatch
@@ -1368,319 +1235,6 @@ function renderVisitorsModal(uniqueCount, devices){
     `<tr><td>${escHtml(label)}</td><td>${count}</td></tr>`).join('');
   document.getElementById('visitorsEmpty').style.display = devices.length ? 'none' : 'block';
 }
-
-function openFuneralCalcModal(){
-  document.getElementById('funeralCalcModal').classList.add('open');
-  FC.update();
-}
-window.openFuneralCalcModal = openFuneralCalcModal;
-function closeFuneralCalcModal(){
-  document.getElementById('funeralCalcModal').classList.remove('open');
-}
-window.closeFuneralCalcModal = closeFuneralCalcModal;
-
-// ── FUNERAL HOME ORDER CALCULATOR — pasted in from a standalone tool
-// (morphii-funeral-calculator.html) and adapted to run inside this page:
-// everything lives under the FC namespace instead of bare globals, and
-// every element id is fc-prefixed, so nothing here can collide with the
-// rest of this admin page now or after future edits. Logic/numbers are
-// otherwise unchanged from the original file. ──
-const FC = (function(){
-  const CFG = {
-    '58mm': { key:'58mm', label:'58mm', desc:'Large — Immediate Family',  perSheet:6,  cols:2, perPiece:41, color:'#7a5c38', colorBg:'rgba(122,92,56,0.08)' },
-    '32mm': { key:'32mm', label:'32mm', desc:'Medium — Close Relatives',  perSheet:24, cols:4, perPiece:29, color:'#3a6e40', colorBg:'rgba(58,110,64,0.08)'  },
-    '25mm': { key:'25mm', label:'25mm', desc:'Small — Extended & Friends',perSheet:35, cols:5, perPiece:22, color:'#2a4a8a', colorBg:'rgba(42,74,138,0.08)' },
-  };
-  const SIZES = ['58mm','32mm','25mm'];
-  const MIN_VALUE  = 350;
-  const REFERRAL   = 50;
-  const WHOLESALE  = 0.15;
-  const SVG_W = 138, SVG_H = 195; // rendered size; viewBox ratio ≈ 210:297
-
-  let qtys = {'58mm':0,'32mm':0,'25mm':0};
-  let mode = 'r';
-
-  // All sizes share one page. Each pin of size k contributes 1/perSheet[k]
-  // to page load; process sizes in order, starting a new page once the
-  // current one hits load=1.0.
-  function getPages(){
-    const rem = {};
-    SIZES.forEach(k => rem[k] = qtys[k]||0);
-    if (SIZES.every(k => rem[k] === 0)) return [];
-    const pages = [];
-    while (SIZES.some(k => rem[k] > 0)){
-      let pageLoad = 0;
-      const allocs = {};
-      for (const k of SIZES){
-        if (rem[k] <= 0) continue;
-        const space = 1.0 - pageLoad;
-        const maxPins = Math.min(rem[k], Math.floor(space * CFG[k].perSheet + 1e-9));
-        if (maxPins > 0){
-          allocs[k] = maxPins;
-          pageLoad += maxPins / CFG[k].perSheet;
-          rem[k] -= maxPins;
-        }
-      }
-      if (Object.keys(allocs).length === 0) break; // safety
-      pages.push({ allocs, load: pageLoad });
-    }
-    return pages;
-  }
-  function totalLoad(){ return SIZES.reduce((s,k) => s + (qtys[k]||0)/CFG[k].perSheet, 0); }
-  function totalPrice(){ return SIZES.reduce((s,k) => s + (qtys[k]||0)*CFG[k].perPiece, 0); }
-  function totalQty(){ return SIZES.reduce((s,k) => s + (qtys[k]||0), 0); }
-
-  // viewBox 0 0 210 297, rendered at SVG_W × SVG_H
-  function buildPageSVG(page){
-    const VW = 210, VH = 297;
-    let bands = [];
-    let yOff = 0;
-    for (const k of SIZES){
-      const qty = page.allocs[k] || 0;
-      if (qty === 0) continue;
-      const c = CFG[k];
-      const load = qty / c.perSheet;
-      const bandH = load * VH;
-      bands.push({ k, qty, load, bandH, yOff, c });
-      yOff += bandH;
-    }
-    const emptyH = VH - yOff;
-    let inner = `<rect width="${VW}" height="${VH}" fill="#fafaf8"/>`;
-    for (const b of bands){
-      const { qty, bandH, yOff: y, c } = b;
-      const cols = c.cols;
-      const rowsUsed = Math.ceil(qty / cols);
-      inner += `<rect x="0" y="${y.toFixed(2)}" width="${VW}" height="${bandH.toFixed(2)}" fill="${c.colorBg}"/>`;
-      if (y > 0){
-        inner += `<line x1="0" y1="${y.toFixed(2)}" x2="${VW}" y2="${y.toFixed(2)}" stroke="${c.color}" stroke-width="0.3" stroke-dasharray="4,3" opacity="0.4"/>`;
-      }
-      const cellW = VW / cols;
-      const cellH = bandH / rowsUsed;
-      const rMax  = Math.min(cellW, cellH) * 0.4;
-      for (let i = 0; i < qty; i++){
-        const col = i % cols;
-        const row = Math.floor(i / cols);
-        const cx = (col + 0.5) * cellW;
-        const cy = y + (row + 0.5) * cellH;
-        inner += `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${(rMax*1.25).toFixed(2)}" fill="${c.color}" opacity="0.12"/>`;
-        inner += `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${rMax.toFixed(2)}" fill="${c.color}" opacity="0.85"/>`;
-      }
-      const filledInLastRow = qty % cols;
-      if (filledInLastRow > 0){
-        const lastRow = rowsUsed - 1;
-        for (let col = filledInLastRow; col < cols; col++){
-          const cx = (col + 0.5) * cellW;
-          const cy = y + (lastRow + 0.5) * cellH;
-          inner += `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${rMax.toFixed(2)}" fill="none" stroke="${c.color}" stroke-width="0.5" stroke-dasharray="2,1.5" opacity="0.4"/>`;
-        }
-      }
-      const labelY = (y + bandH - 2).toFixed(2);
-      inner += `<text x="3" y="${labelY}" font-size="5" fill="${c.color}" font-weight="bold" opacity="0.65">${c.label} ×${qty}</text>`;
-    }
-    if (emptyH > 2){
-      const ey = yOff.toFixed(2);
-      inner += `<rect x="0" y="${ey}" width="${VW}" height="${emptyH.toFixed(2)}" fill="#ededea"/>`;
-      if (emptyH > 14){
-        const midY = (yOff + emptyH/2).toFixed(2);
-        inner += `<text x="${VW/2}" y="${midY}" font-size="7" fill="#aaa" text-anchor="middle" dominant-baseline="middle">empty — ${(emptyH/VH*100).toFixed(0)}% remaining</text>`;
-      }
-    }
-    inner += `<rect width="${VW}" height="${VH}" fill="none" stroke="#ccc" stroke-width="1"/>`;
-    return `<svg viewBox="0 0 ${VW} ${VH}" width="${SVG_W}" height="${SVG_H}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
-  }
-
-  function validate(){
-    if (totalQty() === 0) return { status:'empty' };
-    const pages  = getPages();
-    const load   = totalLoad();
-    const price  = totalPrice();
-    const last   = pages[pages.length - 1];
-    const isLastFull = last && Math.abs(last.load - 1.0) < 0.0001;
-
-    if (load < 1.0){
-      const need = 1.0 - load;
-      const chips = [];
-      const sorted = SIZES.slice().sort((a,b) => CFG[a].perPiece - CFG[b].perPiece);
-      for (const k of sorted){
-        const addPins = Math.ceil(need * CFG[k].perSheet);
-        if (addPins > 0) chips.push({ label:`+${addPins} pcs ${CFG[k].label}`, key:k, add:addPins });
-        if (chips.length >= 3) break;
-      }
-      return { status:'warn', title:'Below minimum',
-        msg:`Page 1 is ${(load*100).toFixed(0)}% full — need ${(need).toFixed(2)} more page-worth to meet minimum (= one full A4).`,
-        chips };
-    }
-    if (!isLastFull && pages.length > 1){
-      const partialLoad = last.load;
-      const need = 1.0 - partialLoad;
-      const chips = [];
-      const sorted = SIZES.slice().sort((a,b) => CFG[a].perPiece - CFG[b].perPiece);
-      for (const k of sorted){
-        const addPins = Math.ceil(need * CFG[k].perSheet);
-        if (addPins > 0) chips.push({ label:`+${addPins} pcs ${CFG[k].label}`, key:k, add:addPins });
-        if (chips.length >= 3) break;
-      }
-      return { status:'partial', title:`Page ${pages.length} is incomplete`,
-        msg:`Page ${pages.length} is only ${(partialLoad*100).toFixed(0)}% full. Add more pins to fill it, or reduce to ${pages.length-1} complete page${pages.length-1!==1?'s':''}.`,
-        chips };
-    }
-    if (price < MIN_VALUE){
-      return { status:'partial', title:'Below ₱'+MIN_VALUE+' value floor',
-        msg:`Order fills ${pages.length} complete page${pages.length!==1?'s':''} but total ₱${price} is below the ₱${MIN_VALUE} minimum order value.`,
-        chips:[] };
-    }
-    return { status:'ok', title:`${pages.length} complete page${pages.length!==1?'s':''} — minimum met`,
-      msg:`All ${pages.length} A4 page${pages.length!==1?'s are':' is'} fully filled. Order total ₱${price.toLocaleString()} is above the ₱${MIN_VALUE} minimum.` };
-  }
-
-  function renderInputs(){
-    document.getElementById('fcInputsRow').innerHTML = SIZES.map(k => {
-      const c = CFG[k], q = qtys[k]||0;
-      const contrib = q > 0 ? `${(q/c.perSheet*100).toFixed(1)}% of a page` : '';
-      return `<div class="fc-input-card ${q>0?'active':''}">
-        <div class="fc-ic-tag">${c.desc}</div>
-        <div class="fc-ic-size" style="color:${c.color}">${c.label}</div>
-        <div class="fc-ic-meta">₱${c.perPiece}/pc · ${c.perSheet} pcs = 1 full page</div>
-        <div class="fc-qty-row">
-          <button class="fc-qty-btn" onclick="FC.chg('${k}',-1)">−</button>
-          <input class="fc-qty-inp" type="number" min="0" value="${q}" oninput="FC.setQ('${k}',this.value)"/>
-          <button class="fc-qty-btn" onclick="FC.chg('${k}',1)">+</button>
-        </div>
-        ${q>0?`<div class="fc-ic-subtotal">₱${(q*c.perPiece).toLocaleString()}</div><div class="fc-ic-contrib">${contrib}</div>`:''}
-      </div>`;
-    }).join('');
-  }
-
-  function renderPageVisual(){
-    const pages  = getPages();
-    const load   = totalLoad();
-    const v      = validate();
-    const loadPct = (load * 100).toFixed(1);
-    const cls = v.status==='ok'?'fc-load-ok':v.status==='warn'?'fc-load-warn':'fc-load-partial';
-    document.getElementById('fcLoadLabel').innerHTML = totalQty()>0
-      ? `<span class="${cls}">${loadPct}% page fill · ${pages.length} page${pages.length!==1?'s':''}</span>`
-      : '';
-    const active = SIZES.filter(k=>(qtys[k]||0)>0);
-    document.getElementById('fcLegend').innerHTML = active.map(k =>
-      `<div class="fc-leg-item"><div class="fc-leg-dot" style="background:${CFG[k].color}"></div>${CFG[k].label} — ${CFG[k].desc} (₱${CFG[k].perPiece}/pc)</div>`
-    ).join('') + (active.length?`<div class="fc-leg-item"><div class="fc-leg-dot" style="background:#ededea;border:1px dashed #aaa"></div>Empty space</div>`:'');
-
-    const vis = document.getElementById('fcPageVisual');
-    if (!pages.length){
-      vis.innerHTML = '<div class="fc-no-visual-msg">Enter quantities above to see the page layout</div>';
-      document.getElementById('fcFillMeter').style.display = 'none';
-      return;
-    }
-    let html = '<div class="fc-pages-scroll">';
-    pages.forEach((p, i) => {
-      const isFull = Math.abs(p.load-1)<0.0001;
-      const pctTxt = isFull ? 'Full ✓' : `${(p.load*100).toFixed(0)}% full`;
-      const infoCls = isFull ? 'ok' : 'warn';
-      html += `<div class="fc-page-card">
-        <div class="fc-page-label">Page ${i+1}</div>
-        <div class="fc-page-svg-wrap">${buildPageSVG(p)}</div>
-        <div class="fc-page-info ${infoCls}">${pctTxt}</div>
-      </div>`;
-    });
-    html += '</div>';
-    vis.innerHTML = html;
-
-    const fm = document.getElementById('fcFillMeter');
-    fm.style.display = '';
-    const totalPct = Math.min(load / Math.ceil(Math.max(load,1)) * 100, 100);
-    const barCls = v.status==='ok'?'ok':v.status==='warn'?'warn':'partial';
-    document.getElementById('fcFillBar').style.width = totalPct.toFixed(1)+'%';
-    document.getElementById('fcFillBar').className = 'fc-fm-bar '+barCls;
-    document.getElementById('fcFillLabelLeft').textContent = `Total page fill: ${loadPct}%`;
-    document.getElementById('fcFillLabelRight').textContent =
-      v.status==='ok' ? '✓ All pages full' :
-      v.status==='warn' ? `Need ${((1-load)*100).toFixed(0)}% more` :
-      `Page ${pages.length} needs ${((1-(pages[pages.length-1].load))*100).toFixed(0)}% more`;
-  }
-
-  function renderStatus(){
-    const v = validate();
-    const el = document.getElementById('fcStatusBanner');
-    const icons = { ok:'✅', warn:'⚠️', partial:'📋', empty:'📋' };
-    el.className = `fc-status-banner ${v.status}`;
-    let chips = '';
-    if (v.chips && v.chips.length){
-      chips = `<div class="fc-b-chips">${v.chips.map(c =>
-        `<button class="fc-b-chip" onclick="FC.applyChip('${c.key}',${c.add})">${c.label}</button>`
-      ).join('')}</div>`;
-    }
-    el.innerHTML = `<span class="fc-b-icon">${icons[v.status]}</span>
-      <div class="fc-b-body">
-        <div class="fc-b-title">${v.title||'Enter quantities above'}</div>
-        <div class="fc-b-msg">${v.msg||'The minimum order fills one complete A4 page worth of mixed pins.'}</div>
-        ${chips}
-      </div>`;
-  }
-
-  function renderSummary(){
-    const ord = SIZES.filter(k=>(qtys[k]||0)>0);
-    const el  = document.getElementById('fcSummaryRows');
-    if (!ord.length){ el.innerHTML='<div class="fc-empty-msg">No items yet</div>'; return; }
-    const price = totalPrice();
-    const pages = getPages();
-    let html = ord.map(k => {
-      const c=CFG[k],q=qtys[k];
-      return `<div class="fc-t-row dim">
-        <span style="color:${c.color};font-weight:600">${c.label}</span>
-        <span>${q} pcs = ${(q/c.perSheet).toFixed(2)} page (₱${(q*c.perPiece).toLocaleString()})</span>
-      </div>`;
-    }).join('');
-    html += `<div class="fc-t-row" style="font-weight:600">
-      <span>Pages needed</span>
-      <span>${pages.length} A4 page${pages.length!==1?'s':''} (${totalLoad().toFixed(2)} total load)</span>
-    </div>`;
-    html += `<div class="fc-t-row grand">
-      <span class="fc-tl">Order Total</span>
-      <span>₱${price.toLocaleString()}</span>
-    </div>`;
-    el.innerHTML = html;
-  }
-
-  function renderPartner(){
-    const ord = SIZES.filter(k=>(qtys[k]||0)>0);
-    const el  = document.getElementById('fcPartnerResult');
-    if (!ord.length){ el.innerHTML='<div class="fc-empty-msg">Add an order above</div>'; return; }
-    const total = totalPrice();
-    if (mode==='r'){
-      el.innerHTML=`<div class="fc-p-lines">
-        <div class="fc-p-line"><span class="fc-p-line-lbl">Customer pays (full rate)</span><span class="fc-p-line-val">₱${total.toLocaleString()}</span></div>
-        <div class="fc-p-line"><span class="fc-p-line-lbl">Your revenue after referral</span><span class="fc-p-line-val">₱${(total-REFERRAL).toLocaleString()}</span></div>
-        <div class="fc-p-line hi"><span class="fc-p-line-lbl">🏥 Funeral home gets</span><span class="fc-p-line-val">₱${REFERRAL}</span></div>
-        <div style="font-size:11px;color:var(--fc-muted);padding:2px 4px">Flat ₱50 per referred order regardless of size.</div>
-      </div>`;
-    } else {
-      const ws     = Math.round(total*(1-WHOLESALE));
-      const margin = total-ws;
-      el.innerHTML=`<div class="fc-p-lines">
-        <div class="fc-p-line hi"><span class="fc-p-line-lbl">💼 Funeral home pays you</span><span class="fc-p-line-val">₱${ws.toLocaleString()}</span></div>
-        <div class="fc-p-line"><span class="fc-p-line-lbl">Their suggested retail</span><span class="fc-p-line-val">₱${total.toLocaleString()}</span></div>
-        <div class="fc-p-line"><span class="fc-p-line-lbl">Their margin (15%)</span><span class="fc-p-line-val">₱${margin.toLocaleString()}</span></div>
-        <div style="font-size:11px;color:var(--fc-muted);padding:2px 4px">15% wholesale for package inclusion. They set their own retail price.</div>
-      </div>`;
-    }
-  }
-
-  function update(){
-    renderInputs(); renderPageVisual(); renderStatus(); renderSummary(); renderPartner();
-  }
-  function chg(k,d){ qtys[k]=Math.max(0,(qtys[k]||0)+d); update(); }
-  function setQ(k,v){ qtys[k]=Math.max(0,parseInt(v)||0); update(); }
-  function applyChip(k,add){ qtys[k]=(qtys[k]||0)+add; update(); }
-  function setMode(m){
-    mode=m;
-    document.getElementById('fcBtnR').classList.toggle('active',m==='r');
-    document.getElementById('fcBtnW').classList.toggle('active',m==='w');
-    renderPartner();
-  }
-
-  return { chg, setQ, applyChip, setMode, update };
-})();
-window.FC = FC;
 
 // A saved value can be the old boolean shape (true/false, from before
 // "hidden" existed) or the new tri-state string — normalize either into
