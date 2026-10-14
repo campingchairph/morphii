@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
 <title>Order Admin — Morphii</title>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -388,7 +389,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
     <div class="help-section">
       <h3>The other buttons up top</h3>
       <ul>
-        <li><b>📊 Visitors</b> — how many unique devices have opened the pin builder, and roughly where from.</li>
+        <li><b>📊 Visitors</b> — a simple count of how many times people have opened the pin builder (not counting you).</li>
         <li><b>⚰️ Funeral Home</b> — opens a dedicated page for the order calculator plus a partner outreach tracker (who's been contacted, replied, or closed) and message templates.</li>
         <li><b>💰 Finance</b> — track costs, set pricing per product/size, and see margin/ROI, unrelated to individual orders.</li>
         <li><b>📦 Catalog</b> — turn a product or size on/off shop-wide, e.g. when you're out of stock, no code changes needed.</li>
@@ -480,7 +481,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
   </div>
 </div>
 
-<!-- ══ VISITORS MODAL — unique-device counter + approximate locations ══ -->
+<!-- ══ VISITORS MODAL — simple visit counter (no device/location tracking) ══ -->
 <div id="visitorsModal">
   <div class="print-modal-inner" style="max-width:560px">
     <div class="pmi-header">
@@ -489,17 +490,19 @@ h1,.logo{font-family:'Fredoka One',cursive;}
     </div>
     <div class="pmi-body" style="flex-direction:column;flex-wrap:nowrap">
       <div style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-bottom:8px;line-height:1.5;">
-        One count per device (cached in that browser) — a repeat visitor on the same phone/computer doesn't count twice. Locations are approximate (from IP, looked up once per device) and only shown to admins.
+        Counts each time someone opens the pin builder (once per browser session). Your own admin visits aren't counted.
       </div>
       <div class="fin-summary-row">
-        <div class="fin-summary-card"><b id="visitorsUniqueCount">—</b><span>Unique Devices</span></div>
-        <div class="fin-summary-card"><b id="visitorsTotalCount">—</b><span>Total Visits</span></div>
+        <div class="fin-summary-card"><b id="visitorsTodayCount">—</b><span>Today</span></div>
+        <div class="fin-summary-card"><b id="visitorsWeekCount">—</b><span>Last 7 Days</span></div>
+        <div class="fin-summary-card"><b id="visitorsTotalCount">—</b><span>All Time</span></div>
       </div>
-      <div class="fin-section-title">By Location</div>
+      <div id="visitorsLastVisit" style="font-size:11px;font-weight:700;color:var(--ink-dim);margin-bottom:10px;"></div>
+      <div class="fin-section-title">By Day</div>
       <div class="fin-table-wrap">
         <table class="fin-table">
-          <thead><tr><th>Location</th><th>Devices</th></tr></thead>
-          <tbody id="visitorsLocationBody"></tbody>
+          <thead><tr><th>Date</th><th>Visits</th></tr></thead>
+          <tbody id="visitorsDayBody"></tbody>
         </table>
       </div>
       <div id="visitorsEmpty" class="fin-empty" style="display:none">No visits recorded yet.</div>
@@ -640,7 +643,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js?v=8"></script>
+<script src="firebase-config.js?v=9"></script>
 <!-- jsPDF — used by doPrint() to write the exact page size directly into the
      PDF file itself, so the export is correct regardless of any browser
      print-dialog "Scale" setting (which is what was causing the 3% mismatch
@@ -1203,12 +1206,11 @@ window.closeCatalogModal = closeCatalogModal;
 
 async function openVisitorsModal(){
   document.getElementById('visitorsModal').classList.add('open');
-  document.getElementById('visitorsUniqueCount').textContent = '…';
-  document.getElementById('visitorsTotalCount').textContent = '…';
-  document.getElementById('visitorsLocationBody').innerHTML = '';
+  ['visitorsTodayCount','visitorsWeekCount','visitorsTotalCount'].forEach(id => document.getElementById(id).textContent = '…');
+  document.getElementById('visitorsLastVisit').textContent = '';
+  document.getElementById('visitorsDayBody').innerHTML = '';
   document.getElementById('visitorsEmpty').style.display = 'none';
-  const [uniqueCount, devices] = await Promise.all([getVisitCount(), getRecentVisits(500)]);
-  renderVisitorsModal(uniqueCount, devices);
+  renderVisitorsModal(await getVisitDays(120));
 }
 window.openVisitorsModal = openVisitorsModal;
 
@@ -1217,23 +1219,25 @@ function closeVisitorsModal(){
 }
 window.closeVisitorsModal = closeVisitorsModal;
 
-function renderVisitorsModal(uniqueCount, devices){
-  document.getElementById('visitorsUniqueCount').textContent = uniqueCount.toLocaleString();
-  const totalVisits = devices.reduce((sum, d) => sum + (d.visitCount || 1), 0);
-  document.getElementById('visitorsTotalCount').textContent = totalVisits.toLocaleString();
+function renderVisitorsModal(days){
+  const d = new Date();
+  const ymd = x => x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
+  const today = ymd(d);
+  const weekAgo = new Date(d); weekAgo.setDate(weekAgo.getDate() - 6);
+  const weekStart = ymd(weekAgo);
+  const sum = list => list.reduce((s, x) => s + (x.visitCount || 0), 0);
 
-  // Groups by whatever location detail is actually known — city+region+
-  // country when the geolocation lookup succeeded, down to "Unknown" for
-  // devices where it failed/was blocked.
-  const groups = new Map();
-  devices.forEach(d => {
-    const label = [d.city, d.region, d.country].filter(Boolean).join(', ') || 'Unknown';
-    groups.set(label, (groups.get(label) || 0) + 1);
-  });
-  const rows = [...groups.entries()].sort((a, b) => b[1] - a[1]);
-  document.getElementById('visitorsLocationBody').innerHTML = rows.map(([label, count]) =>
-    `<tr><td>${escHtml(label)}</td><td>${count}</td></tr>`).join('');
-  document.getElementById('visitorsEmpty').style.display = devices.length ? 'none' : 'block';
+  document.getElementById('visitorsTodayCount').textContent = sum(days.filter(x => x.id === today)).toLocaleString();
+  document.getElementById('visitorsWeekCount').textContent = sum(days.filter(x => x.id >= weekStart)).toLocaleString();
+  document.getElementById('visitorsTotalCount').textContent = sum(days).toLocaleString();
+
+  const last = days[0] && days[0].lastSeen && days[0].lastSeen.toDate ? days[0].lastSeen.toDate() : null;
+  document.getElementById('visitorsLastVisit').textContent = last ? 'Last visit: ' + last.toLocaleString() : '';
+
+  days = days.slice().sort((a, b) => b.id.localeCompare(a.id));
+  document.getElementById('visitorsDayBody').innerHTML = days.map(x =>
+    `<tr><td>${escHtml(x.id)}</td><td>${(x.visitCount || 0).toLocaleString()}</td></tr>`).join('');
+  document.getElementById('visitorsEmpty').style.display = days.length ? 'none' : 'block';
 }
 
 // A saved value can be the old boolean shape (true/false, from before

@@ -3,7 +3,36 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Design Your Pin — Morphii</title>
+<title>Custom Button Pins Philippines — Design Your Own Pin Online | Morphii</title>
+<meta name="description" content="Design your own custom button pins online — lapel pins, badges and memorial pins from 25mm to 75mm. Free design tool, no download. Philippines.">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://morphii.vows-and-petals.com/create.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Morphii">
+<meta property="og:locale" content="en_PH">
+<meta property="og:title" content="Custom Button Pins Philippines — Design Your Own Pin Online | Morphii">
+<meta property="og:description" content="Design your own custom button pins online — lapel pins, badges, memorial pins and more. Free design tool, no download.">
+<meta property="og:url" content="https://morphii.vows-and-petals.com/create.html">
+<meta property="og:image" content="https://morphii.vows-and-petals.com/Cover.PNG">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Custom Button Pins Philippines — Design Your Own Pin Online | Morphii">
+<meta name="twitter:description" content="Design your own custom button pins online — free design tool, no download.">
+<meta name="twitter:image" content="https://morphii.vows-and-petals.com/Cover.PNG">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Morphii Custom Pin Designer",
+  "url": "https://morphii.vows-and-petals.com/create.html",
+  "description": "Free online designer for custom button pins, lapel pins, pinback badges and memorial pins, from 25mm to 75mm.",
+  "applicationCategory": "DesignApplication",
+  "operatingSystem": "Any (web browser)",
+  "inLanguage": "en-PH",
+  "areaServed": "PH",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "PHP", "description": "The design tool is free to use; pins are ordered through Morphii's Shopee store." },
+  "publisher": { "@type": "Organization", "name": "Morphii", "url": "https://morphii.vows-and-petals.com/", "logo": "https://morphii.vows-and-petals.com/facebook-profile-500x500.png" }
+}
+</script>
 <script>
 (function(){
   var t = localStorage.getItem('morphii_theme');
@@ -12,7 +41,7 @@
 })();
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&family=Luckiest+Guy&family=Shrikhand&family=Carter+One&family=Ceviche+One&family=Kavoon&family=Cherry+Bomb+One&family=Lobster&family=Spicy+Rice&family=Chicle&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="create.css?v=6">
+<link rel="stylesheet" href="create.css?v=7">
 </head>
 <body>
 
@@ -35,7 +64,17 @@
     <h1 class="cr-title">What are you making?</h1>
     <p class="cr-sub">Pick a product to start designing.</p>
     <div class="cr-product-grid" id="productGrid"></div>
-  </section>
+
+    <!-- Plain, crawlable text — the product grid above is rendered by JS and
+         gives search engines almost nothing to read on its own. -->
+    <section class="cr-seo">
+      <h2>Design custom button pins online</h2>
+      <p>Morphii is a free online pin designer for <strong>custom button pins</strong>, lapel pins, pinback badges and memorial pins. Add your photo, stickers, text and colors right in your browser — no app to download — then see a 3D preview of your finished pin before you order.</p>
+      <h3>Pin sizes</h3>
+      <p>Choose from 25mm, 32mm, 37mm, 44mm, 58mm and 75mm round pins, perfect for events, giveaways, school and org merch, weddings, fan pins and keepsakes.</p>
+      <h3>How it works</h3>
+      <p>Pick a pin type and size, design it, submit, and get your save code. Order through our Shopee store and we print and ship your custom pins across the Philippines.</p>
+    </section>
 
   <!-- STEP 2: SIZE -->
   <section class="cr-panel" id="step-size">
@@ -439,7 +478,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js?v=8"></script>
+<script src="firebase-config.js?v=9"></script>
 <!-- EmailJS (sends the confirmation email client-side, no backend needed) -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="email-config.js"></script>

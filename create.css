@@ -829,3 +829,9 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
   .cr-steps{gap:12px;}
   .cr-step-label{display:none;}
 }
+
+/* Crawlable intro text under the product grid (SEO — see create.html) */
+.cr-seo{margin-top:36px;padding-top:20px;border-top:1px solid var(--border);color:var(--ink-dim);font-size:13px;line-height:1.65;max-width:680px;}
+.cr-seo h2{font-size:15px;color:var(--ink);margin-bottom:8px;}
+.cr-seo h3{font-size:13px;color:var(--ink);margin:14px 0 4px;}
+.cr-seo strong{color:var(--ink);}
