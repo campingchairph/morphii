@@ -7,7 +7,7 @@
 <meta name="description" content="Pick stickers, set the white holder, and arrange them on an A4 sheet automatically.">
 <meta name="robots" content="noindex, nofollow">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stickers.css?v=5">
+<link rel="stylesheet" href="stickers.css?v=8">
 </head>
 <body>
 
@@ -19,14 +19,14 @@
 <main class="st-layout">
   <!-- PANEL 1: LIBRARY -->
   <section class="st-card" id="libCard">
-    <h2>Sticker library</h2>
-    <p class="st-sub">Tap a design to add it to your sheet — tap again for another copy.</p>
-    <div class="st-row">
-      <select class="st-select" id="libCollection" aria-label="Collection"></select>
-      <label class="st-chip" for="uploadInput" style="cursor:pointer;">＋ Upload my own</label>
+    <div class="st-lib-head">
+      <h2>Sticker library</h2>
+      <span class="st-tip">Tap to add · tap again for more</span>
+      <label class="st-text-btn" for="uploadInput">＋ Upload</label>
       <input type="file" id="uploadInput" accept="image/png,image/webp,image/jpeg" style="display:none">
+      <button class="st-text-btn" id="libToggle" aria-expanded="false">All groups ▾</button>
     </div>
-    <div class="st-row" id="libCats"></div>
+    <div class="st-groups" id="libCats"></div>
     <div class="st-lib-grid" id="libGrid"></div>
   </section>
 
@@ -38,7 +38,6 @@
 
     <div class="st-selbar" id="selBar" style="display:none;">
       <div class="st-sel-thumb"><img id="selImg" alt=""></div>
-      <div class="st-sel-name" id="selName"></div>
       <div class="st-sel-grp"><span class="st-mini">Copies</span>
         <span class="st-step"><button data-sel="qty-" id="selQtyMinus" aria-label="Fewer copies">−</button><b id="selQty"></b><button data-sel="qty+" aria-label="Add a copy">+</button></span></div>
       <div class="st-sel-grp"><span class="st-mini">Size</span>
@@ -50,23 +49,26 @@
     <div class="st-sheet-wrap" id="sheetWrap" style="display:none;"><canvas id="sheetCanvas" width="1050" height="1485"></canvas></div>
     <div class="st-empty" id="sheetBusy" style="display:none;padding:8px;">Arranging…</div>
     <div id="sheetWarn"></div>
-    <div class="st-legend">
-      <span><i style="background:#fff;border:1.5px solid #bbb"></i>White holder</span>
-      <span><i style="background:#e6007e"></i>Cut line</span>
-      <label class="st-check" style="margin:0;"><input type="checkbox" id="setShowCut" checked> Show cut line</label>
-    </div>
 
     <div class="st-holder">
-      <h3>White holder</h3>
-      <p class="st-sub">A white border printed around each sticker so you can cut it out without touching the artwork.</p>
-      <div class="st-row" id="styleChips">
-        <button class="st-chip active" data-style="contour">Follow shape</button>
-        <button class="st-chip" data-style="circle">Circle</button>
-        <button class="st-chip" data-style="rounded">Rounded square</button>
-        <button class="st-chip" data-style="none">No holder</button>
+      <div class="st-h-row">
+        <span class="st-h-label">White holder</span>
+        <div class="st-seg" id="styleChips">
+          <button class="active" data-style="contour">Follow shape</button>
+          <button data-style="circle">Circle</button>
+          <button data-style="rounded">Rounded</button>
+          <button data-style="none">None</button>
+        </div>
       </div>
-      <div id="borderRow"><span class="st-label">Holder width <span class="st-range-val" id="setBorderVal"></span></span><input class="st-range" id="setBorder" type="range" min="0" max="8" step="0.5" value="3"></div>
-      <label class="st-check"><input type="checkbox" id="setRotate" checked> Allow turning stickers 90° to fit more per sheet</label>
+      <div class="st-h-row" id="borderRow">
+        <span class="st-h-label">Width</span>
+        <input class="st-range" id="setBorder" type="range" min="0" max="8" step="0.5" value="3" aria-label="Holder width">
+        <span class="st-range-val" id="setBorderVal"></span>
+      </div>
+      <div class="st-h-row st-h-checks">
+        <label class="st-check"><input type="checkbox" id="setRotate" checked> Turn stickers 90° to fit more</label>
+        <label class="st-check"><input type="checkbox" id="setShowCut" checked> Show cut line <i class="st-dot"></i></label>
+      </div>
     </div>
 
     <!-- Admin tools are built here by stickers.js only after Firebase confirms an admin sign-in. -->
@@ -80,6 +82,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js?v=10"></script>
-<script src="stickers.js?v=4"></script>
+<script src="stickers.js?v=5"></script>
 </body>
 </html>

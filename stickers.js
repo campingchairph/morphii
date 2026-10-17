@@ -130,16 +130,17 @@ async function loadLibrary() {
   try { paths = await fetchTree(); }
   catch (e) { $('libGrid').innerHTML = '<div class="st-empty">Couldn’t load the library right now. Check your connection and refresh.</div>'; return; }
   COLLECTIONS.forEach(([id]) => { LIB.sets[id] = buildSet(paths, id === 'shared' ? '' : id + '/', overrides); });
-  refreshCollections();
   renderLibrary();
   renderAdminLib();   // no-op unless an admin is signed in
 }
-function refreshCollections() {
-  const usable = COLLECTIONS.filter(([id]) => stickerCategories(id).length);
-  $('libCollection').innerHTML = usable.map(([id, label]) => '<option value="' + id + '">' + esc(label) + '</option>').join('');
-  $('libCollection').style.display = usable.length > 1 ? '' : 'none';
-  if (!usable.find(([id]) => id === LIB.collection) && usable.length) LIB.collection = usable[0][0];
-  $('libCollection').value = LIB.collection;
+// every group from every collection, in one list (collection order, then the admin's group order)
+function allCategories(includeHidden) {
+  const cats = [];
+  COLLECTIONS.forEach(([id, label]) => stickerCategories(id, includeHidden).forEach(c => cats.push(Object.assign({ coll: id, collLabel: label }, c))));
+  const count = {};
+  cats.forEach(c => { count[c.label] = (count[c.label] || 0) + 1; });
+  cats.forEach(c => { c.shown = count[c.label] > 1 && c.coll !== 'shared' ? c.label + ' (' + c.collLabel + ')' : c.label; });
+  return cats;
 }
 // circle badge on each library thumbnail showing how many copies are in the tray
 function updateBadges() {
@@ -154,17 +155,26 @@ function updateBadges() {
     b.textContent = n;
   });
 }
+function groupThumb(c) {
+  const logo = c.items.find(it => STICKER_LOGO_RE.test(it.name || ''));
+  return (logo || c.items[0]).src;
+}
 function renderLibrary() {
-  const cats = stickerCategories(LIB.collection, LIB.isAdmin);
-  if (!cats.find(c => c.id === LIB.category)) LIB.category = cats.length ? cats[0].id : null;
-  $('libCats').innerHTML = cats.map(c =>
-    '<button class="st-chip' + (c.id === LIB.category ? ' active' : '') + (LIB.hidden.has(c.key) ? ' is-hidden' : '') + '" data-cat="' + esc(c.id) + '">' + esc(c.label) + '</button>').join('');
-  const cat = cats.find(c => c.id === LIB.category);
+  const cats = allCategories(LIB.isAdmin);
+  if (!cats.find(c => c.key === LIB.category)) LIB.category = cats.length ? cats[0].key : null;
+  const strip = $('libCats');
+  strip.innerHTML = cats.map(c =>
+    '<button class="st-group' + (c.key === LIB.category ? ' active' : '') + (LIB.hidden.has(c.key) ? ' is-hidden' : '') + '" data-cat="' + esc(c.key) + '">' +
+    '<div class="th"><img loading="lazy" src="' + esc(groupThumb(c)) + '" alt=""></div><span>' + esc(c.shown) + '</span></button>').join('');
+  const act = strip.querySelector('.active');
+  if (act && !strip.classList.contains('open')) strip.scrollLeft = Math.max(0, act.offsetLeft - (strip.clientWidth - act.offsetWidth) / 2);
+  const cat = cats.find(c => c.key === LIB.category);
   if (!cat) { $('libGrid').innerHTML = '<div class="st-empty">Nothing here yet.</div>'; return; }
   const items = cat.items.slice().sort((a, b) =>
     (STICKER_LOGO_RE.test(b.name) ? 1 : 0) - (STICKER_LOGO_RE.test(a.name) ? 1 : 0) || a.label.localeCompare(b.label));
-  $('libGrid').innerHTML = items.map((it, i) =>
-    '<div class="st-lib-item" data-src="' + esc(it.src) + '" data-label="' + esc(it.label) + '" title="' + esc(it.label) + '"><img loading="lazy" src="' + esc(it.src) + '" alt="' + esc(it.label) + '"></div>').join('');
+  $('libGrid').innerHTML = items.map(it =>
+    '<div class="st-lib-item" data-src="' + esc(it.src) + '" data-label="' + esc(it.label) + '"><img loading="lazy" src="' + esc(it.src) + '" alt=""></div>').join('');
+  $('libGrid').scrollTop = 0;
   updateBadges();
 }
 
@@ -606,14 +616,17 @@ function renderSummary() {
   if (!total) { box.innerHTML = '<div class="st-sum-empty">Nothing yet — tap stickers in the library to add them.</div>'; return; }
   const sizes = S.items.map(i => i.sizeMm);
   const lo = Math.min(...sizes), hi = Math.max(...sizes);
-  const sizeTxt = lo === hi ? 'All ' + lo + ' mm' : 'Mixed · ' + lo + '–' + hi + ' mm';
   const sheets = S.pages.length;
+  const parts = [
+    S.items.length + ' design' + (S.items.length !== 1 ? 's' : ''),
+    lo === hi ? 'All ' + lo + ' mm' : 'Mixed ' + lo + '–' + hi + ' mm',
+  ];
+  if (sheets) parts.push(sheets + ' sheet' + (sheets > 1 ? 's' : ''), Math.round(S.stats.usedPct) + '% used');
   box.innerHTML =
-    '<div class="st-sum-main"><b>' + total + '</b> sticker' + (total !== 1 ? 's' : '') + '</div>' +
-    '<div class="st-sum-chips"><span>' + S.items.length + ' design' + (S.items.length !== 1 ? 's' : '') + '</span><span>' + sizeTxt + '</span>' +
-    (sheets ? '<span>' + sheets + ' sheet' + (sheets > 1 ? 's' : '') + '</span><span>' + Math.round(S.stats.usedPct) + '% of paper used</span>' : '') + '</div>' +
-    '<div class="st-sum-actions"><span class="st-mini">Resize all</span><span class="st-step"><button data-sum="size-" aria-label="Make all smaller">−</button><b>' + (lo === hi ? lo + ' mm' : '· · ·') + '</b><button data-sum="size+" aria-label="Make all bigger">+</button></span>' +
-    '<button class="st-link-btn" data-sum="clear">Clear all</button></div>';
+    '<div class="st-sum-line"><b class="n">' + total + '</b><b>sticker' + (total !== 1 ? 's' : '') + '</b>' +
+    parts.map(t => '<i class="sep">|</i><span class="dim">' + t + '</span>').join('') + '</div>' +
+    '<div class="st-sum-tools"><span class="st-step"><button data-sum="size-" aria-label="Make all smaller">−</button><b>' + (lo === hi ? lo + ' mm' : '···') + '</b><button data-sum="size+" aria-label="Make all bigger">+</button></span>' +
+    '<button class="st-link-btn" data-sum="clear" title="Remove all stickers">Clear</button></div>';
 }
 function renderSelBar() {
   const it = selItem();
@@ -621,7 +634,6 @@ function renderSelBar() {
   $('selHint').style.display = !it && S.items.length && S.pages.length ? 'block' : 'none';
   if (!it) return;
   $('selImg').src = it.src;
-  $('selName').textContent = it.label;
   $('selQty').textContent = it.qty;
   $('selSize').textContent = it.sizeMm + ' mm';
   $('selQtyMinus').textContent = it.qty <= 1 ? '×' : '−';
@@ -744,7 +756,7 @@ function applyAuth() {
   if (admin === LIB.isAdmin && admin === !!$('adminMount').firstChild) return;
   LIB.isAdmin = admin;
   if (admin) mountAdmin(); else unmountAdmin();
-  if (Object.keys(LIB.sets).length) { refreshCollections(); renderLibrary(); }
+  if (Object.keys(LIB.sets).length) { renderLibrary(); }
 }
 // Collection ▸ type (Stickers / Shapes / …) ▸ sub-group, each with its own checkbox
 function renderAdminLib() {
@@ -779,7 +791,7 @@ async function saveLibraryAccess() {
     msg.textContent = 'Saving…';
     await saveStickerLibrary({ hidden });
     LIB.hidden = new Set(hidden); msg.textContent = 'Saved ✓';
-    refreshCollections(); renderLibrary();
+    renderLibrary();
   } catch (err) {
     msg.textContent = err.message === 'Admin sign-in required' ? err.message
       : 'Couldn’t save — are the Firestore rules published? (' + (err.code || err.message) + ')';
@@ -807,6 +819,12 @@ function exportFiles(kind) {
 
 /* ═══════════════ wiring ═══════════════ */
 let previewVisible = false;
+function setGroupsOpen(open) {
+  $('libCats').classList.toggle('open', open);
+  $('libToggle').textContent = open ? 'Fewer ▴' : 'All groups ▾';
+  $('libToggle').setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (!open) { const act = $('libCats').querySelector('.active'); if (act) $('libCats').scrollLeft = Math.max(0, act.offsetLeft - ($('libCats').clientWidth - act.offsetWidth) / 2); }
+}
 document.addEventListener('DOMContentLoaded', () => {
   const border = $('setBorder');
   const setBorderTxt = () => { $('setBorderVal').textContent = S.settings.border + ' mm'; };
@@ -817,17 +835,18 @@ document.addEventListener('DOMContentLoaded', () => {
   $('styleChips').addEventListener('click', e => {
     const b = e.target.closest('[data-style]'); if (!b) return;
     S.settings.style = b.dataset.style;
-    document.querySelectorAll('#styleChips .st-chip').forEach(c => c.classList.toggle('active', c === b));
+    document.querySelectorAll('#styleChips [data-style]').forEach(c => c.classList.toggle('active', c === b));
     $('borderRow').style.display = S.settings.style === 'none' ? 'none' : '';
     scheduleBuild();
   });
 
   // library
-  $('libCollection').addEventListener('change', e => { LIB.collection = e.target.value; LIB.category = null; renderLibrary(); });
   $('libCats').addEventListener('click', e => {
     const b = e.target.closest('[data-cat]'); if (!b) return;
-    LIB.category = b.dataset.cat; renderLibrary();
+    LIB.category = b.dataset.cat;
+    setGroupsOpen(false); renderLibrary();
   });
+  $('libToggle').addEventListener('click', () => setGroupsOpen(!$('libCats').classList.contains('open')));
   $('libGrid').addEventListener('click', e => {
     const it = e.target.closest('.st-lib-item'); if (!it) return;
     addItem(it.dataset.src, it.dataset.label);
