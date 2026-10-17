@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sticker Sheets — Design Your Own | Morphii</title>
+<meta name="description" content="Pick stickers, set the white holder and cut-guide gap, and arrange them on an A4 sheet automatically.">
+<meta name="robots" content="noindex, nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="stickers.css?v=2">
+</head>
+<body>
+
+<header class="st-header">
+  <div class="st-logo">morphii<span class="dot">.</span> <small>Sticker Sheets</small></div>
+  <a class="st-link" href="create.html">← Button pins</a>
+</header>
+
+<main class="st-layout">
+  <!-- LEFT: pick + configure -->
+  <div class="st-col">
+    <section class="st-card">
+      <h2>1 · Pick stickers</h2>
+      <p class="st-sub">Every design in our library works as a sticker. Tap to add — tap again for another copy.</p>
+      <div class="st-row">
+        <select class="st-select" id="libCollection" aria-label="Collection"></select>
+        <label class="st-chip" for="uploadInput" style="cursor:pointer;">＋ Upload my own</label>
+        <input type="file" id="uploadInput" accept="image/png,image/webp,image/jpeg" style="display:none">
+      </div>
+      <div class="st-row" id="libCats"></div>
+      <div class="st-lib-grid" id="libGrid"></div>
+    </section>
+
+    <section class="st-card">
+      <h2>2 · Size &amp; quantity <span class="st-mini" id="trayCount" style="margin-left:6px;"></span></h2>
+      <p class="st-sub">Size is the longest side of the sticker artwork (the white holder is added around it).</p>
+      <div class="st-row">
+        <span class="st-mini">All sizes</span>
+        <input class="st-num" id="sizeAllVal" type="number" min="10" max="190" value="40">
+        <button class="st-chip" id="sizeAll">Apply</button>
+        <button class="st-chip" id="clearAll" style="margin-left:auto;">Clear all</button>
+      </div>
+      <div id="trayList"></div>
+    </section>
+
+    <section class="st-card">
+      <h2>3 · Holder &amp; cut guide</h2>
+      <p class="st-sub">The white holder is printed around each sticker; the pink cut line sits a small gap outside it, so cutting never touches your artwork.</p>
+      <span class="st-label">Holder shape</span>
+      <div class="st-row" id="styleChips">
+        <button class="st-chip active" data-style="contour">Follow shape</button>
+        <button class="st-chip" data-style="circle">Circle</button>
+        <button class="st-chip" data-style="rounded">Rounded square</button>
+        <button class="st-chip" data-style="none">No holder</button>
+      </div>
+      <div class="st-opt-grid">
+        <div id="borderRow"><span class="st-label">White holder width <span class="st-range-val" id="setBorderVal"></span></span><input class="st-range" id="setBorder" type="range" min="0" max="8" step="0.5" value="3"></div>
+        <div><span class="st-label">Cut gap <span class="st-range-val" id="setGapVal"></span></span><input class="st-range" id="setGap" type="range" min="0.5" max="4" step="0.5" value="1.5"></div>
+        <div><span class="st-label">Sheet margin <span class="st-range-val" id="setMarginVal"></span></span><input class="st-range" id="setMargin" type="range" min="3" max="15" step="1" value="5"></div>
+        <div><span class="st-label">Space between stickers <span class="st-range-val" id="setSpacingVal"></span></span><input class="st-range" id="setSpacing" type="range" min="1" max="6" step="0.5" value="2"></div>
+      </div>
+      <label class="st-check"><input type="checkbox" id="setRotate" checked> Allow turning stickers 90° to fit more per sheet</label>
+    </section>
+  </div>
+
+  <!-- RIGHT: live A4 preview -->
+  <div class="st-col st-preview-col">
+    <section class="st-card">
+      <h2>A4 sheet preview</h2>
+      <div class="st-sheet-tabs" id="sheetTabs"></div>
+      <div class="st-empty" id="sheetEmpty">Pick stickers from the library and they’ll be arranged here automatically.</div>
+      <div class="st-sheet-wrap" id="sheetWrap" style="display:none;"><canvas id="sheetCanvas" width="840" height="1188"></canvas></div>
+      <div class="st-empty" id="sheetBusy" style="display:none;padding:8px;">Arranging…</div>
+      <div class="st-stats" id="sheetStats"></div>
+      <div id="sheetWarn"></div>
+      <div class="st-legend">
+        <span><i style="background:#fff;border:1.5px solid #bbb"></i>White holder</span>
+        <span><i style="background:#e6007e"></i>Cut line</span>
+        <label class="st-check" style="margin:0;"><input type="checkbox" id="setShowCut" checked> Show cut line</label>
+      </div>
+
+      <div class="st-admin" id="adminPanel">
+        <span class="st-label">Admin · clean production files (<span id="adminCount">0</span> sheet)</span>
+        <div class="st-row">
+          <button class="st-btn" id="expPrint">Print PNG (transparent)</button>
+          <button class="st-btn ghost" id="expProof">Proof PNG + cut line</button>
+          <button class="st-btn ghost" id="expSvg">Cut line SVG</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js?v=9"></script>
+<script src="stickers.js?v=1"></script>
+</body>
+</html>
