@@ -13,6 +13,7 @@
    the cut lines + minimum spacing, optional 90deg rotation).
    ═══════════════════════════════════════════════════════════════ */
 'use strict';
+(function () {
 
 /* ── constants ─────────────────────────────────────────────── */
 const PAGE_W = 210, PAGE_H = 297;      // A4, mm
@@ -45,6 +46,7 @@ const S = {
   pages: [],            // [{ placements:[{inst,x,y,rot}] }]
   oversize: [],
   pageIdx: 0,
+  sel: null,            // id of the item whose sticker is selected (tapped on the sheet)
   stats: { stickers: 0, usedPct: 0 },
 };
 let LIB = { sets: {}, order: {}, collection: 'shared', category: null, hidden: new Set(), isAdmin: false };
@@ -130,7 +132,7 @@ async function loadLibrary() {
   COLLECTIONS.forEach(([id]) => { LIB.sets[id] = buildSet(paths, id === 'shared' ? '' : id + '/', overrides); });
   refreshCollections();
   renderLibrary();
-  renderAdminLib();
+  renderAdminLib();   // no-op unless an admin is signed in
 }
 function refreshCollections() {
   const usable = COLLECTIONS.filter(([id]) => stickerCategories(id).length);
@@ -138,23 +140,6 @@ function refreshCollections() {
   $('libCollection').style.display = usable.length > 1 ? '' : 'none';
   if (!usable.find(([id]) => id === LIB.collection) && usable.length) LIB.collection = usable[0][0];
   $('libCollection').value = LIB.collection;
-}
-// admin: tick/untick which collections and categories customers can use
-function renderAdminLib() {
-  const box = $('adminLib'); if (!box) return;
-  box.innerHTML = COLLECTIONS.map(([id, label]) => {
-    const cats = stickerCategories(id, true);
-    if (!cats.length) return '';
-    return '<details><summary><input type="checkbox" data-coll="' + id + '"> ' + esc(label) + ' <span class="st-mini">(' + cats.length + ')</span></summary><div class="st-admin-cats">' +
-      cats.map(c => '<label><input type="checkbox" data-key="' + esc(c.key) + '"' + (LIB.hidden.has(c.key) ? '' : ' checked') + '> ' + esc(c.label) + '</label>').join('') +
-      '</div></details>';
-  }).join('');
-  box.querySelectorAll('[data-coll]').forEach(syncCollBox);
-}
-function syncCollBox(cb) {
-  const kids = [...cb.closest('details').querySelectorAll('[data-key]')];
-  const on = kids.filter(k => k.checked).length;
-  cb.checked = on === kids.length; cb.indeterminate = on > 0 && on < kids.length;
 }
 // circle badge on each library thumbnail showing how many copies are in the tray
 function updateBadges() {
@@ -173,7 +158,7 @@ function renderLibrary() {
   const cats = stickerCategories(LIB.collection, LIB.isAdmin);
   if (!cats.find(c => c.id === LIB.category)) LIB.category = cats.length ? cats[0].id : null;
   $('libCats').innerHTML = cats.map(c =>
-    '<button class="st-chip' + (c.id === LIB.category ? ' active' : '') + '" data-cat="' + esc(c.id) + '">' + esc(c.label) + '</button>').join('');
+    '<button class="st-chip' + (c.id === LIB.category ? ' active' : '') + (LIB.hidden.has(c.key) ? ' is-hidden' : '') + '" data-cat="' + esc(c.id) + '">' + esc(c.label) + '</button>').join('');
   const cat = cats.find(c => c.id === LIB.category);
   if (!cat) { $('libGrid').innerHTML = '<div class="st-empty">Nothing here yet.</div>'; return; }
   const items = cat.items.slice().sort((a, b) =>
@@ -538,6 +523,13 @@ function drawPage(ctx, page, ppmm, mode, opts) {
       ctx.restore();
     }
     ctx.drawImage(g.F.img, 0, 0, g.F.wMm, g.F.hMm);
+    if (mode === 'preview' && opts.selId && p.inst.item.id === opts.selId) {
+      ctx.save();
+      ctx.strokeStyle = '#1E2A20'; ctx.lineWidth = 0.9; ctx.lineJoin = 'round';
+      ctx.shadowColor = 'rgba(143,174,124,0.9)'; ctx.shadowBlur = 6 * ppmm / 4;
+      ctx.stroke(pathOf(g.cuts));
+      ctx.restore();
+    }
     const showCut = mode === 'proof' || (mode === 'preview' && opts.showCut);
     if (showCut) {
       ctx.save();
@@ -604,52 +596,97 @@ async function rebuild() {
   $('sheetBusy').style.display = 'none';
   renderPreview();
 }
+
+/* ═══════════════ summary / selection bar / preview ═══════════════ */
+const totalQty = () => S.items.reduce((s, i) => s + i.qty, 0);
+function selItem() { return S.items.find(i => i.id === S.sel) || null; }
+
+function renderSummary() {
+  const box = $('summary'), total = totalQty();
+  if (!total) { box.innerHTML = '<div class="st-sum-empty">Nothing yet — tap stickers in the library to add them.</div>'; return; }
+  const sizes = S.items.map(i => i.sizeMm);
+  const lo = Math.min(...sizes), hi = Math.max(...sizes);
+  const sizeTxt = lo === hi ? 'All ' + lo + ' mm' : 'Mixed · ' + lo + '–' + hi + ' mm';
+  const sheets = S.pages.length;
+  box.innerHTML =
+    '<div class="st-sum-main"><b>' + total + '</b> sticker' + (total !== 1 ? 's' : '') + '</div>' +
+    '<div class="st-sum-chips"><span>' + S.items.length + ' design' + (S.items.length !== 1 ? 's' : '') + '</span><span>' + sizeTxt + '</span>' +
+    (sheets ? '<span>' + sheets + ' sheet' + (sheets > 1 ? 's' : '') + '</span><span>' + Math.round(S.stats.usedPct) + '% of paper used</span>' : '') + '</div>' +
+    '<div class="st-sum-actions"><span class="st-mini">Resize all</span><span class="st-step"><button data-sum="size-" aria-label="Make all smaller">−</button><b>' + (lo === hi ? lo + ' mm' : '· · ·') + '</b><button data-sum="size+" aria-label="Make all bigger">+</button></span>' +
+    '<button class="st-link-btn" data-sum="clear">Clear all</button></div>';
+}
+function renderSelBar() {
+  const it = selItem();
+  $('selBar').style.display = it ? 'flex' : 'none';
+  $('selHint').style.display = !it && S.items.length && S.pages.length ? 'block' : 'none';
+  if (!it) return;
+  $('selImg').src = it.src;
+  $('selName').textContent = it.label;
+  $('selQty').textContent = it.qty;
+  $('selSize').textContent = it.sizeMm + ' mm';
+  $('selQtyMinus').textContent = it.qty <= 1 ? '×' : '−';
+  $('selQtyMinus').title = it.qty <= 1 ? 'Remove this sticker' : 'Fewer copies';
+}
+function renderMobBar() {
+  const n = totalQty();
+  $('mobBar').classList.toggle('show', n > 0 && !previewVisible);
+  $('mobCount').textContent = n + ' sticker' + (n !== 1 ? 's' : '') + ' added';
+}
+function refreshUI() {
+  updateBadges(); renderSummary(); renderSelBar(); renderMobBar();
+}
 function renderPreview() {
-  const hasItems = S.items.length > 0;
-  $('sheetEmpty').style.display = hasItems && S.pages.length ? 'none' : 'block';
-  $('sheetEmpty').textContent = hasItems ? (S.oversize.length ? 'Nothing fits on a sheet — try a smaller size.' : 'Preparing…') : 'Pick stickers from the library and they’ll be arranged here automatically.';
-  $('sheetWrap').style.display = hasItems && S.pages.length ? 'block' : 'none';
+  const hasItems = S.items.length > 0, ready = hasItems && S.pages.length > 0;
+  $('sheetEmpty').style.display = ready ? 'none' : (hasItems ? 'block' : 'none');
+  $('sheetEmpty').textContent = S.oversize.length && !ready ? 'Nothing fits on a sheet — try a smaller size.' : 'Preparing…';
+  $('sheetWrap').style.display = ready ? 'block' : 'none';
   $('sheetTabs').innerHTML = S.pages.length > 1
     ? S.pages.map((_, i) => '<button class="st-chip' + (i === S.pageIdx ? ' active' : '') + '" data-page="' + i + '">Sheet ' + (i + 1) + '</button>').join('') : '';
   const warn = [];
-  if (S.oversize.length) warn.push(S.oversize.length + ' sticker' + (S.oversize.length > 1 ? 's are' : ' is') + ' too big for an A4 sheet with these margins and were left out — reduce their size.');
+  if (S.oversize.length) warn.push(S.oversize.length + ' sticker' + (S.oversize.length > 1 ? 's are' : ' is') + ' too big for an A4 sheet and was left out — tap it and reduce its size.');
   if (S.stats.failed) warn.push(S.stats.failed + ' image' + (S.stats.failed > 1 ? 's' : '') + ' couldn’t be loaded.');
-  const total = S.items.reduce((s, i) => s + i.qty, 0);
-  if (total > MAX_INSTANCES) warn.push('Limit is ' + MAX_INSTANCES + ' stickers per order; extras were ignored.');
   $('sheetWarn').innerHTML = warn.map(w => '<div class="st-warn">' + esc(w) + '</div>').join('');
-  $('sheetStats').textContent = S.pages.length
-    ? S.pages.length + ' sheet' + (S.pages.length > 1 ? 's' : '') + ' · ' + S.stats.stickers + ' sticker' + (S.stats.stickers !== 1 ? 's' : '') + ' · ' + S.stats.usedPct.toFixed(0) + '% of paper used'
-    : '';
-  $('adminCount').textContent = S.pages.length;
+  const ac = $('adminCount'); if (ac) ac.textContent = S.pages.length;
+  renderSummary(); renderSelBar();
   if (!S.pages.length) return;
-  const cv = $('sheetCanvas'), ppmm = 4;
+  drawSheetPreview();
+}
+function drawSheetPreview() {
+  if (!S.pages.length) return;
+  const cv = $('sheetCanvas'), ppmm = 5;
   cv.width = Math.round(PAGE_W * ppmm); cv.height = Math.round(PAGE_H * ppmm);
-  drawPage(cv.getContext('2d'), S.pages[S.pageIdx], ppmm, 'preview', { showCut: S.settings.showCut, margin: S.settings.margin });
+  drawPage(cv.getContext('2d'), S.pages[S.pageIdx], ppmm, 'preview', { showCut: S.settings.showCut, margin: S.settings.margin, selId: S.sel });
+}
+// which sticker is under a click/tap on the preview canvas?
+function hitTest(ev) {
+  const pg = S.pages[S.pageIdx]; if (!pg) return null;
+  const r = $('sheetCanvas').getBoundingClientRect();
+  const X = (ev.clientX - r.left) / r.width * PAGE_W, Y = (ev.clientY - r.top) / r.height * PAGE_H;
+  for (let i = pg.placements.length - 1; i >= 0; i--) {
+    const p = pg.placements[i], m = placementMatrix(p);
+    const x = p.rot ? Y - m[5] : X - m[4], y = p.rot ? m[4] - X : Y - m[5];
+    if (p.inst.geom.cuts.some(poly => pointInPoly([x, y], poly))) return p.inst.item.id;
+  }
+  return null;
 }
 
-/* ═══════════════ tray ═══════════════ */
+/* ═══════════════ editing the sheet ═══════════════ */
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 function addItem(src, label) {
-  const existing = S.items.find(i => i.src === src);
-  if (existing) { existing.qty = Math.min(99, existing.qty + 1); }
-  else S.items.push({ id: nextId++, src, label, sizeMm: 40, qty: 1 });
-  renderTray(); scheduleBuild();
+  if (totalQty() >= MAX_INSTANCES) { alert('That’s the most stickers we can fit in one order (' + MAX_INSTANCES + ').'); return; }
+  let it = S.items.find(i => i.src === src);
+  if (it) it.qty = Math.min(99, it.qty + 1);
+  else { it = { id: nextId++, src, label, sizeMm: 40, qty: 1 }; S.items.push(it); }
+  S.sel = it.id;
+  refreshUI(); scheduleBuild();
 }
-function renderTray() {
-  updateBadges();
-  const box = $('trayList');
-  if (!S.items.length) { box.innerHTML = '<div class="st-empty">No stickers selected yet. Tap one in the library above.</div>'; $('trayCount').textContent = ''; return; }
-  box.innerHTML = S.items.map(it =>
-    '<div class="st-tray-row" data-id="' + it.id + '">' +
-    '<div class="st-tray-thumb"><img src="' + esc(it.src) + '" alt=""></div>' +
-    '<div class="st-tray-main"><div class="st-tray-name">' + esc(it.label) + '</div>' +
-    '<div class="st-tray-fields">' +
-    '<span class="st-mini">Size (mm)</span><span class="st-step"><button data-act="size-" aria-label="Smaller">−</button><input data-f="sizeMm" type="number" min="10" max="190" value="' + it.sizeMm + '"><button data-act="size+" aria-label="Bigger">+</button></span>' +
-    '<span class="st-mini">Qty</span><span class="st-step"><button data-act="qty-" aria-label="Fewer">−</button><input data-f="qty" type="number" min="1" max="99" value="' + it.qty + '"><button data-act="qty+" aria-label="More">+</button></span>' +
-    '</div></div>' +
-    '<button class="st-remove" data-act="remove" title="Remove">×</button></div>').join('');
-  $('trayCount').textContent = S.items.reduce((s, i) => s + i.qty, 0) + ' stickers';
+function changeQty(it, d) {
+  if (d > 0 && totalQty() >= MAX_INSTANCES) return;
+  it.qty += d;
+  if (it.qty <= 0) { S.items = S.items.filter(i => i !== it); if (S.sel === it.id) S.sel = null; }
+  refreshUI(); scheduleBuild();
 }
-function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function changeSize(it, d) { it.sizeMm = clamp(it.sizeMm + d, 10, 190); refreshUI(); scheduleBuild(); }
 
 /* ═══════════════ own-image upload ═══════════════ */
 function handleUpload(file) {
@@ -669,42 +706,114 @@ function handleUpload(file) {
   fr.readAsDataURL(file);
 }
 
-/* ═══════════════ admin export ═══════════════ */
+/* ═══════════════ ADMIN ONLY ═══════════════
+   Nothing below is reachable unless Firebase Auth reports a signed-in admin:
+   - the admin DOM is only built after that check (it is not in the HTML),
+   - every admin action re-checks the live sign-in (guard()) before it runs,
+   - this whole file runs inside a closure, so none of these functions are
+     callable from the browser console,
+   - and the only thing that persists (library access) is protected by the
+     Firestore rule on morphii_config (admin emails only) — the real lock.
+   The clean, un-watermarked renders are drawn locally from the same public
+   library images, so the guard there is a convenience, not a secret. */
+let TEST_ADMIN = false;   // only ever set by the localhost test hook at the bottom
+function isAdminNow() {
+  if (TEST_ADMIN) return true;
+  try { const u = AUTH && AUTH.currentUser; return !!(u && isAdmin(u)); } catch (e) { return false; }
+}
+function guard() { if (!isAdminNow()) throw new Error('Admin sign-in required'); }
+
+const ADMIN_HTML =
+  '<div class="st-admin">' +
+  '<span class="st-label">Admin · library customers can use</span>' +
+  '<p class="st-sub" style="margin-bottom:8px;">Tick what customers may use — a whole collection, a type (Stickers, Shapes…) or a single sub-group. Saved for everyone.</p>' +
+  '<div id="adminLib" class="st-admin-lib"></div>' +
+  '<div class="st-row"><button class="st-btn" id="libSave">Save library access</button><span class="st-mini" id="libSaveMsg"></span></div>' +
+  '<span class="st-label" style="margin-top:6px;">Admin · clean production files (<span id="adminCount">0</span> sheet)</span>' +
+  '<div class="st-row"><button class="st-btn" data-exp="print">Print PNG (transparent)</button><button class="st-btn ghost" data-exp="proof">Proof PNG + cut line</button><button class="st-btn ghost" data-exp="svg">Cut line SVG</button></div>' +
+  '</div>';
+
+function mountAdmin() {
+  if (!isAdminNow()) return;
+  $('adminMount').innerHTML = ADMIN_HTML;
+  renderAdminLib(); renderPreview();
+}
+function unmountAdmin() { $('adminMount').innerHTML = ''; }
+function applyAuth() {
+  const admin = isAdminNow();
+  if (admin === LIB.isAdmin && admin === !!$('adminMount').firstChild) return;
+  LIB.isAdmin = admin;
+  if (admin) mountAdmin(); else unmountAdmin();
+  if (Object.keys(LIB.sets).length) { refreshCollections(); renderLibrary(); }
+}
+// Collection ▸ type (Stickers / Shapes / …) ▸ sub-group, each with its own checkbox
+function renderAdminLib() {
+  const box = $('adminLib'); if (!box || !isAdminNow()) return;
+  const chk = key => '<input type="checkbox" data-key="' + esc(key) + '"' + (LIB.hidden.has(key) ? '' : ' checked') + '>';
+  box.innerHTML = COLLECTIONS.map(([id, label]) => {
+    const cats = stickerCategories(id, true);
+    if (!cats.length) return '';
+    const sub = cats.filter(c => c.id.startsWith('s:')), other = cats.filter(c => c.id.startsWith('o:'));
+    let inner = '';
+    if (sub.length) {
+      inner += '<details><summary><input type="checkbox" data-parent> Stickers <span class="st-mini">(' + sub.length + ' sub-groups)</span></summary><div class="st-admin-cats">' +
+        sub.map(c => '<label>' + chk(c.key) + ' ' + esc(c.label) + '</label>').join('') + '</div></details>';
+    }
+    inner += other.map(c => '<label class="leaf">' + chk(c.key) + ' ' + esc(c.label) + '</label>').join('');
+    return '<details><summary><input type="checkbox" data-parent> ' + esc(label) + '</summary>' + inner + '</details>';
+  }).join('');
+  syncParents();
+}
+function syncParents() {
+  document.querySelectorAll('#adminLib input[data-parent]').forEach(p => {
+    const kids = [...p.closest('details').querySelectorAll('[data-key]')];
+    const on = kids.filter(k => k.checked).length;
+    p.checked = on === kids.length; p.indeterminate = on > 0 && on < kids.length;
+  });
+}
+async function saveLibraryAccess() {
+  const msg = $('libSaveMsg');
+  try {
+    guard();
+    const hidden = [...document.querySelectorAll('#adminLib [data-key]')].filter(k => !k.checked).map(k => k.dataset.key);
+    msg.textContent = 'Saving…';
+    await saveStickerLibrary({ hidden });
+    LIB.hidden = new Set(hidden); msg.textContent = 'Saved ✓';
+    refreshCollections(); renderLibrary();
+  } catch (err) {
+    msg.textContent = err.message === 'Admin sign-in required' ? err.message
+      : 'Couldn’t save — are the Firestore rules published? (' + (err.code || err.message) + ')';
+  }
+}
 function download(blob, name) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
-function exportPng(mode) {
+function exportFiles(kind) {
+  guard();
+  if (kind === 'svg') {
+    S.pages.forEach((pg, i) => download(new Blob([pageSvg(pg)], { type: 'image/svg+xml' }), 'sticker-sheet-' + (i + 1) + '-cutline.svg'));
+    return;
+  }
   S.pages.forEach((pg, i) => {
     const cv = document.createElement('canvas');
     cv.width = Math.round(PAGE_W * EXPORT_PPMM); cv.height = Math.round(PAGE_H * EXPORT_PPMM);
-    drawPage(cv.getContext('2d'), pg, EXPORT_PPMM, mode);
-    cv.toBlob(b => download(b, 'sticker-sheet-' + (i + 1) + (mode === 'proof' ? '-proof' : '-print') + '.png'));
+    drawPage(cv.getContext('2d'), pg, EXPORT_PPMM, kind);
+    cv.toBlob(b => download(b, 'sticker-sheet-' + (i + 1) + (kind === 'proof' ? '-proof' : '-print') + '.png'));
   });
-}
-function exportSvg() {
-  S.pages.forEach((pg, i) => download(new Blob([pageSvg(pg)], { type: 'image/svg+xml' }), 'sticker-sheet-' + (i + 1) + '-cutline.svg'));
 }
 
 /* ═══════════════ wiring ═══════════════ */
-function bindSetting(id, key, parse, outId, fmt) {
-  const el = $(id);
-  const apply = () => {
-    S.settings[key] = parse(el);
-    if (outId) $(outId).textContent = fmt(S.settings[key]);
-    scheduleBuild();
-  };
-  el.addEventListener('input', apply);
-  if (outId) $(outId).textContent = fmt(S.settings[key]);
-}
-
+let previewVisible = false;
 document.addEventListener('DOMContentLoaded', () => {
-  bindSetting('setBorder', 'border', e => +e.value, 'setBorderVal', v => v + ' mm');
-  bindSetting('setRotate', 'rotate', e => e.checked);
-  $('setShowCut').addEventListener('change', e => { S.settings.showCut = e.target.checked; renderPreview(); });
-
+  const border = $('setBorder');
+  const setBorderTxt = () => { $('setBorderVal').textContent = S.settings.border + ' mm'; };
+  border.addEventListener('input', () => { S.settings.border = +border.value; setBorderTxt(); scheduleBuild(); });
+  setBorderTxt();
+  $('setRotate').addEventListener('change', e => { S.settings.rotate = e.target.checked; scheduleBuild(); });
+  $('setShowCut').addEventListener('change', e => { S.settings.showCut = e.target.checked; drawSheetPreview(); });
   $('styleChips').addEventListener('click', e => {
     const b = e.target.closest('[data-style]'); if (!b) return;
     S.settings.style = b.dataset.style;
@@ -713,6 +822,7 @@ document.addEventListener('DOMContentLoaded', () => {
     scheduleBuild();
   });
 
+  // library
   $('libCollection').addEventListener('change', e => { LIB.collection = e.target.value; LIB.category = null; renderLibrary(); });
   $('libCats').addEventListener('click', e => {
     const b = e.target.closest('[data-cat]'); if (!b) return;
@@ -724,70 +834,58 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   $('uploadInput').addEventListener('change', e => { handleUpload(e.target.files[0]); e.target.value = ''; });
 
-  const tray = $('trayList');
-  tray.addEventListener('click', e => {
-    const btn = e.target.closest('[data-act]'); if (!btn) return;
-    const row = btn.closest('.st-tray-row'); const it = S.items.find(i => i.id === +row.dataset.id); if (!it) return;
-    const act = btn.dataset.act;
-    if (act === 'remove') { S.items = S.items.filter(i => i !== it); renderTray(); }
-    else {
-      if (act === 'size-') it.sizeMm = clamp(it.sizeMm - 5, 10, 190);
-      if (act === 'size+') it.sizeMm = clamp(it.sizeMm + 5, 10, 190);
-      if (act === 'qty-') it.qty = clamp(it.qty - 1, 1, 99);
-      if (act === 'qty+') it.qty = clamp(it.qty + 1, 1, 99);
-      row.querySelector('[data-f="sizeMm"]').value = it.sizeMm;
-      row.querySelector('[data-f="qty"]').value = it.qty;
-      $('trayCount').textContent = S.items.reduce((s, i) => s + i.qty, 0) + ' stickers';
-      updateBadges();
-    }
-    scheduleBuild();
+  // tap a sticker on the sheet
+  $('sheetCanvas').addEventListener('click', e => {
+    S.sel = hitTest(e); renderSelBar(); drawSheetPreview();
   });
-  tray.addEventListener('input', e => {
-    const f = e.target.dataset.f; if (!f) return;
-    const row = e.target.closest('.st-tray-row'); const it = S.items.find(i => i.id === +row.dataset.id); if (!it) return;
-    const v = parseFloat(e.target.value); if (!isFinite(v)) return;
-    if (f === 'sizeMm') it.sizeMm = clamp(Math.round(v), 10, 190);
-    if (f === 'qty') it.qty = clamp(Math.round(v), 1, 99);
-    $('trayCount').textContent = S.items.reduce((s, i) => s + i.qty, 0) + ' stickers';
-    updateBadges();
-    scheduleBuild();
+  $('selBar').addEventListener('click', e => {
+    const b = e.target.closest('[data-sel]'); if (!b) return;
+    const it = selItem(); if (!it) return;
+    const a = b.dataset.sel;
+    if (a === 'qty+') changeQty(it, 1);
+    else if (a === 'qty-') changeQty(it, -1);
+    else if (a === 'size+') changeSize(it, 5);
+    else if (a === 'size-') changeSize(it, -5);
   });
-  $('sizeAll').addEventListener('click', () => {
-    const v = clamp(parseInt($('sizeAllVal').value, 10) || 40, 10, 190);
-    S.items.forEach(i => i.sizeMm = v); renderTray(); scheduleBuild();
+  $('summary').addEventListener('click', e => {
+    const b = e.target.closest('[data-sum]'); if (!b) return;
+    const a = b.dataset.sum;
+    if (a === 'clear') { S.items = []; S.sel = null; refreshUI(); scheduleBuild(); return; }
+    const d = a === 'size+' ? 5 : -5;
+    S.items.forEach(i => { i.sizeMm = clamp(i.sizeMm + d, 10, 190); });
+    refreshUI(); scheduleBuild();
   });
-  $('clearAll').addEventListener('click', () => { S.items = []; renderTray(); scheduleBuild(); });
   $('sheetTabs').addEventListener('click', e => {
     const b = e.target.closest('[data-page]'); if (!b) return;
     S.pageIdx = +b.dataset.page; renderPreview();
   });
 
-  $('adminLib').addEventListener('change', e => {
+  // mobile: jump to the sheet; hide the bar while the sheet is on screen
+  $('mobGo').addEventListener('click', () => $('previewCard').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(es => { previewVisible = es[0].isIntersecting; renderMobBar(); }, { threshold: 0.15 }).observe($('previewCard'));
+  }
+
+  // admin (delegated; each handler re-checks admin status)
+  $('adminMount').addEventListener('change', e => {
     const t = e.target;
-    if (t.dataset.coll) { t.closest('details').querySelectorAll('[data-key]').forEach(k => { k.checked = t.checked; }); }
-    else if (t.dataset.key) syncCollBox(t.closest('details').querySelector('[data-coll]'));
+    if (!t.closest('#adminLib')) return;
+    if (t.hasAttribute('data-parent')) t.closest('details').querySelectorAll('[data-key]').forEach(k => { k.checked = t.checked; });
+    syncParents();
   });
-  $('libSave').addEventListener('click', async () => {
-    const hidden = [...document.querySelectorAll('#adminLib [data-key]')].filter(k => !k.checked).map(k => k.dataset.key);
-    const msg = $('libSaveMsg'); msg.textContent = 'Saving…';
-    try {
-      await saveStickerLibrary({ hidden });
-      LIB.hidden = new Set(hidden); msg.textContent = 'Saved ✓';
-      refreshCollections(); renderLibrary();
-    } catch (err) { msg.textContent = 'Couldn’t save — are the Firestore rules published? (' + (err.code || err.message) + ')'; }
+  $('adminMount').addEventListener('click', e => {
+    if (e.target.id === 'libSave') { saveLibraryAccess(); return; }
+    const b = e.target.closest('[data-exp]');
+    if (b) { try { exportFiles(b.dataset.exp); } catch (err) { /* not an admin */ } }
   });
 
-  $('expPrint').addEventListener('click', () => exportPng('print'));
-  $('expProof').addEventListener('click', () => exportPng('proof'));
-  $('expSvg').addEventListener('click', exportSvg);
-
-  renderTray();
+  refreshUI();
   loadLibrary();
-  if (typeof AUTH !== 'undefined' && AUTH) {
-    AUTH.onAuthStateChanged(u => {
-      const admin = !!(u && isAdmin(u));
-      $('adminPanel').classList.toggle('show', admin);
-      if (admin !== LIB.isAdmin) { LIB.isAdmin = admin; if (Object.keys(LIB.sets).length) { refreshCollections(); renderLibrary(); } }
-    });
+  if (typeof AUTH !== 'undefined' && AUTH) AUTH.onAuthStateChanged(applyAuth);
+
+  // localhost-only test hook — absent on the live site
+  if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+    window.__stTest = { S, LIB, becomeAdmin() { TEST_ADMIN = true; applyAuth(); }, stopAdmin() { TEST_ADMIN = false; applyAuth(); } };
   }
 });
+})();

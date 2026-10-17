@@ -466,6 +466,7 @@ async function pushFileToGithub(repoPath, base64Content, commitMessage) {
        match /morphii_config/{docId} {
          allow read: if true;
          allow write: if request.auth != null
+           && request.auth.token.email_verified == true
            && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
        }
        match /morphii_costs/{costId} {
