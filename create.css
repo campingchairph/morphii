@@ -835,3 +835,20 @@ h1,.cr-logo,.cr-title,.cr-sheet-title,.cr-design-title,.cr-btn-primary,.cr-icon-
 .cr-seo h2{font-size:15px;color:var(--ink);margin-bottom:8px;}
 .cr-seo h3{font-size:13px;color:var(--ink);margin:14px 0 4px;}
 .cr-seo strong{color:var(--ink);}
+
+/* ── HOME: sticker sheets feature card + separation from the pin types ── */
+.cr-home-label{font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-dim);margin:6px 2px 10px;}
+.cr-feature-card{
+  display:flex;align-items:center;gap:16px;padding:14px 18px;border-radius:20px;text-decoration:none;color:var(--ink);
+  background:var(--card);border:1px solid var(--border);box-shadow:var(--shadow-sm);position:relative;overflow:hidden;
+  transition:transform 0.15s,box-shadow 0.15s;
+}
+.cr-feature-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,#bfe0a8,#ffd9a8 55%,#ff8fb1);}
+.cr-feature-card:hover{transform:translateY(-3px);box-shadow:var(--shadow);}
+.cr-feature-thumb{flex:0 0 auto;width:58px;height:74px;filter:drop-shadow(0 3px 6px rgba(0,0,0,.12));}
+.cr-feature-text{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}
+.cr-feature-name{font-family:'Baloo 2',cursive;font-size:18px;font-weight:800;line-height:1.15;}
+.cr-feature-desc{font-size:12.5px;font-weight:700;color:var(--ink-dim);line-height:1.4;}
+.cr-feature-go{font-size:20px;font-weight:800;color:var(--coral);flex:0 0 auto;}
+.cr-home-divider{display:flex;align-items:center;gap:12px;margin:22px 0 14px;color:var(--ink-dim);font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;}
+.cr-home-divider::before,.cr-home-divider::after{content:'';flex:1;height:1px;background:var(--border);}

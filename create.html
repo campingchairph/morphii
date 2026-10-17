@@ -41,7 +41,7 @@
 })();
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&family=Luckiest+Guy&family=Shrikhand&family=Carter+One&family=Ceviche+One&family=Kavoon&family=Cherry+Bomb+One&family=Lobster&family=Spicy+Rice&family=Chicle&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="create.css?v=7">
+<link rel="stylesheet" href="create.css?v=8">
 </head>
 <body>
 
@@ -63,7 +63,34 @@
   <section class="cr-panel active" id="step-product">
     <h1 class="cr-title">What are you making?</h1>
     <p class="cr-sub">Pick a product to start designing.</p>
-    <p class="cr-sub" style="margin-top:-6px;"><a href="stickers.html" style="color:inherit;font-weight:800;text-decoration:underline;">Need stickers instead? Make a sticker sheet →</a></p>
+
+    <!-- Sticker sheets: a separate feature from the pins below -->
+    <div class="cr-home-label">Stickers</div>
+    <a class="cr-feature-card" href="stickers.html">
+      <svg class="cr-feature-thumb" viewBox="0 0 72 92" aria-hidden="true">
+        <defs>
+          <linearGradient id="crSt1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFC9DE"/><stop offset="1" stop-color="#FFE6C7"/></linearGradient>
+          <linearGradient id="crSt2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C8F3DC"/><stop offset="1" stop-color="#C6E4FF"/></linearGradient>
+          <linearGradient id="crSt3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDCCFF"/><stop offset="1" stop-color="#FFCBE6"/></linearGradient>
+        </defs>
+        <rect x="3" y="3" width="66" height="86" rx="5" fill="#fff" stroke="rgba(34,48,31,.14)"/>
+        <circle cx="25" cy="27" r="14" fill="url(#crSt1)" stroke="#e6007e" stroke-width="1" stroke-dasharray="2.5 2" />
+        <circle cx="25" cy="27" r="9.5" fill="#FF6F91"/>
+        <path d="M52 15l4.2 8.6 9.4 1.3-6.8 6.6 1.6 9.4L52 36.4l-8.4 4.5 1.6-9.4-6.8-6.6 9.4-1.3z" transform="translate(-4 -2)" fill="url(#crSt2)" stroke="#e6007e" stroke-width="1" stroke-dasharray="2.5 2"/>
+        <path d="M52 21l2.2 4.5 4.9.7-3.5 3.4.8 4.9L52 32.2l-4.4 2.3.8-4.9-3.5-3.4 4.9-.7z" transform="translate(-4 -2)" fill="#8FAE7C"/>
+        <rect x="12" y="52" width="46" height="28" rx="13" fill="url(#crSt3)" stroke="#e6007e" stroke-width="1" stroke-dasharray="2.5 2"/>
+        <path d="M35 77c-9-6-14-10-14-16 0-4 3-6 6-6 3 0 6 2 8 4 2-2 5-4 8-4 3 0 6 2 6 6 0 6-5 10-14 16z" transform="translate(-0.3 -7.5) scale(1 .9)" fill="#7BB6FF"/>
+      </svg>
+      <span class="cr-feature-text">
+        <span class="cr-feature-name">Sticker Sheets</span>
+        <span class="cr-feature-desc">Pick stickers, add a pastel border and we arrange them on an A4 sheet.</span>
+      </span>
+      <span class="cr-feature-go" aria-hidden="true">&rarr;</span>
+    </a>
+
+    <div class="cr-home-divider"><span>or</span></div>
+
+    <div class="cr-home-label">Button pins</div>
     <div class="cr-product-grid" id="productGrid"></div>
 
     <!-- Plain, crawlable text — the product grid above is rendered by JS and
