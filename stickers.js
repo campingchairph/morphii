@@ -34,12 +34,34 @@ const OTHER_CATS = [
   ['shapes', 'Shapes'], ['wordart', 'Text art'], ['characters', 'Characters'],
   ['borders', 'Borders'], ['background', 'Backgrounds'], ['letters', 'Letters'],
 ];
+// border colours: white, light pastel solids, and pastel gradients (diagonal across each sticker)
+const SWATCHES = [
+  { id: 'white',    name: 'White',               stops: ['#FFFFFF'] },
+  { id: 'pink',     name: 'Pink',                stops: ['#FFD9E3'] },
+  { id: 'butter',   name: 'Butter',              stops: ['#FFF3BF'] },
+  { id: 'mint',     name: 'Mint',                stops: ['#D4F4E2'] },
+  { id: 'sky',      name: 'Sky',                 stops: ['#D3EAFF'] },
+  { id: 'lavender', name: 'Lavender',            stops: ['#E6DCFF'] },
+  { id: 'g-peach',  name: 'Pink to peach',       stops: ['#FFC9DE', '#FFE6C7'] },
+  { id: 'g-aqua',   name: 'Mint to sky',         stops: ['#C8F3DC', '#C6E4FF'] },
+  { id: 'g-berry',  name: 'Lavender to pink',    stops: ['#DDCCFF', '#FFCBE6'] },
+  { id: 'g-dusk',   name: 'Sky to lavender',     stops: ['#C3E3FF', '#E2D2FF'] },
+  { id: 'g-sun',    name: 'Butter to blush',     stops: ['#FFEEB5', '#FFD0D0'] },
+];
+const swatchCss = sw => sw.stops.length === 1 ? sw.stops[0] : 'linear-gradient(135deg,' + sw.stops.join(',') + ')';
+function swatchFill(ctx, bb, id) {
+  const sw = SWATCHES.find(x => x.id === id) || SWATCHES[0];
+  if (sw.stops.length === 1) return sw.stops[0];
+  const gr = ctx.createLinearGradient(bb.x0, bb.y0, bb.x1, bb.y1);
+  sw.stops.forEach((c, i) => gr.addColorStop(i / (sw.stops.length - 1), c));
+  return gr;
+}
 const STICKER_LOGO_RE = /^logo\.[^.]+$/i;
 
 /* ── state ─────────────────────────────────────────────────── */
 const S = {
   items: [],            // { id, src, label, sizeMm, qty }
-  settings: { style: 'contour', border: 3, gap: 0.5, margin: 5, spacing: 2, rotate: false, showCut: false },  // gap/margin/spacing are fixed (no UI)
+  settings: { style: 'contour', color: 'white', border: 3, gap: 0.5, margin: 5, spacing: 2, rotate: false, showCut: false },  // gap/margin/spacing are fixed (no UI)
   pages: [],            // [{ placements:[{inst,x,y,rot}] }]
   oversize: [],
   pageIdx: 0,
@@ -568,7 +590,7 @@ function drawPage(ctx, page, ppmm, mode, opts) {
     if (g.holders.length) {
       ctx.save();
       if (mode === 'preview') { ctx.shadowColor = 'rgba(40,50,30,0.30)'; ctx.shadowBlur = 3 * ppmm / 4; ctx.shadowOffsetY = 0.4 * ppmm / 4; }
-      ctx.fillStyle = '#fff';
+      ctx.fillStyle = swatchFill(ctx, g.bbox, opts.holderColor || S.settings.color);
       ctx.fill(pathOf(g.holders));
       ctx.restore();
     }
@@ -1095,15 +1117,26 @@ document.addEventListener('DOMContentLoaded', () => {
   // phone: the cut line is shown from the start; desktop starts without it
   S.settings.showCut = !DESKTOP.matches; $('setShowCut').checked = S.settings.showCut;
   const border = $('setBorder');
-  const setBorderTxt = () => { $('setBorderVal').textContent = S.settings.border + ' mm'; };
+  const setBorderTxt = () => {
+    $('setBorderVal').textContent = S.settings.border + ' mm';
+    const bi = $('setBorder'); bi.style.setProperty('--pct', ((bi.value - bi.min) / (bi.max - bi.min) * 100) + '%');   // gradient progress
+  };
   border.addEventListener('input', () => { S.settings.border = +border.value; setBorderTxt(); scheduleBuild(); });
   setBorderTxt();
+  $('swatches').innerHTML = SWATCHES.map(sw =>
+    '<button class="st-sw' + (sw.id === S.settings.color ? ' active' : '') + '" role="radio" aria-checked="' + (sw.id === S.settings.color) + '" aria-label="' + sw.name + '" data-sw="' + sw.id + '" style="background:' + swatchCss(sw) + '"></button>').join('');
+  $('swatches').addEventListener('click', e => {
+    const b = e.target.closest('[data-sw]'); if (!b) return;
+    S.settings.color = b.dataset.sw;
+    $('swatches').querySelectorAll('.st-sw').forEach(x => { const on = x === b; x.classList.toggle('active', on); x.setAttribute('aria-checked', on); });
+    drawSheetPreview();
+  });
   $('setShowCut').addEventListener('change', e => { S.settings.showCut = e.target.checked; drawSheetPreview(); });
   $('styleChips').addEventListener('click', e => {
     const b = e.target.closest('[data-style]'); if (!b) return;
     S.settings.style = b.dataset.style;
     document.querySelectorAll('#styleChips [data-style]').forEach(c => c.classList.toggle('active', c === b));
-    $('borderRow').style.display = S.settings.style === 'none' ? 'none' : '';
+    $('borderRow').style.display = $('swatches').style.display = S.settings.style === 'none' ? 'none' : '';
     scheduleBuild();
   });
 

@@ -7,7 +7,7 @@
 <meta name="description" content="Pick stickers, set the white holder, and arrange them on an A4 sheet automatically.">
 <meta name="robots" content="noindex, nofollow">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stickers.css?v=16">
+<link rel="stylesheet" href="stickers.css?v=17">
 </head>
 <body>
 <canvas id="bgFx" aria-hidden="true"></canvas>
@@ -61,17 +61,16 @@
 
     <!-- white holder: always visible under the sheet -->
     <div class="st-holder-bar" id="holderBar">
-      <span class="st-h-label">White holder</span>
+      <span class="st-h-label">Border</span>
       <div class="st-seg" id="styleChips">
-        <button class="active" data-style="contour">Follow shape</button>
-        <button data-style="circle">Circle</button>
-        <button data-style="rounded">Rounded</button>
+        <button class="active" data-style="contour">Border</button>
         <button data-style="none">None</button>
       </div>
       <div class="st-hb-width" id="borderRow">
-        <input class="st-range" id="setBorder" type="range" min="0" max="8" step="0.5" value="3" aria-label="Holder width">
+        <input class="st-range" id="setBorder" type="range" min="0" max="8" step="0.5" value="3" aria-label="Border width">
         <span class="st-range-val" id="setBorderVal"></span>
       </div>
+      <div class="st-swatches" id="swatches" role="radiogroup" aria-label="Border colour"></div>
       <label class="st-check"><input type="checkbox" id="setShowCut"> Cut line <i class="st-dot"></i></label>
     </div>
   </section>
@@ -99,6 +98,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js?v=10"></script>
-<script src="stickers.js?v=12"></script>
+<script src="stickers.js?v=13"></script>
 </body>
 </html>
