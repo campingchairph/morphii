@@ -6,6 +6,7 @@
   --border:rgba(34,48,31,0.10); --shadow-sm:0 3px 12px rgba(60,70,40,0.08);
 }
 html,body{height:100%;overflow:hidden;overscroll-behavior:none;}
+#bgFx{position:fixed;left:0;top:0;width:100%;height:100%;z-index:0;pointer-events:none;}
 body{font-family:'Nunito',sans-serif;background:var(--cream);color:var(--ink);display:flex;flex-direction:column;height:100vh;height:100dvh;}
 button,input,select{font-family:inherit;}
 h1,h2,h3,.st-logo{font-family:'Baloo 2',cursive;}
@@ -20,7 +21,7 @@ h1,h2,h3,.st-logo{font-family:'Baloo 2',cursive;}
 .st-link{font-size:12px;font-weight:800;color:var(--sage);text-decoration:none;}
 
 /* ═══════════ PHONE (default): one screen, sheet on top, library docked at the bottom ═══════════ */
-.st-stage{flex:1 1 auto;min-height:0;width:100%;max-width:760px;margin:0 auto;display:flex;flex-direction:column;padding:6px 10px 0;}
+.st-stage{position:relative;z-index:1;flex:1 1 auto;min-height:0;width:100%;max-width:760px;margin:0 auto;display:flex;flex-direction:column;padding:6px 10px 0;}
 .st-view{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;}
 .st-libcol{position:relative;flex:0 0 auto;}
 
@@ -40,19 +41,20 @@ h1,h2,h3,.st-logo{font-family:'Baloo 2',cursive;}
 .st-warnbar{position:absolute;left:0;right:0;bottom:4px;display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;z-index:3;}
 .st-warn{background:var(--coral-light);color:#b0304f;border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,.1);}
 
-/* floating rails beside the sheet (phone) */
-.st-rail{display:none;position:absolute;right:4px;top:50%;transform:translateY(-50%);z-index:4;flex-direction:column;gap:10px;}
-.st-rail.show{display:flex;}
-.st-rail-grp{display:flex;flex-direction:column;align-items:center;gap:4px;background:rgba(255,255,255,.94);border-radius:22px;padding:7px 5px;box-shadow:0 4px 14px rgba(0,0,0,.18);}
-.st-rail-cap{font-size:8px;font-weight:900;letter-spacing:.6px;text-transform:uppercase;color:var(--ink-dim);}
-.st-rail-grp button{width:36px;height:36px;border-radius:50%;border:none;background:var(--pill);color:#fff;font-size:20px;font-weight:700;line-height:1;cursor:pointer;}
-.st-rail-grp button:active{transform:scale(.92);}
-.st-rail-grp b{font-size:11px;font-weight:900;color:var(--ink);min-width:36px;text-align:center;}
-.st-lrail{position:absolute;left:4px;top:50%;transform:translateY(-50%);z-index:4;display:flex;flex-direction:column;gap:10px;}
-.st-fab{width:46px;height:46px;border-radius:50%;border:none;background:var(--grad);color:var(--ink);box-shadow:0 4px 14px rgba(255,111,145,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;}
-.st-fab svg{width:18px;height:18px;}
-.st-fab span{font-size:8px;font-weight:900;letter-spacing:.3px;text-transform:uppercase;}
+/* floating buttons (phone) */
+.st-lrail{position:absolute;left:2px;bottom:6px;z-index:4;display:flex;flex-direction:column;gap:8px;}
+.st-fab{width:34px;height:34px;border-radius:50%;border:none;background:var(--grad);color:var(--ink);box-shadow:0 4px 14px rgba(255,111,145,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;}
+.st-fab svg{width:16px;height:16px;}
+.st-fab span{display:none;}
 .st-fab:active{transform:scale(.93);}
+
+/* tiny tools beside the tapped sticker (phone) */
+.st-pt{position:absolute;z-index:4;display:flex;gap:6px;}
+.st-pt-v{flex-direction:column;}
+.st-pt button{width:28px;height:28px;border-radius:50%;border:none;background:#fff;color:var(--ink);font-size:17px;font-weight:800;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.24);cursor:pointer;padding:0;}
+.st-pt button svg{width:14px;height:14px;}
+.st-pt button.del{color:#e5395f;}
+.st-pt button:active{transform:scale(.9);}
 
 /* white holder bar (always under the sheet) */
 .st-holder-bar{flex:0 0 auto;display:flex;align-items:center;flex-wrap:wrap;gap:2px 12px;padding:4px 4px 6px;margin-top:2px;}
@@ -127,9 +129,11 @@ h1,h2,h3,.st-logo{font-family:'Baloo 2',cursive;}
 /* ═══════════ DESKTOP (≥901px): two panels — library left, sheet right ═══════════ */
 @media(min-width:901px){
   .st-stage{flex-direction:row;max-width:1180px;gap:14px;padding:14px;}
-  .st-view,.st-libcol{flex:1 1 0;min-width:0;background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-sm);padding:12px 14px;}
+  .st-view{background:rgba(255,255,255,.38);}
+  .st-libcol{background:var(--card);}
+  .st-view,.st-libcol{flex:1 1 0;min-width:0;border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-sm);padding:12px 14px;}
   .st-libcol{order:-1;display:flex;flex-direction:column;position:static;}
-  .st-rail,.st-rail.show,.st-lrail{display:none;}
+  .st-lrail,.st-pt{display:none !important;}
 
   /* summary + context row */
   .st-summary{flex:0 0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:2px 12px;padding:6px 12px;border-radius:12px;background:var(--grad);box-shadow:0 6px 16px rgba(255,111,145,.22);min-height:40px;}

@@ -44,6 +44,7 @@ const S = {
   oversize: [],
   pageIdx: 0,
   panel: null,          // which bottom pop-up is open: null | 'lib' | 'admin'
+  selK: null,           // which copy (0-based) of the selected design was tapped
   sel: null,            // id of the item whose sticker is selected (tapped on the sheet)
   stats: { stickers: 0, usedPct: 0 },
 };
@@ -132,6 +133,7 @@ async function loadLibrary() {
   renderLibrary();
   renderAdminLib();   // no-op unless an admin is signed in
   if (DESKTOP.matches && !S.panel && LIB.category) openPanel('lib');
+  bgSync();
 }
 // every group from every collection, in one list (collection order, then the admin's group order)
 function allCategories(includeHidden) {
@@ -571,10 +573,12 @@ function drawPage(ctx, page, ppmm, mode, opts) {
       ctx.restore();
     }
     ctx.drawImage(g.F.img, 0, 0, g.F.wMm, g.F.hMm);
-    if (mode === 'preview' && opts.selId && p.inst.item.id === opts.selId) {
+    if (mode === 'preview' && opts.selId && p.inst.item.id === opts.selId && (opts.selK == null || p.inst.k === opts.selK)) {
+      const bb = g.bbox, gr = ctx.createLinearGradient(bb.x0, bb.y0, bb.x1, bb.y1);
+      gr.addColorStop(0, '#9ad77a'); gr.addColorStop(0.5, '#ffc277'); gr.addColorStop(1, '#ff6f91');
       ctx.save();
-      ctx.strokeStyle = '#1E2A20'; ctx.lineWidth = 0.9; ctx.lineJoin = 'round';
-      ctx.shadowColor = 'rgba(143,174,124,0.9)'; ctx.shadowBlur = 6 * ppmm / 4;
+      ctx.lineJoin = 'round'; ctx.strokeStyle = gr; ctx.lineWidth = 0.7;
+      ctx.shadowColor = 'rgba(255,111,145,0.6)'; ctx.shadowBlur = 2.2 * ppmm;
       ctx.stroke(pathOf(g.cuts));
       ctx.restore();
     }
@@ -681,11 +685,8 @@ function renderSelBar() {
   $('selBar').style.display = it ? 'flex' : 'none';
   $('selHint').style.display = it ? 'none' : 'block';
   $('selHint').textContent = S.items.length ? 'Tap a sticker on the sheet to change it' : 'Your sheet is empty';
-  $('floatRail').classList.toggle('show', !!it);
+  positionTools();
   if (!it) return;
-  $('railQty').textContent = '×' + it.qty;
-  $('railSize').textContent = it.sizeMm + 'mm';
-  $('railMinus').textContent = it.qty <= 1 ? '×' : '−';
   $('selImg').src = it.src;
   $('selQty').textContent = it.qty;
   $('selSize').textContent = it.sizeMm + ' mm';
@@ -693,7 +694,7 @@ function renderSelBar() {
   $('selQtyMinus').title = it.qty <= 1 ? 'Remove this sticker' : 'Fewer copies';
 }
 function refreshUI() {
-  updateBadges(); renderSummary(); renderSelBar();
+  bgSync(); updateBadges(); renderSummary(); renderSelBar();
   $('sheetEmpty').style.display = S.items.length ? 'none' : 'flex';
 }
 function renderPreview() {
@@ -707,12 +708,13 @@ function renderPreview() {
   const ac = $('adminCount'); if (ac) ac.textContent = S.pages.length;
   renderSummary(); renderSelBar();
   drawSheetPreview();
+  positionTools();
 }
 function drawSheetPreview() {
   const cv = $('sheetCanvas'), ppmm = 5;
   cv.width = Math.round(PAGE_W * ppmm); cv.height = Math.round(PAGE_H * ppmm);
   const page = S.pages[S.pageIdx] || { placements: [] };   // an empty sheet is the starting screen
-  drawPage(cv.getContext('2d'), page, ppmm, 'preview', { showCut: S.settings.showCut, margin: S.settings.margin, selId: S.sel });
+  drawPage(cv.getContext('2d'), page, ppmm, 'preview', { showCut: S.settings.showCut, margin: S.settings.margin, selId: S.sel, selK: S.selK });
 }
 // keep the whole A4 sheet visible in whatever space the pop-up leaves it
 function fitPaper() {
@@ -721,8 +723,9 @@ function fitPaper() {
   if (maxW < 40 || maxH < 40) return;
   const w = Math.min(maxW, maxH * PAGE_W / PAGE_H), cv = $('sheetCanvas');
   cv.style.width = w + 'px'; cv.style.height = (w * PAGE_H / PAGE_W) + 'px';
+  positionTools();
 }
-// which sticker is under a click/tap on the preview canvas?
+// which sticker is under a click/tap on the preview canvas? -> { id, k } or null
 function hitTest(ev) {
   const pg = S.pages[S.pageIdx]; if (!pg) return null;
   const r = $('sheetCanvas').getBoundingClientRect();
@@ -730,9 +733,32 @@ function hitTest(ev) {
   for (let i = pg.placements.length - 1; i >= 0; i--) {
     const p = pg.placements[i], m = placementMatrix(p);
     const x = p.rot ? Y - m[5] : X - m[4], y = p.rot ? m[4] - X : Y - m[5];
-    if (p.inst.geom.cuts.some(poly => pointInPoly([x, y], poly))) return p.inst.item.id;
+    if (p.inst.geom.cuts.some(poly => pointInPoly([x, y], poly))) return { id: p.inst.item.id, k: p.inst.k };
   }
   return null;
+}
+// phone: small tools that sit right next to the tapped sticker
+function selPlacement() {
+  const pg = S.pages[S.pageIdx]; if (!pg || !S.sel) return null;
+  return pg.placements.find(pl => pl.inst.item.id === S.sel && pl.inst.k === S.selK)
+      || pg.placements.find(pl => pl.inst.item.id === S.sel) || null;
+}
+function positionTools() {
+  const size = $('ptSize'), side = $('ptSide');
+  const p = !DESKTOP.matches && selItem() ? selPlacement() : null;
+  size.style.display = side.style.display = p ? 'flex' : 'none';
+  if (!p) return;
+  const r = $('sheetCanvas').getBoundingClientRect(), k = r.width / PAGE_W, g = p.inst.geom;
+  const w = (p.rot ? g.h : g.w) * k, h = (p.rot ? g.w : g.h) * k, x0 = p.x * k, y0 = p.y * k, B = 28, gap = 5;
+  // size − / + centred under the sticker (above it if there is no room)
+  let sx = clamp(x0 + w / 2 - B - 2, -6, r.width - 2 * B - 10), sy = y0 + h + gap;
+  if (sy + B > r.height + 14) sy = y0 - B - gap;
+  size.style.left = sx + 'px'; size.style.top = sy + 'px';
+  // duplicate / delete down the right-hand side (left-hand side if there is no room)
+  let tx = x0 + w + gap;
+  if (tx + B > r.width + 12) tx = x0 - B - gap;
+  const ty = clamp(y0 + h / 2 - B - 2, -6, r.height - 2 * B - 8);
+  side.style.left = tx + 'px'; side.style.top = ty + 'px';
 }
 
 /* ═══════════════ little animations: confetti when added, poof when removed ═══════════════ */
@@ -823,6 +849,94 @@ function poofAll() {
   pg.placements.slice(0, 40).forEach((pl, i) => setTimeout(() => fxPoof(pl), i * 25));
 }
 
+/* ═══════════════ floating background stickers (same idea as the pin designer) ═══════════════
+   15 of the added stickers drift behind everything at 40% opacity and bounce off the screen
+   edges and each other. Before anything is added, random library stickers fill in. */
+const BG = { bodies: [], raf: 0, last: 0, w: 0, h: 0, dpr: 1 };
+function bgResize() {
+  const cv = $('bgFx'); if (!cv) return;
+  BG.dpr = window.devicePixelRatio || 1; BG.w = window.innerWidth; BG.h = window.innerHeight;
+  cv.width = Math.round(BG.w * BG.dpr); cv.height = Math.round(BG.h * BG.dpr);
+  cv.getContext('2d').setTransform(BG.dpr, 0, 0, BG.dpr, 0, 0);
+  BG.bodies.forEach(b => { b.x = clamp(b.x, b.r, Math.max(b.r, BG.w - b.r)); b.y = clamp(b.y, b.r, Math.max(b.r, BG.h - b.r)); });
+}
+function bgPool() {
+  if (S.items.length) return S.items.map(i => i.src);
+  const all = [];
+  allCategories(false).forEach(c => c.items.forEach(it => all.push(it.src)));
+  return all;
+}
+function bgSetSrc(b, src) {
+  b.src = src; b.img = null;
+  loadImg(src).then(img => { if (b.src === src) b.img = img; }).catch(() => {});
+}
+function bgSpawn(src) {
+  const size = 26 + Math.random() * 34, r = size / 2;
+  let x, y, tries = 0;
+  do {
+    x = r + Math.random() * Math.max(1, BG.w - size); y = r + Math.random() * Math.max(1, BG.h - size); tries++;
+  } while (BG.bodies.some(o => Math.hypot(x - o.x, y - o.y) < r + o.r) && tries < 60);
+  const a = Math.random() * Math.PI * 2, sp = 10 + Math.random() * 16;
+  const b = { x, y, r, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, rot: Math.random() * 360, rs: (Math.random() < 0.5 ? -1 : 1) * (4 + Math.random() * 6), src: '', img: null };
+  bgSetSrc(b, src);
+  BG.bodies.push(b);
+}
+// keep the floaters in step with what is on the sheet (without making them jump)
+function bgSync() {
+  if (!BG.w || !$('bgFx')) return;
+  const pool = bgPool(); if (!pool.length) return;
+  const pick = () => pool[Math.floor(Math.random() * pool.length)];
+  if (!BG.bodies.length) { for (let i = 0; i < 15; i++) bgSpawn(pick()); }
+  else {
+    const have = new Set(pool);
+    BG.bodies.forEach(b => { if (!have.has(b.src)) bgSetSrc(b, pick()); });
+    if (S.items.length) {
+      new Set(pool).forEach(src => {
+        if (BG.bodies.some(b => b.src === src)) return;
+        const dupe = BG.bodies.find(b => BG.bodies.filter(o => o.src === b.src).length > 1) || BG.bodies[Math.floor(Math.random() * BG.bodies.length)];
+        bgSetSrc(dupe, src);
+      });
+    }
+  }
+  if (!BG.raf) { BG.last = performance.now(); BG.raf = requestAnimationFrame(bgTick); }
+}
+function bgTick(now) {
+  const dt = Math.min(0.05, (now - BG.last) / 1000), bs = BG.bodies; BG.last = now;
+  const still = reducedMotion();
+  if (!still) {
+    bs.forEach(b => {
+      b.x += b.vx * dt; b.y += b.vy * dt; b.rot += b.rs * dt;
+      if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); } else if (b.x > BG.w - b.r) { b.x = BG.w - b.r; b.vx = -Math.abs(b.vx); }
+      if (b.y < b.r) { b.y = b.r; b.vy = Math.abs(b.vy); } else if (b.y > BG.h - b.r) { b.y = BG.h - b.r; b.vy = -Math.abs(b.vy); }
+    });
+    for (let i = 0; i < bs.length; i++) for (let j = i + 1; j < bs.length; j++) {
+      const a = bs[i], c = bs[j], dx = c.x - a.x, dy = c.y - a.y, d = Math.hypot(dx, dy), min = a.r + c.r;
+      if (d >= min || d === 0) continue;
+      const nx = dx / d, ny = dy / d, over = (min - d) / 2;
+      a.x -= nx * over; a.y -= ny * over; c.x += nx * over; c.y += ny * over;
+      const ma = a.r * a.r, mc = c.r * c.r, vr = (a.vx - c.vx) * nx + (a.vy - c.vy) * ny;
+      if (vr > 0) {
+        const j2 = (2 * vr) / (1 / ma + 1 / mc);
+        a.vx -= (j2 / ma) * nx; a.vy -= (j2 / ma) * ny; c.vx += (j2 / mc) * nx; c.vy += (j2 / mc) * ny;
+      }
+    }
+    bs.forEach(b => {   // keep the drift gentle, never frantic or frozen
+      const sp = Math.hypot(b.vx, b.vy), t = Math.min(32, Math.max(9, sp));
+      if (sp > 0) { b.vx *= t / sp; b.vy *= t / sp; }
+    });
+  }
+  const ctx = $('bgFx').getContext('2d');
+  ctx.clearRect(0, 0, BG.w, BG.h);
+  ctx.globalAlpha = 0.4;
+  bs.forEach(b => {
+    if (!b.img) return;
+    const sz = b.r * 2, ar = b.img.naturalWidth / b.img.naturalHeight, w = ar >= 1 ? sz : sz * ar, h = ar >= 1 ? sz / ar : sz;
+    ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.rot * Math.PI / 180); ctx.drawImage(b.img, -w / 2, -h / 2, w, h); ctx.restore();
+  });
+  ctx.globalAlpha = 1;
+  BG.raf = requestAnimationFrame(bgTick);
+}
+
 /* ═══════════════ editing the sheet ═══════════════ */
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 function addItem(src, label) {
@@ -830,16 +944,17 @@ function addItem(src, label) {
   let it = S.items.find(i => i.src === src);
   if (it) { if (it.qty >= 99) return; it.qty++; }
   else { it = { id: nextId++, src, label, sizeMm: 40, qty: 1 }; S.items.push(it); }
-  S.sel = it.id;
+  S.sel = it.id; S.selK = it.qty - 1;
   FX.queue.push({ id: it.id, k: it.qty - 1 });
   refreshUI(); scheduleBuild();
 }
 function changeQty(it, d) {
   if (d > 0 && totalQty() >= MAX_INSTANCES) return;
-  if (d < 0) poofCopy(it, it.qty - 1);
+  if (d < 0) poofCopy(it, S.sel === it.id && S.selK != null && S.selK < it.qty ? S.selK : it.qty - 1);
   it.qty += d;
-  if (d > 0) FX.queue.push({ id: it.id, k: it.qty - 1 });
-  if (it.qty <= 0) { S.items = S.items.filter(i => i !== it); if (S.sel === it.id) S.sel = null; }
+  if (d > 0) { FX.queue.push({ id: it.id, k: it.qty - 1 }); if (S.sel === it.id) S.selK = it.qty - 1; }
+  if (it.qty <= 0) { S.items = S.items.filter(i => i !== it); if (S.sel === it.id) { S.sel = null; S.selK = null; } }
+  else if (S.sel === it.id && S.selK != null && S.selK >= it.qty) S.selK = it.qty - 1;
   refreshUI(); scheduleBuild();
 }
 function changeSize(it, d) { it.sizeMm = clamp(it.sizeMm + d, 10, 190); refreshUI(); scheduleBuild(); }
@@ -1016,7 +1131,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // tap a sticker on the sheet
   $('sheetCanvas').addEventListener('click', e => {
-    S.sel = hitTest(e); renderSelBar(); drawSheetPreview();
+    const hit = hitTest(e);
+    S.sel = hit ? hit.id : null; S.selK = hit ? hit.k : null;
+    renderSelBar(); drawSheetPreview();
   });
   const onSelClick = e => {
     const b = e.target.closest('[data-sel]'); if (!b) return;
@@ -1026,9 +1143,12 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (a === 'qty-') changeQty(it, -1);
     else if (a === 'size+') changeSize(it, 5);
     else if (a === 'size-') changeSize(it, -5);
+    else if (a === 'dup') changeQty(it, 1);
+    else if (a === 'del') changeQty(it, -1);
   };
   $('selBar').addEventListener('click', onSelClick);
-  $('floatRail').addEventListener('click', onSelClick);
+  $('ptSize').addEventListener('click', onSelClick);
+  $('ptSide').addEventListener('click', onSelClick);
   $('summary').addEventListener('click', e => {
     const b = e.target.closest('[data-sum]'); if (!b) return;
     const a = b.dataset.sum;
@@ -1063,7 +1183,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const onLayout = () => { if (DESKTOP.matches && !S.panel && LIB.category) openPanel('lib'); fitPaper(); };
   if (DESKTOP.addEventListener) DESKTOP.addEventListener('change', onLayout); else DESKTOP.addListener(onLayout);
   if ('ResizeObserver' in window) new ResizeObserver(fitPaper).observe($('paperArea'));
-  window.addEventListener('resize', fitPaper);
+  window.addEventListener('resize', () => { fitPaper(); bgResize(); });
+  bgResize();
   refreshUI(); renderLibrary(); fitPaper(); drawSheetPreview();
   loadLibrary();
   if (typeof AUTH !== 'undefined' && AUTH) AUTH.onAuthStateChanged(applyAuth);

@@ -7,9 +7,10 @@
 <meta name="description" content="Pick stickers, set the white holder, and arrange them on an A4 sheet automatically.">
 <meta name="robots" content="noindex, nofollow">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stickers.css?v=15">
+<link rel="stylesheet" href="stickers.css?v=16">
 </head>
 <body>
+<canvas id="bgFx" aria-hidden="true"></canvas>
 
 <header class="st-header">
   <div class="st-logo">morphii<span class="dot">.</span> <small>Sticker Sheets</small></div>
@@ -37,18 +38,17 @@
 
     <div class="st-paper-area" id="paperArea">
       <div class="st-sheet-tabs" id="sheetTabs"></div>
-      <div class="st-sheet-wrap" id="sheetWrap"><canvas id="sheetCanvas" width="1050" height="1485"></canvas><canvas id="fxCanvas" aria-hidden="true"></canvas></div>
+      <div class="st-sheet-wrap" id="sheetWrap"><canvas id="sheetCanvas" width="1050" height="1485"></canvas><canvas id="fxCanvas" aria-hidden="true"></canvas>
+        <!-- phone only: tiny tools that sit right next to the tapped sticker -->
+        <div class="st-pt" id="ptSize" style="display:none;">
+          <button data-sel="size-" aria-label="Smaller">−</button><button data-sel="size+" aria-label="Bigger">+</button></div>
+        <div class="st-pt st-pt-v" id="ptSide" style="display:none;">
+          <button data-sel="dup" aria-label="Duplicate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg></button>
+          <button class="del" data-sel="del" aria-label="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5"/></svg></button></div>
+      </div>
       <div class="st-paper-hint" id="sheetEmpty">Pick a group,<br>then tap stickers to add them</div>
       <div class="st-busy" id="sheetBusy" style="display:none;">Arranging…</div>
       <div class="st-warnbar" id="sheetWarn"></div>
-
-      <!-- phone only: add / remove / resize for the tapped sticker, floating on the right -->
-      <div class="st-rail" id="floatRail">
-        <div class="st-rail-grp"><span class="st-rail-cap">Copies</span>
-          <button data-sel="qty+" aria-label="Add a copy">+</button><b id="railQty"></b><button data-sel="qty-" id="railMinus" aria-label="Remove a copy">−</button></div>
-        <div class="st-rail-grp"><span class="st-rail-cap">Size</span>
-          <button data-sel="size+" aria-label="Bigger">+</button><b id="railSize"></b><button data-sel="size-" aria-label="Smaller">−</button></div>
-      </div>
 
       <!-- phone only: upload + paste, floating on the left -->
       <div class="st-lrail" id="leftRail">
@@ -99,6 +99,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js?v=10"></script>
-<script src="stickers.js?v=10"></script>
+<script src="stickers.js?v=12"></script>
 </body>
 </html>
