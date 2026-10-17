@@ -43,7 +43,7 @@ const S = {
   pages: [],            // [{ placements:[{inst,x,y,rot}] }]
   oversize: [],
   pageIdx: 0,
-  panel: null,          // which bottom pop-up is open: null | 'lib' | 'holder' | 'admin'
+  panel: null,          // which bottom pop-up is open: null | 'lib' | 'admin'
   sel: null,            // id of the item whose sticker is selected (tapped on the sheet)
   stats: { stickers: 0, usedPct: 0 },
 };
@@ -54,6 +54,7 @@ let buildTimer = null;
 const IMG_CACHE = {};     // src -> Promise<HTMLImageElement>
 const FIELD_CACHE = {};   // src|size -> Promise<field record>
 
+const DESKTOP = window.matchMedia('(min-width:901px)');   // desktop = two panels; below that = the phone layout
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
@@ -130,6 +131,7 @@ async function loadLibrary() {
   COLLECTIONS.forEach(([id]) => { LIB.sets[id] = buildSet(paths, id === 'shared' ? '' : id + '/', overrides); });
   renderLibrary();
   renderAdminLib();   // no-op unless an admin is signed in
+  if (DESKTOP.matches && !S.panel && LIB.category) openPanel('lib');
 }
 // every group from every collection, in one list (collection order, then the admin's group order)
 function allCategories(includeHidden) {
@@ -157,7 +159,7 @@ function groupThumb(c) {
   const logo = c.items.find(it => STICKER_LOGO_RE.test(it.name || ''));
   return (logo || c.items[0]).src;
 }
-const ICON_HOLDER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9L12 3z"/></svg>';
+const ICON_PASTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M9 5H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-3"/><path d="M9 12h6M9 16h6"/></svg>';
 const ICON_UPLOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>';
 const ICON_ADMIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6l8-3z"/></svg>';
 
@@ -169,10 +171,10 @@ function renderLibrary() {
   const tool = (name, label, icon) =>
     '<button class="st-group tool' + (S.panel === name ? ' active' : '') + '" data-panel="' + name + '"><div class="th">' + icon + '</div><span>' + label + '</span></button>';
   strip.innerHTML =
-    tool('holder', 'Holder', ICON_HOLDER) +
-    '<label class="st-group tool" for="uploadInput"><div class="th">' + ICON_UPLOAD + '</div><span>Upload</span></label>' +
+    '<label class="st-group tool desk" for="uploadInput"><div class="th">' + ICON_UPLOAD + '</div><span>Upload</span></label>' +
+    '<button class="st-group tool desk" data-act="paste"><div class="th">' + ICON_PASTE + '</div><span>Paste</span></button>' +
     (LIB.isAdmin ? tool('admin', 'Admin', ICON_ADMIN) : '') +
-    '<i class="st-dock-sep"></i>' +
+    '<i class="st-dock-sep' + (LIB.isAdmin ? '' : ' desk') + '"></i>' +
     cats.map(c =>
       '<button class="st-group' + (S.panel === 'lib' && c.key === LIB.category ? ' active' : '') + (LIB.hidden.has(c.key) ? ' is-hidden' : '') + '" data-cat="' + esc(c.key) + '">' +
       '<div class="th"><img loading="lazy" src="' + esc(groupThumb(c)) + '" alt=""></div><span>' + esc(c.shown) + '</span></button>').join('');
@@ -198,17 +200,17 @@ function renderGrid() {
 function updatePanelHead(cat) {
   const t = $('panelTitle'), sub = $('panelSub');
   if (S.panel === 'lib') { t.textContent = cat ? cat.shown : 'Stickers'; sub.textContent = 'Tap to add · tap again for more'; }
-  else if (S.panel === 'holder') { t.textContent = 'White holder'; sub.textContent = 'Printed around each sticker'; }
   else if (S.panel === 'admin') { t.textContent = 'Admin'; sub.textContent = ''; }
 }
 function openPanel(name) {
   S.panel = name;
   $('panel').classList.add('open');
-  ['lib', 'holder', 'admin'].forEach(n => { $('pane-' + n).hidden = n !== name; });
+  ['lib', 'admin'].forEach(n => { $('pane-' + n).hidden = n !== name; });
   $('pane-lib').parentElement.scrollTop = 0;
   renderLibrary();
 }
 function closePanel() {
+  if (DESKTOP.matches && LIB.category) { openPanel('lib'); return; }   // desktop: the library is always open
   S.panel = null;
   $('panel').classList.remove('open');
   renderLibrary();
@@ -843,8 +845,8 @@ function changeQty(it, d) {
 function changeSize(it, d) { it.sizeMm = clamp(it.sizeMm + d, 10, 190); refreshUI(); scheduleBuild(); }
 
 /* ═══════════════ own-image upload ═══════════════ */
-function handleUpload(file) {
-  if (!file || !/^image\//.test(file.type)) return;
+function addImageBlob(blob, name) {
+  if (!blob || !/^image\//.test(blob.type)) return;
   const fr = new FileReader();
   fr.onload = () => {
     const im = new Image();
@@ -853,11 +855,34 @@ function handleUpload(file) {
       const cv = document.createElement('canvas');
       cv.width = Math.round(im.naturalWidth * sc); cv.height = Math.round(im.naturalHeight * sc);
       cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
-      addItem(cv.toDataURL('image/png'), (file.name || 'My image').replace(/\.[^.]+$/, ''));
+      addItem(cv.toDataURL('image/png'), (name || 'My image').replace(/\.[^.]+$/, ''));
     };
     im.src = fr.result;
   };
-  fr.readAsDataURL(file);
+  fr.readAsDataURL(blob);
+}
+function handleUpload(file) { addImageBlob(file, file && file.name); }
+
+// Same idea as the pin designer's paste button: grabs a photo the customer copied
+// (e.g. long-press → Copy on a phone). Must run straight from a tap; not every
+// browser can read images off the clipboard, so every failure says what to do.
+async function pasteFromClipboard() {
+  if (!navigator.clipboard || !navigator.clipboard.read) {
+    alert("Paste isn't supported in this browser yet — use Upload instead.");
+    return;
+  }
+  let items;
+  try { items = await navigator.clipboard.read(); }
+  catch (e) {
+    alert("Couldn't access your clipboard. Copy a photo first (press and hold it, then Copy), then tap Paste again — your browser may also ask permission first.");
+    return;
+  }
+  const TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+  for (const item of items) {
+    const type = item.types.find(t => TYPES.includes(t));
+    if (type) { addImageBlob(await item.getType(type), 'Pasted photo'); return; }
+  }
+  alert('No photo found on your clipboard — copy one first, then tap Paste.');
 }
 
 /* ═══════════════ ADMIN ONLY ═══════════════
@@ -952,6 +977,8 @@ function exportFiles(kind) {
 
 /* ═══════════════ wiring ═══════════════ */
 document.addEventListener('DOMContentLoaded', () => {
+  // phone: the cut line is shown from the start; desktop starts without it
+  S.settings.showCut = !DESKTOP.matches; $('setShowCut').checked = S.settings.showCut;
   const border = $('setBorder');
   const setBorderTxt = () => { $('setBorderVal').textContent = S.settings.border + ' mm'; };
   border.addEventListener('input', () => { S.settings.border = +border.value; setBorderTxt(); scheduleBuild(); });
@@ -967,6 +994,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // library menu (bottom) + pop-up
   $('libCats').addEventListener('click', e => {
+    if (e.target.closest('[data-act="paste"]')) { pasteFromClipboard(); return; }
     const tool = e.target.closest('[data-panel]');
     if (tool) {
       const n = tool.dataset.panel;
@@ -1027,6 +1055,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (b) { try { exportFiles(b.dataset.exp); } catch (err) { /* not an admin */ } }
   });
 
+  $('fabPaste').addEventListener('click', pasteFromClipboard);
+  document.addEventListener('paste', e => {   // Ctrl/Cmd+V with a copied image
+    const f = [...((e.clipboardData && e.clipboardData.files) || [])].find(x => /^image\//.test(x.type));
+    if (f) { e.preventDefault(); addImageBlob(f, 'Pasted photo'); }
+  });
+  const onLayout = () => { if (DESKTOP.matches && !S.panel && LIB.category) openPanel('lib'); fitPaper(); };
+  if (DESKTOP.addEventListener) DESKTOP.addEventListener('change', onLayout); else DESKTOP.addListener(onLayout);
   if ('ResizeObserver' in window) new ResizeObserver(fitPaper).observe($('paperArea'));
   window.addEventListener('resize', fitPaper);
   refreshUI(); renderLibrary(); fitPaper(); drawSheetPreview();

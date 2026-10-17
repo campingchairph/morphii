@@ -7,7 +7,7 @@
 <meta name="description" content="Pick stickers, set the white holder, and arrange them on an A4 sheet automatically.">
 <meta name="robots" content="noindex, nofollow">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stickers.css?v=14">
+<link rel="stylesheet" href="stickers.css?v=15">
 </head>
 <body>
 
@@ -16,79 +16,82 @@
   <a class="st-link" href="create.html">← Button pins</a>
 </header>
 
+<!-- Phone: sheet on top, library menu + pop-up docked at the bottom.
+     Desktop (≥901px): two panels side by side — library on the left, sheet on the right. -->
 <main class="st-stage">
-  <!-- one-line summary -->
-  <div class="st-summary" id="summary"></div>
 
-  <!-- context row: hint, or the controls for the sticker you tapped (fixed height so nothing jumps) -->
-  <div class="st-ctx">
-    <div class="st-selbar" id="selBar" style="display:none;">
-      <div class="st-sel-thumb"><img id="selImg" alt=""></div>
-      <div class="st-sel-grp"><span class="st-mini">Copies</span>
-        <span class="st-step"><button data-sel="qty-" id="selQtyMinus" aria-label="Fewer copies">−</button><b id="selQty"></b><button data-sel="qty+" aria-label="Add a copy">+</button></span></div>
-      <div class="st-sel-grp"><span class="st-mini">Size</span>
-        <span class="st-step"><button data-sel="size-" aria-label="Smaller">−</button><b id="selSize"></b><button data-sel="size+" aria-label="Bigger">+</button></span></div>
+  <!-- the sheet -->
+  <section class="st-view" id="viewCol">
+    <div class="st-summary" id="summary"></div>
+
+    <div class="st-ctx">
+      <div class="st-selbar" id="selBar" style="display:none;">
+        <div class="st-sel-thumb"><img id="selImg" alt=""></div>
+        <div class="st-sel-grp"><span class="st-mini">Copies</span>
+          <span class="st-step"><button data-sel="qty-" id="selQtyMinus" aria-label="Fewer copies">−</button><b id="selQty"></b><button data-sel="qty+" aria-label="Add a copy">+</button></span></div>
+        <div class="st-sel-grp"><span class="st-mini">Size</span>
+          <span class="st-step"><button data-sel="size-" aria-label="Smaller">−</button><b id="selSize"></b><button data-sel="size+" aria-label="Bigger">+</button></span></div>
+      </div>
+      <div class="st-hint" id="selHint">Tap a sticker on the sheet to change it</div>
     </div>
-    <div class="st-hint" id="selHint">Tap a sticker on the sheet to change it</div>
-  </div>
 
-  <!-- the paper: the default screen -->
-  <div class="st-paper-area" id="paperArea">
-    <div class="st-sheet-tabs" id="sheetTabs"></div>
-    <div class="st-sheet-wrap" id="sheetWrap"><canvas id="sheetCanvas" width="1050" height="1485"></canvas><canvas id="fxCanvas" aria-hidden="true"></canvas></div>
-    <div class="st-paper-hint" id="sheetEmpty">Pick a group below,<br>then tap stickers to add them</div>
-    <div class="st-busy" id="sheetBusy" style="display:none;">Arranging…</div>
-    <div class="st-warnbar" id="sheetWarn"></div>
-    <!-- phone only: add / remove / resize for the tapped sticker, floating beside the sheet -->
-    <div class="st-rail" id="floatRail">
-      <div class="st-rail-grp"><span class="st-rail-cap">Copies</span>
-        <button data-sel="qty+" aria-label="Add a copy">+</button><b id="railQty"></b><button data-sel="qty-" id="railMinus" aria-label="Remove a copy">−</button></div>
-      <div class="st-rail-grp"><span class="st-rail-cap">Size</span>
-        <button data-sel="size+" aria-label="Bigger">+</button><b id="railSize"></b><button data-sel="size-" aria-label="Smaller">−</button></div>
-    </div>
-  </div>
+    <div class="st-paper-area" id="paperArea">
+      <div class="st-sheet-tabs" id="sheetTabs"></div>
+      <div class="st-sheet-wrap" id="sheetWrap"><canvas id="sheetCanvas" width="1050" height="1485"></canvas><canvas id="fxCanvas" aria-hidden="true"></canvas></div>
+      <div class="st-paper-hint" id="sheetEmpty">Pick a group,<br>then tap stickers to add them</div>
+      <div class="st-busy" id="sheetBusy" style="display:none;">Arranging…</div>
+      <div class="st-warnbar" id="sheetWarn"></div>
 
-  <div class="st-bottom">
-  <!-- bottom pop-up: all assets of a group / holder settings / admin -->
-  <section class="st-panel" id="panel" aria-live="polite">
-    <div class="st-panel-head">
-      <div class="st-panel-title"><b id="panelTitle"></b><span id="panelSub"></span></div>
-      <button class="st-panel-close" id="panelClose" aria-label="Close">✕</button>
-    </div>
-    <div class="st-panel-body">
-      <div id="pane-lib"><div class="st-lib-grid" id="libGrid"></div></div>
-
-      <div id="pane-holder" hidden>
-        <div class="st-holder">
-          <div class="st-h-row">
-            <span class="st-h-label">Shape</span>
-            <div class="st-seg" id="styleChips">
-              <button class="active" data-style="contour">Follow shape</button>
-              <button data-style="circle">Circle</button>
-              <button data-style="rounded">Rounded</button>
-              <button data-style="none">None</button>
-            </div>
-          </div>
-          <div class="st-h-row" id="borderRow">
-            <span class="st-h-label">Width</span>
-            <input class="st-range" id="setBorder" type="range" min="0" max="8" step="0.5" value="3" aria-label="Holder width">
-            <span class="st-range-val" id="setBorderVal"></span>
-          </div>
-          <div class="st-h-row">
-            <span class="st-h-label"></span>
-            <label class="st-check"><input type="checkbox" id="setShowCut"> Show cut line <i class="st-dot"></i></label>
-          </div>
-        </div>
+      <!-- phone only: add / remove / resize for the tapped sticker, floating on the right -->
+      <div class="st-rail" id="floatRail">
+        <div class="st-rail-grp"><span class="st-rail-cap">Copies</span>
+          <button data-sel="qty+" aria-label="Add a copy">+</button><b id="railQty"></b><button data-sel="qty-" id="railMinus" aria-label="Remove a copy">−</button></div>
+        <div class="st-rail-grp"><span class="st-rail-cap">Size</span>
+          <button data-sel="size+" aria-label="Bigger">+</button><b id="railSize"></b><button data-sel="size-" aria-label="Smaller">−</button></div>
       </div>
 
-      <!-- Admin tools are built here by stickers.js only after Firebase confirms an admin sign-in. -->
-      <div id="pane-admin" hidden></div>
+      <!-- phone only: upload + paste, floating on the left -->
+      <div class="st-lrail" id="leftRail">
+        <label class="st-fab" for="uploadInput" title="Upload a photo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg><span>Upload</span></label>
+        <button class="st-fab" id="fabPaste" title="Paste a copied photo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M9 5H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-3"/><path d="M9 12h6M9 16h6"/></svg><span>Paste</span></button>
+      </div>
+    </div>
+
+    <!-- white holder: always visible under the sheet -->
+    <div class="st-holder-bar" id="holderBar">
+      <span class="st-h-label">White holder</span>
+      <div class="st-seg" id="styleChips">
+        <button class="active" data-style="contour">Follow shape</button>
+        <button data-style="circle">Circle</button>
+        <button data-style="rounded">Rounded</button>
+        <button data-style="none">None</button>
+      </div>
+      <div class="st-hb-width" id="borderRow">
+        <input class="st-range" id="setBorder" type="range" min="0" max="8" step="0.5" value="3" aria-label="Holder width">
+        <span class="st-range-val" id="setBorderVal"></span>
+      </div>
+      <label class="st-check"><input type="checkbox" id="setShowCut"> Cut line <i class="st-dot"></i></label>
     </div>
   </section>
 
-  <!-- the library menu -->
-  <nav class="st-dock" aria-label="Sticker library"><div class="st-groups" id="libCats"></div></nav>
-  </div>
+  <!-- the library -->
+  <section class="st-libcol" id="libCol">
+    <div class="st-panel" id="panel" aria-live="polite">
+      <div class="st-panel-head">
+        <div class="st-panel-title"><b id="panelTitle"></b><span id="panelSub"></span></div>
+        <button class="st-panel-close" id="panelClose" aria-label="Close">✕</button>
+      </div>
+      <div class="st-panel-body">
+        <div id="pane-lib"><div class="st-lib-grid" id="libGrid"></div></div>
+        <!-- Admin tools are built here by stickers.js only after Firebase confirms an admin sign-in. -->
+        <div id="pane-admin" hidden></div>
+      </div>
+    </div>
+    <nav class="st-dock" aria-label="Sticker library"><div class="st-groups" id="libCats"></div></nav>
+  </section>
+
   <input type="file" id="uploadInput" accept="image/png,image/webp,image/jpeg" style="display:none">
 </main>
 
@@ -96,6 +99,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js?v=10"></script>
-<script src="stickers.js?v=9"></script>
+<script src="stickers.js?v=10"></script>
 </body>
 </html>
