@@ -220,6 +220,24 @@ async function saveCategoryOrder(map) {
   return DB.collection('morphii_config').doc('categoryOrder').set(map);
 }
 
+/* ── STICKER SHEET LIBRARY ACCESS (morphii_config/stickerLibrary doc) ──
+   { hidden: ["<collection>|<category id>", ...] }  e.g. "shared|s:aespa", "wedding|o:shapes"
+   Which parts of the asset library customers may use on stickers.html.
+   Anything not listed is available. Public read, admin-only write (covered by
+   the existing morphii_config rule). Edited from the admin panel on stickers.html. */
+async function getStickerLibrary() {
+  if (!DB) return { hidden: [] };
+  try {
+    const doc = await DB.collection('morphii_config').doc('stickerLibrary').get();
+    const d = (doc.exists && doc.data()) || {};
+    return { hidden: Array.isArray(d.hidden) ? d.hidden : [] };
+  } catch (e) { return { hidden: [] }; }
+}
+async function saveStickerLibrary(cfg) {
+  if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
+  return DB.collection('morphii_config').doc('stickerLibrary').set({ hidden: cfg.hidden || [] });
+}
+
 /* ── CATALOG CONFIG (morphii_config/catalog doc) ──
    { products: { "lapel-pin": true, ... }, sizes: { "37": true, ... } }
    Lets the admin turn product types and pin sizes on/off (e.g. when out of

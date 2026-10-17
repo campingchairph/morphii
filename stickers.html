@@ -7,7 +7,7 @@
 <meta name="description" content="Pick stickers, set the white holder and cut-guide gap, and arrange them on an A4 sheet automatically.">
 <meta name="robots" content="noindex, nofollow">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stickers.css?v=2">
+<link rel="stylesheet" href="stickers.css?v=3">
 </head>
 <body>
 
@@ -44,8 +44,8 @@
     </section>
 
     <section class="st-card">
-      <h2>3 · Holder &amp; cut guide</h2>
-      <p class="st-sub">The white holder is printed around each sticker; the pink cut line sits a small gap outside it, so cutting never touches your artwork.</p>
+      <h2>3 · White holder</h2>
+      <p class="st-sub">A white holder is printed around each sticker so you can cut it out without touching the artwork.</p>
       <span class="st-label">Holder shape</span>
       <div class="st-row" id="styleChips">
         <button class="st-chip active" data-style="contour">Follow shape</button>
@@ -55,9 +55,6 @@
       </div>
       <div class="st-opt-grid">
         <div id="borderRow"><span class="st-label">White holder width <span class="st-range-val" id="setBorderVal"></span></span><input class="st-range" id="setBorder" type="range" min="0" max="8" step="0.5" value="3"></div>
-        <div><span class="st-label">Cut gap <span class="st-range-val" id="setGapVal"></span></span><input class="st-range" id="setGap" type="range" min="0.5" max="4" step="0.5" value="1.5"></div>
-        <div><span class="st-label">Sheet margin <span class="st-range-val" id="setMarginVal"></span></span><input class="st-range" id="setMargin" type="range" min="3" max="15" step="1" value="5"></div>
-        <div><span class="st-label">Space between stickers <span class="st-range-val" id="setSpacingVal"></span></span><input class="st-range" id="setSpacing" type="range" min="1" max="6" step="0.5" value="2"></div>
       </div>
       <label class="st-check"><input type="checkbox" id="setRotate" checked> Allow turning stickers 90° to fit more per sheet</label>
     </section>
@@ -80,6 +77,11 @@
       </div>
 
       <div class="st-admin" id="adminPanel">
+        <span class="st-label">Admin · library customers can use</span>
+        <p class="st-sub" style="margin-bottom:8px;">Untick anything customers shouldn’t see on this page. Saved for everyone.</p>
+        <div id="adminLib" class="st-admin-lib"></div>
+        <div class="st-row"><button class="st-btn" id="libSave">Save library access</button><span class="st-mini" id="libSaveMsg"></span></div>
+
         <span class="st-label">Admin · clean production files (<span id="adminCount">0</span> sheet)</span>
         <div class="st-row">
           <button class="st-btn" id="expPrint">Print PNG (transparent)</button>
@@ -94,7 +96,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js?v=9"></script>
-<script src="stickers.js?v=1"></script>
+<script src="firebase-config.js?v=10"></script>
+<script src="stickers.js?v=2"></script>
 </body>
 </html>

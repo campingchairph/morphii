@@ -41,13 +41,13 @@ const STICKER_LOGO_RE = /^logo\.[^.]+$/i;
 /* ── state ─────────────────────────────────────────────────── */
 const S = {
   items: [],            // { id, src, label, sizeMm, qty }
-  settings: { style: 'contour', border: 3, gap: 1.5, margin: 5, spacing: 2, rotate: true, showCut: true },
+  settings: { style: 'contour', border: 3, gap: 0.5, margin: 5, spacing: 2, rotate: true, showCut: true },  // gap/margin/spacing are fixed (no UI)
   pages: [],            // [{ placements:[{inst,x,y,rot}] }]
   oversize: [],
   pageIdx: 0,
   stats: { stickers: 0, usedPct: 0 },
 };
-let LIB = { sets: {}, order: {}, collection: 'shared', category: null };
+let LIB = { sets: {}, order: {}, collection: 'shared', category: null, hidden: new Set(), isAdmin: false };
 let nextId = 1;
 let buildGen = 0;
 let buildTimer = null;
@@ -97,7 +97,7 @@ function buildSet(paths, basePath, overrides) {
   });
   return set;
 }
-function stickerCategories(collection) {
+function stickerCategories(collection, includeHidden) {
   const set = LIB.sets[collection];
   if (!set) return [];
   const by = {}, loose = [];
@@ -115,24 +115,49 @@ function stickerCategories(collection) {
   OTHER_CATS.forEach(([key, label]) => {
     if (set[key] && set[key].length) cats.push({ id: 'o:' + key, label, items: set[key] });
   });
-  return cats;
+  cats.forEach(c => { c.key = collection + '|' + c.id; });
+  return includeHidden ? cats : cats.filter(c => !LIB.hidden.has(c.key));
 }
 async function loadLibrary() {
   $('libGrid').innerHTML = '<div class="st-empty">Loading library…</div>';
   let overrides = {};
   try { overrides = await getAssetLabelOverrides(); } catch (e) {}
   try { LIB.order = await getCategoryOrder(); } catch (e) {}
+  try { LIB.hidden = new Set((await getStickerLibrary()).hidden); } catch (e) {}
   let paths = [];
   try { paths = await fetchTree(); }
   catch (e) { $('libGrid').innerHTML = '<div class="st-empty">Couldn’t load the library right now. Check your connection and refresh.</div>'; return; }
   COLLECTIONS.forEach(([id]) => { LIB.sets[id] = buildSet(paths, id === 'shared' ? '' : id + '/', overrides); });
+  refreshCollections();
+  renderLibrary();
+  renderAdminLib();
+}
+function refreshCollections() {
   const usable = COLLECTIONS.filter(([id]) => stickerCategories(id).length);
   $('libCollection').innerHTML = usable.map(([id, label]) => '<option value="' + id + '">' + esc(label) + '</option>').join('');
-  if (usable.length) LIB.collection = usable[0][0];
-  renderLibrary();
+  $('libCollection').style.display = usable.length > 1 ? '' : 'none';
+  if (!usable.find(([id]) => id === LIB.collection) && usable.length) LIB.collection = usable[0][0];
+  $('libCollection').value = LIB.collection;
+}
+// admin: tick/untick which collections and categories customers can use
+function renderAdminLib() {
+  const box = $('adminLib'); if (!box) return;
+  box.innerHTML = COLLECTIONS.map(([id, label]) => {
+    const cats = stickerCategories(id, true);
+    if (!cats.length) return '';
+    return '<details><summary><input type="checkbox" data-coll="' + id + '"> ' + esc(label) + ' <span class="st-mini">(' + cats.length + ')</span></summary><div class="st-admin-cats">' +
+      cats.map(c => '<label><input type="checkbox" data-key="' + esc(c.key) + '"' + (LIB.hidden.has(c.key) ? '' : ' checked') + '> ' + esc(c.label) + '</label>').join('') +
+      '</div></details>';
+  }).join('');
+  box.querySelectorAll('[data-coll]').forEach(syncCollBox);
+}
+function syncCollBox(cb) {
+  const kids = [...cb.closest('details').querySelectorAll('[data-key]')];
+  const on = kids.filter(k => k.checked).length;
+  cb.checked = on === kids.length; cb.indeterminate = on > 0 && on < kids.length;
 }
 function renderLibrary() {
-  const cats = stickerCategories(LIB.collection);
+  const cats = stickerCategories(LIB.collection, LIB.isAdmin);
   if (!cats.find(c => c.id === LIB.category)) LIB.category = cats.length ? cats[0].id : null;
   $('libCats').innerHTML = cats.map(c =>
     '<button class="st-chip' + (c.id === LIB.category ? ' active' : '') + '" data-cat="' + esc(c.id) + '">' + esc(c.label) + '</button>').join('');
@@ -662,9 +687,6 @@ function bindSetting(id, key, parse, outId, fmt) {
 
 document.addEventListener('DOMContentLoaded', () => {
   bindSetting('setBorder', 'border', e => +e.value, 'setBorderVal', v => v + ' mm');
-  bindSetting('setGap', 'gap', e => +e.value, 'setGapVal', v => v + ' mm');
-  bindSetting('setMargin', 'margin', e => +e.value, 'setMarginVal', v => v + ' mm');
-  bindSetting('setSpacing', 'spacing', e => +e.value, 'setSpacingVal', v => v + ' mm');
   bindSetting('setRotate', 'rotate', e => e.checked);
   $('setShowCut').addEventListener('change', e => { S.settings.showCut = e.target.checked; renderPreview(); });
 
@@ -723,6 +745,21 @@ document.addEventListener('DOMContentLoaded', () => {
     S.pageIdx = +b.dataset.page; renderPreview();
   });
 
+  $('adminLib').addEventListener('change', e => {
+    const t = e.target;
+    if (t.dataset.coll) { t.closest('details').querySelectorAll('[data-key]').forEach(k => { k.checked = t.checked; }); }
+    else if (t.dataset.key) syncCollBox(t.closest('details').querySelector('[data-coll]'));
+  });
+  $('libSave').addEventListener('click', async () => {
+    const hidden = [...document.querySelectorAll('#adminLib [data-key]')].filter(k => !k.checked).map(k => k.dataset.key);
+    const msg = $('libSaveMsg'); msg.textContent = 'Saving…';
+    try {
+      await saveStickerLibrary({ hidden });
+      LIB.hidden = new Set(hidden); msg.textContent = 'Saved ✓';
+      refreshCollections(); renderLibrary();
+    } catch (err) { msg.textContent = 'Couldn’t save — are the Firestore rules published? (' + (err.code || err.message) + ')'; }
+  });
+
   $('expPrint').addEventListener('click', () => exportPng('print'));
   $('expProof').addEventListener('click', () => exportPng('proof'));
   $('expSvg').addEventListener('click', exportSvg);
@@ -730,6 +767,10 @@ document.addEventListener('DOMContentLoaded', () => {
   renderTray();
   loadLibrary();
   if (typeof AUTH !== 'undefined' && AUTH) {
-    AUTH.onAuthStateChanged(u => $('adminPanel').classList.toggle('show', !!(u && isAdmin(u))));
+    AUTH.onAuthStateChanged(u => {
+      const admin = !!(u && isAdmin(u));
+      $('adminPanel').classList.toggle('show', admin);
+      if (admin !== LIB.isAdmin) { LIB.isAdmin = admin; if (Object.keys(LIB.sets).length) { refreshCollections(); renderLibrary(); } }
+    });
   }
 });
