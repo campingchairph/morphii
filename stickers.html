@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Sticker Sheets — Design Your Own | Morphii</title>
 <meta name="description" content="Pick stickers, set the white holder, and arrange them on an A4 sheet automatically.">
 <meta name="robots" content="noindex, nofollow">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stickers.css?v=11">
+<link rel="stylesheet" href="stickers.css?v=13">
 </head>
 <body>
 
@@ -16,26 +16,12 @@
   <a class="st-link" href="create.html">← Button pins</a>
 </header>
 
-<main class="st-layout">
-  <!-- PANEL 1: LIBRARY -->
-  <section class="st-card" id="libCard">
-    <div class="st-lib-head">
-      <h2>Sticker library</h2>
-      <span class="st-tip">Tap to add · tap again for more</span>
-      <label class="st-text-btn" for="uploadInput">＋ Upload</label>
-      <input type="file" id="uploadInput" accept="image/png,image/webp,image/jpeg" style="display:none">
-      <button class="st-text-btn" id="libToggle" aria-expanded="false">All groups ▾</button>
-    </div>
-    <div class="st-groups" id="libCats"></div>
-    <div class="st-lib-grid" id="libGrid"></div>
-  </section>
+<main class="st-stage">
+  <!-- one-line summary -->
+  <div class="st-summary" id="summary"></div>
 
-  <!-- PANEL 2: PREVIEW (summary, sheet, white holder) -->
-  <section class="st-card st-preview-col" id="previewCard">
-    <h2>Your A4 sheet</h2>
-    <div class="st-summary" id="summary"></div>
-    <div class="st-sheet-tabs" id="sheetTabs"></div>
-
+  <!-- context row: hint, or the controls for the sticker you tapped (fixed height so nothing jumps) -->
+  <div class="st-ctx">
     <div class="st-selbar" id="selBar" style="display:none;">
       <div class="st-sel-thumb"><img id="selImg" alt=""></div>
       <div class="st-sel-grp"><span class="st-mini">Copies</span>
@@ -43,44 +29,64 @@
       <div class="st-sel-grp"><span class="st-mini">Size</span>
         <span class="st-step"><button data-sel="size-" aria-label="Smaller">−</button><b id="selSize"></b><button data-sel="size+" aria-label="Bigger">+</button></span></div>
     </div>
-    <div class="st-hint" id="selHint" style="display:none;">Tap a sticker on the sheet to add copies or change its size.</div>
+    <div class="st-hint" id="selHint">Tap a sticker on the sheet to change it</div>
+  </div>
 
-    <div class="st-empty" id="sheetEmpty">Your stickers will be arranged here automatically.</div>
-    <div class="st-sheet-wrap" id="sheetWrap" style="display:none;"><canvas id="sheetCanvas" width="1050" height="1485"></canvas><canvas id="fxCanvas" aria-hidden="true"></canvas></div>
-    <div class="st-empty" id="sheetBusy" style="display:none;padding:8px;">Arranging…</div>
-    <div id="sheetWarn"></div>
+  <!-- the paper: the default screen -->
+  <div class="st-paper-area" id="paperArea">
+    <div class="st-sheet-tabs" id="sheetTabs"></div>
+    <div class="st-sheet-wrap" id="sheetWrap"><canvas id="sheetCanvas" width="1050" height="1485"></canvas><canvas id="fxCanvas" aria-hidden="true"></canvas></div>
+    <div class="st-paper-hint" id="sheetEmpty">Pick a group below,<br>then tap stickers to add them</div>
+    <div class="st-busy" id="sheetBusy" style="display:none;">Arranging…</div>
+    <div class="st-warnbar" id="sheetWarn"></div>
+  </div>
 
-    <div class="st-holder">
-      <div class="st-h-row">
-        <span class="st-h-label">White holder</span>
-        <div class="st-seg" id="styleChips">
-          <button class="active" data-style="contour">Follow shape</button>
-          <button data-style="circle">Circle</button>
-          <button data-style="rounded">Rounded</button>
-          <button data-style="none">None</button>
+  <!-- bottom pop-up: all assets of a group / holder settings / admin -->
+  <section class="st-panel" id="panel" aria-live="polite">
+    <div class="st-panel-head">
+      <div class="st-panel-title"><b id="panelTitle"></b><span id="panelSub"></span></div>
+      <button class="st-panel-close" id="panelClose" aria-label="Close">✕</button>
+    </div>
+    <div class="st-panel-body">
+      <div id="pane-lib"><div class="st-lib-grid" id="libGrid"></div></div>
+
+      <div id="pane-holder" hidden>
+        <div class="st-holder">
+          <div class="st-h-row">
+            <span class="st-h-label">Shape</span>
+            <div class="st-seg" id="styleChips">
+              <button class="active" data-style="contour">Follow shape</button>
+              <button data-style="circle">Circle</button>
+              <button data-style="rounded">Rounded</button>
+              <button data-style="none">None</button>
+            </div>
+          </div>
+          <div class="st-h-row" id="borderRow">
+            <span class="st-h-label">Width</span>
+            <input class="st-range" id="setBorder" type="range" min="0" max="8" step="0.5" value="3" aria-label="Holder width">
+            <span class="st-range-val" id="setBorderVal"></span>
+          </div>
+          <div class="st-h-row">
+            <span class="st-h-label"></span>
+            <label class="st-check"><input type="checkbox" id="setShowCut"> Show cut line <i class="st-dot"></i></label>
+          </div>
         </div>
       </div>
-      <div class="st-h-row" id="borderRow">
-        <span class="st-h-label">Width</span>
-        <input class="st-range" id="setBorder" type="range" min="0" max="8" step="0.5" value="3" aria-label="Holder width">
-        <span class="st-range-val" id="setBorderVal"></span>
-      </div>
-      <div class="st-h-row st-h-checks">
-        <label class="st-check"><input type="checkbox" id="setShowCut"> Show cut line <i class="st-dot"></i></label>
-      </div>
+
+      <!-- Admin tools are built here by stickers.js only after Firebase confirms an admin sign-in. -->
+      <div id="pane-admin" hidden></div>
     </div>
-
-    <!-- Admin tools are built here by stickers.js only after Firebase confirms an admin sign-in. -->
-    <div id="adminMount"></div>
   </section>
-</main>
 
-<div class="st-mobbar" id="mobBar"><span id="mobCount"></span><button class="st-btn" id="mobGo">View my sheet ↓</button></div>
+  <!-- the library menu -->
+  <nav class="st-dock" aria-label="Sticker library"><div class="st-groups" id="libCats"></div></nav>
+  <input type="file" id="uploadInput" accept="image/png,image/webp,image/jpeg" style="display:none">
+</main>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js?v=10"></script>
-<script src="stickers.js?v=7"></script>
+<script src="stickers.js?v=8"></script>
 </body>
 </html>

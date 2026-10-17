@@ -43,6 +43,7 @@ const S = {
   pages: [],            // [{ placements:[{inst,x,y,rot}] }]
   oversize: [],
   pageIdx: 0,
+  panel: null,          // which bottom pop-up is open: null | 'lib' | 'holder' | 'admin'
   sel: null,            // id of the item whose sticker is selected (tapped on the sheet)
   stats: { stickers: 0, usedPct: 0 },
 };
@@ -156,23 +157,61 @@ function groupThumb(c) {
   const logo = c.items.find(it => STICKER_LOGO_RE.test(it.name || ''));
   return (logo || c.items[0]).src;
 }
+const ICON_HOLDER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9L12 3z"/></svg>';
+const ICON_UPLOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>';
+const ICON_ADMIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6l8-3z"/></svg>';
+
+// the menu along the bottom: tools first, then every group of the library as a thumbnail
 function renderLibrary() {
   const cats = allCategories(LIB.isAdmin);
   if (!cats.find(c => c.key === LIB.category)) LIB.category = cats.length ? cats[0].key : null;
-  const strip = $('libCats');
-  strip.innerHTML = cats.map(c =>
-    '<button class="st-group' + (c.key === LIB.category ? ' active' : '') + (LIB.hidden.has(c.key) ? ' is-hidden' : '') + '" data-cat="' + esc(c.key) + '">' +
-    '<div class="th"><img loading="lazy" src="' + esc(groupThumb(c)) + '" alt=""></div><span>' + esc(c.shown) + '</span></button>').join('');
-  const act = strip.querySelector('.active');
-  if (act && !strip.classList.contains('open')) strip.scrollLeft = Math.max(0, act.offsetLeft - (strip.clientWidth - act.offsetWidth) / 2);
-  const cat = cats.find(c => c.key === LIB.category);
-  if (!cat) { $('libGrid').innerHTML = '<div class="st-empty">Nothing here yet.</div>'; return; }
+  const strip = $('libCats'), keep = strip.scrollLeft;
+  const tool = (name, label, icon) =>
+    '<button class="st-group tool' + (S.panel === name ? ' active' : '') + '" data-panel="' + name + '"><div class="th">' + icon + '</div><span>' + label + '</span></button>';
+  strip.innerHTML =
+    tool('holder', 'Holder', ICON_HOLDER) +
+    '<label class="st-group tool" for="uploadInput"><div class="th">' + ICON_UPLOAD + '</div><span>Upload</span></label>' +
+    (LIB.isAdmin ? tool('admin', 'Admin', ICON_ADMIN) : '') +
+    '<i class="st-dock-sep"></i>' +
+    cats.map(c =>
+      '<button class="st-group' + (S.panel === 'lib' && c.key === LIB.category ? ' active' : '') + (LIB.hidden.has(c.key) ? ' is-hidden' : '') + '" data-cat="' + esc(c.key) + '">' +
+      '<div class="th"><img loading="lazy" src="' + esc(groupThumb(c)) + '" alt=""></div><span>' + esc(c.shown) + '</span></button>').join('');
+  strip.scrollLeft = keep;
+  renderGrid();
+}
+// all the assets of the chosen group, shown in the bottom pop-up
+function renderGrid() {
+  const cat = allCategories(LIB.isAdmin).find(c => c.key === LIB.category);
+  if (!cat) { $('libGrid').innerHTML = '<div class="st-empty">Nothing here yet.</div>'; updatePanelHead(null); return; }
   const items = cat.items.slice().sort((a, b) =>
     (STICKER_LOGO_RE.test(b.name) ? 1 : 0) - (STICKER_LOGO_RE.test(a.name) ? 1 : 0) || a.label.localeCompare(b.label));
-  $('libGrid').innerHTML = items.map(it =>
-    '<div class="st-lib-item" data-src="' + esc(it.src) + '" data-label="' + esc(it.label) + '"><img loading="lazy" src="' + esc(it.src) + '" alt=""></div>').join('');
-  $('libGrid').scrollTop = 0;
+  const same = $('libGrid').dataset.cat === cat.key;
+  if (!same) {
+    $('libGrid').innerHTML = items.map(it =>
+      '<div class="st-lib-item" data-src="' + esc(it.src) + '" data-label="' + esc(it.label) + '"><img loading="lazy" src="' + esc(it.src) + '" alt=""></div>').join('');
+    $('libGrid').dataset.cat = cat.key;
+    $('pane-lib').parentElement.scrollTop = 0;
+  }
   updateBadges();
+  updatePanelHead(cat);
+}
+function updatePanelHead(cat) {
+  const t = $('panelTitle'), sub = $('panelSub');
+  if (S.panel === 'lib') { t.textContent = cat ? cat.shown : 'Stickers'; sub.textContent = 'Tap to add · tap again for more'; }
+  else if (S.panel === 'holder') { t.textContent = 'White holder'; sub.textContent = 'Printed around each sticker'; }
+  else if (S.panel === 'admin') { t.textContent = 'Admin'; sub.textContent = ''; }
+}
+function openPanel(name) {
+  S.panel = name;
+  $('panel').classList.add('open');
+  ['lib', 'holder', 'admin'].forEach(n => { $('pane-' + n).hidden = n !== name; });
+  $('pane-lib').parentElement.scrollTop = 0;
+  renderLibrary();
+}
+function closePanel() {
+  S.panel = null;
+  $('panel').classList.remove('open');
+  renderLibrary();
 }
 
 /* ═══════════════ image + silhouette field ═══════════════ */
@@ -638,7 +677,8 @@ function renderSummary() {
 function renderSelBar() {
   const it = selItem();
   $('selBar').style.display = it ? 'flex' : 'none';
-  $('selHint').style.display = !it && S.items.length && S.pages.length ? 'block' : 'none';
+  $('selHint').style.display = it ? 'none' : 'block';
+  $('selHint').textContent = S.items.length ? 'Tap a sticker on the sheet to change it' : 'Your sheet is empty';
   if (!it) return;
   $('selImg').src = it.src;
   $('selQty').textContent = it.qty;
@@ -646,35 +686,35 @@ function renderSelBar() {
   $('selQtyMinus').textContent = it.qty <= 1 ? '×' : '−';
   $('selQtyMinus').title = it.qty <= 1 ? 'Remove this sticker' : 'Fewer copies';
 }
-function renderMobBar() {
-  const n = totalQty();
-  $('mobBar').classList.toggle('show', n > 0 && !previewVisible);
-  $('mobCount').textContent = n + ' sticker' + (n !== 1 ? 's' : '') + ' added';
-}
 function refreshUI() {
-  updateBadges(); renderSummary(); renderSelBar(); renderMobBar();
+  updateBadges(); renderSummary(); renderSelBar();
+  $('sheetEmpty').style.display = S.items.length ? 'none' : 'flex';
 }
 function renderPreview() {
-  const hasItems = S.items.length > 0, ready = hasItems && S.pages.length > 0;
-  $('sheetEmpty').style.display = ready ? 'none' : (hasItems ? 'block' : 'none');
-  $('sheetEmpty').textContent = S.oversize.length && !ready ? 'Nothing fits on a sheet — try a smaller size.' : 'Preparing…';
-  $('sheetWrap').style.display = ready ? 'block' : 'none';
+  $('sheetEmpty').style.display = S.items.length ? 'none' : 'flex';
   $('sheetTabs').innerHTML = S.pages.length > 1
     ? S.pages.map((_, i) => '<button class="st-chip' + (i === S.pageIdx ? ' active' : '') + '" data-page="' + i + '">Sheet ' + (i + 1) + '</button>').join('') : '';
   const warn = [];
-  if (S.oversize.length) warn.push(S.oversize.length + ' sticker' + (S.oversize.length > 1 ? 's are' : ' is') + ' too big for an A4 sheet and was left out — tap it and reduce its size.');
+  if (S.oversize.length) warn.push(S.oversize.length + ' sticker' + (S.oversize.length > 1 ? 's are' : ' is') + ' too big for A4 — tap it and make it smaller.');
   if (S.stats.failed) warn.push(S.stats.failed + ' image' + (S.stats.failed > 1 ? 's' : '') + ' couldn’t be loaded.');
   $('sheetWarn').innerHTML = warn.map(w => '<div class="st-warn">' + esc(w) + '</div>').join('');
   const ac = $('adminCount'); if (ac) ac.textContent = S.pages.length;
   renderSummary(); renderSelBar();
-  if (!S.pages.length) return;
   drawSheetPreview();
 }
 function drawSheetPreview() {
-  if (!S.pages.length) return;
   const cv = $('sheetCanvas'), ppmm = 5;
   cv.width = Math.round(PAGE_W * ppmm); cv.height = Math.round(PAGE_H * ppmm);
-  drawPage(cv.getContext('2d'), S.pages[S.pageIdx], ppmm, 'preview', { showCut: S.settings.showCut, margin: S.settings.margin, selId: S.sel });
+  const page = S.pages[S.pageIdx] || { placements: [] };   // an empty sheet is the starting screen
+  drawPage(cv.getContext('2d'), page, ppmm, 'preview', { showCut: S.settings.showCut, margin: S.settings.margin, selId: S.sel });
+}
+// keep the whole A4 sheet visible in whatever space the pop-up leaves it
+function fitPaper() {
+  const r = $('paperArea').getBoundingClientRect(), pad = 12;
+  const maxW = r.width - pad * 2, maxH = r.height - pad * 2 - (S.pages.length > 1 ? 22 : 0);
+  if (maxW < 40 || maxH < 40) return;
+  const w = Math.min(maxW, maxH * PAGE_W / PAGE_H), cv = $('sheetCanvas');
+  cv.style.width = w + 'px'; cv.style.height = (w * PAGE_H / PAGE_W) + 'px';
 }
 // which sticker is under a click/tap on the preview canvas?
 function hitTest(ev) {
@@ -845,13 +885,13 @@ const ADMIN_HTML =
 
 function mountAdmin() {
   if (!isAdminNow()) return;
-  $('adminMount').innerHTML = ADMIN_HTML;
+  $('pane-admin').innerHTML = ADMIN_HTML;
   renderAdminLib(); renderPreview();
 }
-function unmountAdmin() { $('adminMount').innerHTML = ''; }
+function unmountAdmin() { $('pane-admin').innerHTML = ''; if (S.panel === 'admin') closePanel(); }
 function applyAuth() {
   const admin = isAdminNow();
-  if (admin === LIB.isAdmin && admin === !!$('adminMount').firstChild) return;
+  if (admin === LIB.isAdmin && admin === !!$('pane-admin').firstChild) return;
   LIB.isAdmin = admin;
   if (admin) mountAdmin(); else unmountAdmin();
   if (Object.keys(LIB.sets).length) { renderLibrary(); }
@@ -907,13 +947,6 @@ function exportFiles(kind) {
 }
 
 /* ═══════════════ wiring ═══════════════ */
-let previewVisible = false;
-function setGroupsOpen(open) {
-  $('libCats').classList.toggle('open', open);
-  $('libToggle').textContent = open ? 'Fewer ▴' : 'All groups ▾';
-  $('libToggle').setAttribute('aria-expanded', open ? 'true' : 'false');
-  if (!open) { const act = $('libCats').querySelector('.active'); if (act) $('libCats').scrollLeft = Math.max(0, act.offsetLeft - ($('libCats').clientWidth - act.offsetWidth) / 2); }
-}
 document.addEventListener('DOMContentLoaded', () => {
   const border = $('setBorder');
   const setBorderTxt = () => { $('setBorderVal').textContent = S.settings.border + ' mm'; };
@@ -928,13 +961,21 @@ document.addEventListener('DOMContentLoaded', () => {
     scheduleBuild();
   });
 
-  // library
+  // library menu (bottom) + pop-up
   $('libCats').addEventListener('click', e => {
-    const b = e.target.closest('[data-cat]'); if (!b) return;
-    LIB.category = b.dataset.cat;
-    setGroupsOpen(false); renderLibrary();
+    const tool = e.target.closest('[data-panel]');
+    if (tool) {
+      const n = tool.dataset.panel;
+      if (n === 'admin' && !isAdminNow()) return;
+      S.panel === n ? closePanel() : openPanel(n);
+      return;
+    }
+    const g = e.target.closest('[data-cat]'); if (!g) return;
+    if (S.panel === 'lib' && LIB.category === g.dataset.cat) { closePanel(); return; }
+    LIB.category = g.dataset.cat; openPanel('lib');
   });
-  $('libToggle').addEventListener('click', () => setGroupsOpen(!$('libCats').classList.contains('open')));
+  $('panelClose').addEventListener('click', closePanel);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.panel) closePanel(); });
   $('libGrid').addEventListener('click', e => {
     const it = e.target.closest('.st-lib-item'); if (!it) return;
     addItem(it.dataset.src, it.dataset.label);
@@ -967,26 +1008,22 @@ document.addEventListener('DOMContentLoaded', () => {
     S.pageIdx = +b.dataset.page; renderPreview();
   });
 
-  // mobile: jump to the sheet; hide the bar while the sheet is on screen
-  $('mobGo').addEventListener('click', () => $('previewCard').scrollIntoView({ behavior: 'smooth', block: 'start' }));
-  if ('IntersectionObserver' in window) {
-    new IntersectionObserver(es => { previewVisible = es[0].isIntersecting; renderMobBar(); }, { threshold: 0.15 }).observe($('previewCard'));
-  }
-
   // admin (delegated; each handler re-checks admin status)
-  $('adminMount').addEventListener('change', e => {
+  $('pane-admin').addEventListener('change', e => {
     const t = e.target;
     if (!t.closest('#adminLib')) return;
     if (t.hasAttribute('data-parent')) document.querySelectorAll('#adminLib [data-key]').forEach(k => { k.checked = t.checked; });
     syncParents();
   });
-  $('adminMount').addEventListener('click', e => {
+  $('pane-admin').addEventListener('click', e => {
     if (e.target.id === 'libSave') { saveLibraryAccess(); return; }
     const b = e.target.closest('[data-exp]');
     if (b) { try { exportFiles(b.dataset.exp); } catch (err) { /* not an admin */ } }
   });
 
-  refreshUI();
+  if ('ResizeObserver' in window) new ResizeObserver(fitPaper).observe($('paperArea'));
+  window.addEventListener('resize', fitPaper);
+  refreshUI(); renderLibrary(); fitPaper(); drawSheetPreview();
   loadLibrary();
   if (typeof AUTH !== 'undefined' && AUTH) AUTH.onAuthStateChanged(applyAuth);
 
