@@ -679,7 +679,11 @@ function renderSelBar() {
   $('selBar').style.display = it ? 'flex' : 'none';
   $('selHint').style.display = it ? 'none' : 'block';
   $('selHint').textContent = S.items.length ? 'Tap a sticker on the sheet to change it' : 'Your sheet is empty';
+  $('floatRail').classList.toggle('show', !!it);
   if (!it) return;
+  $('railQty').textContent = '×' + it.qty;
+  $('railSize').textContent = it.sizeMm + 'mm';
+  $('railMinus').textContent = it.qty <= 1 ? '×' : '−';
   $('selImg').src = it.src;
   $('selQty').textContent = it.qty;
   $('selSize').textContent = it.sizeMm + ' mm';
@@ -986,7 +990,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('sheetCanvas').addEventListener('click', e => {
     S.sel = hitTest(e); renderSelBar(); drawSheetPreview();
   });
-  $('selBar').addEventListener('click', e => {
+  const onSelClick = e => {
     const b = e.target.closest('[data-sel]'); if (!b) return;
     const it = selItem(); if (!it) return;
     const a = b.dataset.sel;
@@ -994,7 +998,9 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (a === 'qty-') changeQty(it, -1);
     else if (a === 'size+') changeSize(it, 5);
     else if (a === 'size-') changeSize(it, -5);
-  });
+  };
+  $('selBar').addEventListener('click', onSelClick);
+  $('floatRail').addEventListener('click', onSelClick);
   $('summary').addEventListener('click', e => {
     const b = e.target.closest('[data-sum]'); if (!b) return;
     const a = b.dataset.sum;

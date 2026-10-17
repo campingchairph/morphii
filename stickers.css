@@ -58,8 +58,9 @@ h1,h2,h3,.st-logo{font-family:'Baloo 2',cursive;}
 .st-warn{background:var(--coral-light);color:#b0304f;border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,.1);}
 
 /* ── bottom pop-up (rises above the menu; the paper shrinks to stay visible) ── */
-.st-panel{flex:0 0 auto;max-height:0;overflow:hidden;opacity:0;background:var(--card);border:1px solid var(--border);border-bottom:none;border-radius:16px 16px 0 0;box-shadow:0 -8px 24px rgba(60,70,40,.14);display:flex;flex-direction:column;transition:max-height .26s ease,opacity .2s ease;margin-top:6px;}
-.st-panel.open{max-height:min(38vh,320px);opacity:1;}
+.st-bottom{position:relative;flex:0 0 auto;}
+.st-panel{position:absolute;left:-10px;right:-10px;bottom:100%;z-index:6;max-height:0;overflow:hidden;opacity:0;background:var(--card);border:1px solid var(--border);border-bottom:none;border-radius:16px 16px 0 0;box-shadow:0 -8px 24px rgba(60,70,40,.16);display:flex;flex-direction:column;transition:max-height .26s ease,opacity .2s ease;}
+.st-panel.open{max-height:min(32vh,270px);opacity:1;}
 .st-panel-head{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px 4px;position:relative;}
 .st-panel-head::before{content:'';position:absolute;top:5px;left:50%;width:34px;height:4px;margin-left:-17px;border-radius:3px;background:var(--border);}
 .st-panel-title{display:flex;align-items:baseline;gap:10px;min-width:0;}
@@ -67,8 +68,8 @@ h1,h2,h3,.st-logo{font-family:'Baloo 2',cursive;}
 .st-panel-title span{font-size:11px;font-weight:700;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .st-panel-close{background:none;border:none;color:var(--ink-dim);font-size:15px;font-weight:800;cursor:pointer;padding:4px 6px;}
 .st-panel-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding:4px 14px 12px;}
-.st-lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:7px;padding:8px 2px 4px;}
-.st-lib-item{position:relative;aspect-ratio:1;border:1px solid var(--border);border-radius:10px;background:#f6f6f2 repeating-conic-gradient(#efefe9 0% 25%,#fafaf6 0% 50%) 50%/12px 12px;padding:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.st-lib-grid{display:grid;grid-template-columns:repeat(auto-fill,56px);justify-content:center;gap:9px 8px;padding:8px 2px 4px;}
+.st-lib-item{position:relative;width:56px;height:56px;border:1px solid var(--border);border-radius:10px;background:#f6f6f2 repeating-conic-gradient(#efefe9 0% 25%,#fafaf6 0% 50%) 50%/12px 12px;padding:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .st-lib-item:hover,.st-lib-item.picked{border-color:var(--sage);}
 .st-lib-item:active{transform:scale(.95);}
 .st-lib-item img{max-width:100%;max-height:100%;object-fit:contain;pointer-events:none;}
@@ -119,4 +120,23 @@ h1,h2,h3,.st-logo{font-family:'Baloo 2',cursive;}
 .st-admin-cats label{font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;}
 .st-admin-lib input{accent-color:var(--sage);}
 
-@media(max-width:560px){.st-panel.open{max-height:min(40vh,340px);}}
+/* ── floating side rail (phone only) ── */
+.st-rail{display:none;position:absolute;right:4px;top:50%;transform:translateY(-50%);z-index:4;flex-direction:column;gap:10px;}
+.st-rail-grp{display:flex;flex-direction:column;align-items:center;gap:4px;background:rgba(255,255,255,.94);border-radius:22px;padding:7px 5px;box-shadow:0 4px 14px rgba(0,0,0,.18);}
+.st-rail-cap{font-size:8px;font-weight:900;letter-spacing:.6px;text-transform:uppercase;color:var(--ink-dim);}
+.st-rail-grp button{width:36px;height:36px;border-radius:50%;border:none;background:var(--pill);color:#fff;font-size:20px;font-weight:700;line-height:1;cursor:pointer;}
+.st-rail-grp button:active{transform:scale(.92);}
+.st-rail-grp b{font-size:11px;font-weight:900;color:var(--ink);min-width:36px;text-align:center;}
+
+/* ── phone: the sheet is the star ── */
+@media(max-width:700px){
+  .st-summary,.st-ctx{display:none;}
+  .st-rail.show{display:flex;}
+  .st-stage{padding-top:6px;}
+  .st-panel.open{max-height:min(28vh,230px);}
+  .st-lib-grid{grid-template-columns:repeat(auto-fill,50px);gap:8px 7px;}
+  .st-lib-item{width:50px;height:50px;}
+  .st-group{width:54px;}
+  .st-group .th{width:38px;height:38px;}
+  .st-group span{font-size:10px;max-width:52px;}
+}
