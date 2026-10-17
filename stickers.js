@@ -156,6 +156,19 @@ function syncCollBox(cb) {
   const on = kids.filter(k => k.checked).length;
   cb.checked = on === kids.length; cb.indeterminate = on > 0 && on < kids.length;
 }
+// circle badge on each library thumbnail showing how many copies are in the tray
+function updateBadges() {
+  const counts = {};
+  S.items.forEach(i => { counts[i.src] = i.qty; });
+  document.querySelectorAll('#libGrid .st-lib-item').forEach(el => {
+    const n = counts[el.dataset.src] || 0;
+    el.classList.toggle('picked', n > 0);
+    let b = el.querySelector('.st-badge');
+    if (!n) { if (b) b.remove(); return; }
+    if (!b) { b = document.createElement('span'); b.className = 'st-badge'; el.appendChild(b); }
+    b.textContent = n;
+  });
+}
 function renderLibrary() {
   const cats = stickerCategories(LIB.collection, LIB.isAdmin);
   if (!cats.find(c => c.id === LIB.category)) LIB.category = cats.length ? cats[0].id : null;
@@ -167,6 +180,7 @@ function renderLibrary() {
     (STICKER_LOGO_RE.test(b.name) ? 1 : 0) - (STICKER_LOGO_RE.test(a.name) ? 1 : 0) || a.label.localeCompare(b.label));
   $('libGrid').innerHTML = items.map((it, i) =>
     '<div class="st-lib-item" data-src="' + esc(it.src) + '" data-label="' + esc(it.label) + '" title="' + esc(it.label) + '"><img loading="lazy" src="' + esc(it.src) + '" alt="' + esc(it.label) + '"></div>').join('');
+  updateBadges();
 }
 
 /* ═══════════════ image + silhouette field ═══════════════ */
@@ -621,6 +635,7 @@ function addItem(src, label) {
   renderTray(); scheduleBuild();
 }
 function renderTray() {
+  updateBadges();
   const box = $('trayList');
   if (!S.items.length) { box.innerHTML = '<div class="st-empty">No stickers selected yet. Tap one in the library above.</div>'; $('trayCount').textContent = ''; return; }
   box.innerHTML = S.items.map(it =>
@@ -723,6 +738,7 @@ document.addEventListener('DOMContentLoaded', () => {
       row.querySelector('[data-f="sizeMm"]').value = it.sizeMm;
       row.querySelector('[data-f="qty"]').value = it.qty;
       $('trayCount').textContent = S.items.reduce((s, i) => s + i.qty, 0) + ' stickers';
+      updateBadges();
     }
     scheduleBuild();
   });
@@ -733,6 +749,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (f === 'sizeMm') it.sizeMm = clamp(Math.round(v), 10, 190);
     if (f === 'qty') it.qty = clamp(Math.round(v), 1, 99);
     $('trayCount').textContent = S.items.reduce((s, i) => s + i.qty, 0) + ' stickers';
+    updateBadges();
     scheduleBuild();
   });
   $('sizeAll').addEventListener('click', () => {
