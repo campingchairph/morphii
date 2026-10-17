@@ -29,10 +29,7 @@ const PINS_TREE_CACHE_KEY = 'morphii_pins_asset_tree_v1';   // same cache create
 const PINS_TREE_CACHE_TTL = 10 * 60 * 1000;
 const ASSET_CATEGORIES = ['stickers','shapes','holders','texts','borders','background','characters','letters'];
 const CATEGORY_TO_SET_KEY = { stickers:'stickers', shapes:'shapes', holders:'shapes', texts:'wordart', borders:'borders', background:'background', characters:'characters', letters:'letters' };
-const COLLECTIONS = [
-  ['shared', 'Main library'], ['election', 'Election'], ['ph-souvenir', 'PH Souvenir'],
-  ['wedding', 'Wedding'], ['in-loving-memory', 'In Loving Memory'],
-];
+const COLLECTIONS = [['shared', 'Main library']];   // only the main library is offered for stickers
 const OTHER_CATS = [
   ['shapes', 'Shapes'], ['wordart', 'Text art'], ['characters', 'Characters'],
   ['borders', 'Borders'], ['background', 'Backgrounds'], ['letters', 'Letters'],
@@ -738,7 +735,7 @@ function guard() { if (!isAdminNow()) throw new Error('Admin sign-in required');
 const ADMIN_HTML =
   '<div class="st-admin">' +
   '<span class="st-label">Admin · library customers can use</span>' +
-  '<p class="st-sub" style="margin-bottom:8px;">Tick what customers may use — a whole collection, a type (Stickers, Shapes…) or a single sub-group. Saved for everyone.</p>' +
+  '<p class="st-sub" style="margin-bottom:8px;">Tick the groups customers can use. Saved for everyone.</p>' +
   '<div id="adminLib" class="st-admin-lib"></div>' +
   '<div class="st-row"><button class="st-btn" id="libSave">Save library access</button><span class="st-mini" id="libSaveMsg"></span></div>' +
   '<span class="st-label" style="margin-top:6px;">Admin · clean production files (<span id="adminCount">0</span> sheet)</span>' +
@@ -758,30 +755,21 @@ function applyAuth() {
   if (admin) mountAdmin(); else unmountAdmin();
   if (Object.keys(LIB.sets).length) { renderLibrary(); }
 }
-// Collection ▸ type (Stickers / Shapes / …) ▸ sub-group, each with its own checkbox
+// one tick box per group of the main library, plus select all
 function renderAdminLib() {
   const box = $('adminLib'); if (!box || !isAdminNow()) return;
-  const chk = key => '<input type="checkbox" data-key="' + esc(key) + '"' + (LIB.hidden.has(key) ? '' : ' checked') + '>';
-  box.innerHTML = COLLECTIONS.map(([id, label]) => {
-    const cats = stickerCategories(id, true);
-    if (!cats.length) return '';
-    const sub = cats.filter(c => c.id.startsWith('s:')), other = cats.filter(c => c.id.startsWith('o:'));
-    let inner = '';
-    if (sub.length) {
-      inner += '<details><summary><input type="checkbox" data-parent> Stickers <span class="st-mini">(' + sub.length + ' sub-groups)</span></summary><div class="st-admin-cats">' +
-        sub.map(c => '<label>' + chk(c.key) + ' ' + esc(c.label) + '</label>').join('') + '</div></details>';
-    }
-    inner += other.map(c => '<label class="leaf">' + chk(c.key) + ' ' + esc(c.label) + '</label>').join('');
-    return '<details><summary><input type="checkbox" data-parent> ' + esc(label) + '</summary>' + inner + '</details>';
-  }).join('');
+  const cats = allCategories(true);
+  box.innerHTML = '<label class="st-admin-all"><input type="checkbox" data-parent> Select all groups <span class="st-mini">(' + cats.length + ')</span></label>' +
+    '<div class="st-admin-cats">' +
+    cats.map(c => '<label><input type="checkbox" data-key="' + esc(c.key) + '"' + (LIB.hidden.has(c.key) ? '' : ' checked') + '> ' + esc(c.shown) + '</label>').join('') +
+    '</div>';
   syncParents();
 }
 function syncParents() {
-  document.querySelectorAll('#adminLib input[data-parent]').forEach(p => {
-    const kids = [...p.closest('details').querySelectorAll('[data-key]')];
-    const on = kids.filter(k => k.checked).length;
-    p.checked = on === kids.length; p.indeterminate = on > 0 && on < kids.length;
-  });
+  const p = document.querySelector('#adminLib input[data-parent]'); if (!p) return;
+  const kids = [...document.querySelectorAll('#adminLib [data-key]')];
+  const on = kids.filter(k => k.checked).length;
+  p.checked = on === kids.length; p.indeterminate = on > 0 && on < kids.length;
 }
 async function saveLibraryAccess() {
   const msg = $('libSaveMsg');
@@ -889,7 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('adminMount').addEventListener('change', e => {
     const t = e.target;
     if (!t.closest('#adminLib')) return;
-    if (t.hasAttribute('data-parent')) t.closest('details').querySelectorAll('[data-key]').forEach(k => { k.checked = t.checked; });
+    if (t.hasAttribute('data-parent')) document.querySelectorAll('#adminLib [data-key]').forEach(k => { k.checked = t.checked; });
     syncParents();
   });
   $('adminMount').addEventListener('click', e => {
