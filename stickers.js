@@ -39,7 +39,7 @@ const STICKER_LOGO_RE = /^logo\.[^.]+$/i;
 /* ── state ─────────────────────────────────────────────────── */
 const S = {
   items: [],            // { id, src, label, sizeMm, qty }
-  settings: { style: 'contour', border: 3, gap: 0.5, margin: 5, spacing: 2, rotate: true, showCut: true },  // gap/margin/spacing are fixed (no UI)
+  settings: { style: 'contour', border: 3, gap: 0.5, margin: 5, spacing: 2, rotate: false, showCut: false },  // gap/margin/spacing are fixed (no UI)
   pages: [],            // [{ placements:[{inst,x,y,rot}] }]
   oversize: [],
   pageIdx: 0,
@@ -591,7 +591,7 @@ async function rebuild() {
     if (gen !== buildGen) return;
     const geom = buildGeom(F, st);
     if (!isFinite(geom.w) || geom.w <= 0) { failed++; continue; }
-    for (let k = 0; k < item.qty && instances.length < MAX_INSTANCES; k++) instances.push({ item, geom });
+    for (let k = 0; k < item.qty && instances.length < MAX_INSTANCES; k++) instances.push({ item, geom, k });
   }
   if (gen !== buildGen) return;
   const { pages, oversize } = layoutPages(instances, st);
@@ -601,7 +601,17 @@ async function rebuild() {
   const used = pages.reduce((s, pg) => s + pg.placements.reduce((a, p) => a + p.inst.geom.area, 0), 0);
   S.stats = { stickers: pages.reduce((s, pg) => s + pg.placements.length, 0), usedPct: totalArea ? used / totalArea * 100 : 0, failed };
   $('sheetBusy').style.display = 'none';
+  const burst = FX.queue.splice(0).slice(-3);
+  const spots = burst.map(b => {
+    for (let i = 0; i < S.pages.length; i++) {
+      const p = S.pages[i].placements.find(pl => pl.inst.item.id === b.id && pl.inst.k === b.k);
+      if (p) return { page: i, p };
+    }
+    return null;
+  }).filter(Boolean);
+  if (spots.length) S.pageIdx = spots[spots.length - 1].page;
   renderPreview();
+  spots.forEach(sp => { if (sp.page === S.pageIdx) fxConfetti(sp.p); });
 }
 
 /* ═══════════════ summary / selection bar / preview ═══════════════ */
@@ -679,19 +689,110 @@ function hitTest(ev) {
   return null;
 }
 
+/* ═══════════════ little animations: confetti when added, poof when removed ═══════════════ */
+const FX = { parts: [], raf: 0, last: 0, queue: [] };
+const FX_COLORS = ['#FF6F91', '#8FAE7C', '#FFC857', '#6EC5FF', '#B79CFF', '#FF9F6B'];
+const reducedMotion = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+// a placement's centre + rough radius, in CSS px of the preview canvas
+function fxSpot(p) {
+  const r = $('sheetCanvas').getBoundingClientRect(), g = p.inst.geom;
+  const w = p.rot ? g.h : g.w, h = p.rot ? g.w : g.h;
+  return { x: (p.x + w / 2) / PAGE_W * r.width, y: (p.y + h / 2) / PAGE_H * r.height, r: Math.max(w, h) / PAGE_W * r.width / 2 };
+}
+function fxPrepare() {
+  const cv = $('sheetCanvas'), fx = $('fxCanvas'), r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+  fx.style.left = cv.offsetLeft + 'px'; fx.style.top = cv.offsetTop + 'px';
+  fx.style.width = r.width + 'px'; fx.style.height = r.height + 'px';
+  if (fx.width !== Math.round(r.width * d)) { fx.width = Math.round(r.width * d); fx.height = Math.round(r.height * d); }
+  fx.getContext('2d').setTransform(d, 0, 0, d, 0, 0);
+  return fx;
+}
+function fxConfetti(p) {
+  if (reducedMotion() || !p) return;
+  fxPrepare();
+  const { x, y, r } = fxSpot(p);
+  for (let i = 0; i < 26; i++) {
+    const a = Math.random() * Math.PI * 2, sp = 90 + Math.random() * 190;
+    FX.parts.push({ kind: 'conf', x: x + Math.cos(a) * r * 0.5, y: y + Math.sin(a) * r * 0.5, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 90,
+      rot: Math.random() * 6, vr: (Math.random() - 0.5) * 14, w: 4 + Math.random() * 4, h: 2.5 + Math.random() * 3, c: FX_COLORS[i % FX_COLORS.length], life: 0, max: 0.8 + Math.random() * 0.45 });
+  }
+  for (let i = 0; i < 7; i++) {
+    const a = Math.random() * Math.PI * 2, d = r * (0.3 + Math.random() * 0.85);
+    FX.parts.push({ kind: 'star', x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, vx: 0, vy: -14, s: 5 + Math.random() * 6, c: i % 2 ? '#FFC857' : '#fff', life: -Math.random() * 0.25, max: 0.55 + Math.random() * 0.2 });
+  }
+  fxRun();
+}
+function fxPoof(p) {
+  if (reducedMotion() || !p) return;
+  fxPrepare();
+  const { x, y, r } = fxSpot(p), base = Math.max(10, r * 0.55);
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * Math.PI * 2 + Math.random() * 0.5, d = r * (0.15 + Math.random() * 0.55);
+    FX.parts.push({ kind: 'puff', x: x + Math.cos(a) * d * 0.4, y: y + Math.sin(a) * d * 0.4, vx: Math.cos(a) * d * 1.6, vy: Math.sin(a) * d * 1.6 - 12,
+      r0: base * (0.55 + Math.random() * 0.35), grow: 1.1 + Math.random() * 0.6, life: 0, max: 0.55 + Math.random() * 0.15 });
+  }
+  for (let i = 0; i < 6; i++) {
+    const a = Math.random() * Math.PI * 2;
+    FX.parts.push({ kind: 'star', x: x + Math.cos(a) * r * 0.6, y: y + Math.sin(a) * r * 0.6, vx: Math.cos(a) * 40, vy: Math.sin(a) * 40, s: 3 + Math.random() * 3, c: '#fff', life: 0, max: 0.45 });
+  }
+  fxRun();
+}
+function fxRun() { if (!FX.raf) { FX.last = performance.now(); FX.raf = requestAnimationFrame(fxTick); } }
+function fxTick(now) {
+  const fx = $('fxCanvas'), ctx = fx.getContext('2d'), dt = Math.min(0.05, (now - FX.last) / 1000);
+  FX.last = now;
+  ctx.clearRect(0, 0, fx.width, fx.height);
+  FX.parts = FX.parts.filter(q => (q.life += dt) < q.max);
+  FX.parts.forEach(q => {
+    if (q.life < 0) return;
+    const t = q.life / q.max;
+    q.x += (q.vx || 0) * dt; q.y += (q.vy || 0) * dt;
+    if (q.kind === 'conf') {
+      q.vy += 520 * dt; q.vx *= 0.985; q.rot += q.vr * dt;
+      ctx.save(); ctx.globalAlpha = 1 - t * t; ctx.translate(q.x, q.y); ctx.rotate(q.rot); ctx.fillStyle = q.c; ctx.fillRect(-q.w / 2, -q.h / 2, q.w, q.h); ctx.restore();
+    } else if (q.kind === 'star') {
+      const sz = q.s * (t < 0.5 ? t * 2 : 2 - t * 2) + 0.5;
+      ctx.save(); ctx.globalAlpha = 0.95; ctx.translate(q.x, q.y); ctx.fillStyle = q.c; ctx.shadowColor = 'rgba(255,160,60,.7)'; ctx.shadowBlur = 6;
+      ctx.beginPath(); ctx.moveTo(0, -sz); ctx.quadraticCurveTo(0, 0, sz, 0); ctx.quadraticCurveTo(0, 0, 0, sz); ctx.quadraticCurveTo(0, 0, -sz, 0); ctx.quadraticCurveTo(0, 0, 0, -sz); ctx.fill(); ctx.restore();
+    } else { // puff
+      q.vx *= 0.94; q.vy *= 0.94;
+      const rad = q.r0 * (1 + q.grow * t), a = 1 - t;
+      ctx.save(); ctx.globalAlpha = a * 0.95;
+      const g = ctx.createRadialGradient(q.x - rad * 0.25, q.y - rad * 0.3, rad * 0.1, q.x, q.y, rad);
+      g.addColorStop(0, '#ffffff'); g.addColorStop(1, 'rgba(214,220,228,0.9)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(q.x, q.y, rad, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(120,130,145,.35)'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
+    }
+  });
+  if (FX.parts.length) FX.raf = requestAnimationFrame(fxTick);
+  else { FX.raf = 0; ctx.clearRect(0, 0, fx.width, fx.height); }
+}
+// poof for the copy that is about to disappear (it is still on the current sheet at this point)
+function poofCopy(it, k) {
+  const pg = S.pages[S.pageIdx]; if (!pg) return;
+  fxPoof(pg.placements.find(pl => pl.inst.item.id === it.id && pl.inst.k === k));
+}
+function poofAll() {
+  const pg = S.pages[S.pageIdx]; if (!pg) return;
+  pg.placements.slice(0, 40).forEach((pl, i) => setTimeout(() => fxPoof(pl), i * 25));
+}
+
 /* ═══════════════ editing the sheet ═══════════════ */
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 function addItem(src, label) {
   if (totalQty() >= MAX_INSTANCES) { alert('That’s the most stickers we can fit in one order (' + MAX_INSTANCES + ').'); return; }
   let it = S.items.find(i => i.src === src);
-  if (it) it.qty = Math.min(99, it.qty + 1);
+  if (it) { if (it.qty >= 99) return; it.qty++; }
   else { it = { id: nextId++, src, label, sizeMm: 40, qty: 1 }; S.items.push(it); }
   S.sel = it.id;
+  FX.queue.push({ id: it.id, k: it.qty - 1 });
   refreshUI(); scheduleBuild();
 }
 function changeQty(it, d) {
   if (d > 0 && totalQty() >= MAX_INSTANCES) return;
+  if (d < 0) poofCopy(it, it.qty - 1);
   it.qty += d;
+  if (d > 0) FX.queue.push({ id: it.id, k: it.qty - 1 });
   if (it.qty <= 0) { S.items = S.items.filter(i => i !== it); if (S.sel === it.id) S.sel = null; }
   refreshUI(); scheduleBuild();
 }
@@ -818,7 +919,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const setBorderTxt = () => { $('setBorderVal').textContent = S.settings.border + ' mm'; };
   border.addEventListener('input', () => { S.settings.border = +border.value; setBorderTxt(); scheduleBuild(); });
   setBorderTxt();
-  $('setRotate').addEventListener('change', e => { S.settings.rotate = e.target.checked; scheduleBuild(); });
   $('setShowCut').addEventListener('change', e => { S.settings.showCut = e.target.checked; drawSheetPreview(); });
   $('styleChips').addEventListener('click', e => {
     const b = e.target.closest('[data-style]'); if (!b) return;
@@ -857,7 +957,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('summary').addEventListener('click', e => {
     const b = e.target.closest('[data-sum]'); if (!b) return;
     const a = b.dataset.sum;
-    if (a === 'clear') { S.items = []; S.sel = null; refreshUI(); scheduleBuild(); return; }
+    if (a === 'clear') { poofAll(); S.items = []; S.sel = null; FX.queue.length = 0; refreshUI(); scheduleBuild(); return; }
     const d = a === 'size+' ? 5 : -5;
     S.items.forEach(i => { i.sizeMm = clamp(i.sizeMm + d, 10, 190); });
     refreshUI(); scheduleBuild();
