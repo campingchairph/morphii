@@ -704,6 +704,8 @@ function renderSummary() {
 }
 function renderSelBar() {
   const it = selItem();
+  const ed = it && it.collage ? '' : 'none';
+  $('selEdit').style.display = ed; $('ptEdit').style.display = ed;
   $('selBar').style.display = it ? 'flex' : 'none';
   $('selHint').style.display = it ? 'none' : 'block';
   $('selHint').textContent = S.items.length ? 'Tap a sticker on the sheet to change it' : 'Your sheet is empty';
@@ -779,7 +781,8 @@ function positionTools() {
   // duplicate / delete down the right-hand side (left-hand side if there is no room)
   let tx = x0 + w + gap;
   if (tx + B > r.width + 12) tx = x0 - B - gap;
-  const ty = clamp(y0 + h / 2 - B - 2, -6, r.height - 2 * B - 8);
+  const sideH = $('ptEdit').style.display === 'none' ? 2 * B + 6 : 3 * B + 12;
+  const ty = clamp(y0 + h / 2 - sideH / 2, -6, r.height - sideH - 8);
   side.style.left = tx + 'px'; side.style.top = ty + 'px';
 }
 
@@ -969,6 +972,7 @@ function addItem(src, label) {
   S.sel = it.id; S.selK = it.qty - 1;
   FX.queue.push({ id: it.id, k: it.qty - 1 });
   refreshUI(); scheduleBuild();
+  return it;
 }
 function changeQty(it, d) {
   if (d > 0 && totalQty() >= MAX_INSTANCES) return;
@@ -1112,6 +1116,216 @@ function exportFiles(kind) {
   });
 }
 
+/* ═══════════════ BUILD YOUR OWN STICKER ═══════════════
+   A separate window where assets from the library are collaged into one new sticker.
+   Layers: { src, img, x, y, scale, rot } on a 1000×1000 artboard (x,y = centre).
+   "Add to sheet" renders the collage to a trimmed transparent PNG and adds it as a
+   normal sticker; the layer list is kept on the item (item.collage) so it can be edited again. */
+const BD = { open: false, layers: [], sel: -1, cat: null, editItem: null, size: 0, k: 1, ptrs: new Map(), gesture: null };
+const BD_UNITS = 1000, BD_BASE = 420;        // an asset at scale 1 fits inside a 420-unit box
+const BD_EXPORT_PX = 1600;
+const BD_MASKS = new WeakMap();
+
+const bdW = l => (l.img.naturalWidth >= l.img.naturalHeight ? BD_BASE : BD_BASE * l.img.naturalWidth / l.img.naturalHeight) * l.scale;
+const bdH = l => (l.img.naturalWidth >= l.img.naturalHeight ? BD_BASE * l.img.naturalHeight / l.img.naturalWidth : BD_BASE) * l.scale;
+
+// tiny alpha map of an image so taps only grab the opaque parts of a layer
+function bdMask(img) {
+  let m = BD_MASKS.get(img);
+  if (!m) {
+    const n = 64, c = document.createElement('canvas'); c.width = c.height = n;
+    const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0, n, n);
+    m = { n, d: x.getImageData(0, 0, n, n).data }; BD_MASKS.set(img, m);
+  }
+  return m;
+}
+function bdHit(ux, uy) {
+  for (let i = BD.layers.length - 1; i >= 0; i--) {
+    const l = BD.layers[i], a = -l.rot * Math.PI / 180, dx = ux - l.x, dy = uy - l.y;
+    const lx = dx * Math.cos(a) - dy * Math.sin(a), ly = dx * Math.sin(a) + dy * Math.cos(a);
+    const w = bdW(l), h = bdH(l);
+    if (Math.abs(lx) > w / 2 || Math.abs(ly) > h / 2) continue;
+    const m = bdMask(l.img), px = Math.min(m.n - 1, Math.floor((lx / w + 0.5) * m.n)), py = Math.min(m.n - 1, Math.floor((ly / h + 0.5) * m.n));
+    if (m.d[(py * m.n + px) * 4 + 3] > 24) return i;
+  }
+  return -1;
+}
+
+function bdDraw() {
+  const cv = $('bdCanvas'); if (!cv || !BD.size) return;
+  const ctx = cv.getContext('2d'), k = BD.k * (window.devicePixelRatio || 1);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.imageSmoothingQuality = 'high';
+  BD.layers.forEach(l => {
+    ctx.save(); ctx.translate(l.x * k, l.y * k); ctx.rotate(l.rot * Math.PI / 180);
+    ctx.drawImage(l.img, -bdW(l) * k / 2, -bdH(l) * k / 2, bdW(l) * k, bdH(l) * k); ctx.restore();
+  });
+  const l = BD.layers[BD.sel];
+  if (l) {   // soft gradient frame around the selected layer
+    const w = bdW(l) * k, h = bdH(l) * k, gr = ctx.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2);
+    gr.addColorStop(0, '#9ad77a'); gr.addColorStop(0.5, '#ffc277'); gr.addColorStop(1, '#ff6f91');
+    ctx.save(); ctx.translate(l.x * k, l.y * k); ctx.rotate(l.rot * Math.PI / 180);
+    ctx.setLineDash([8, 5]); ctx.lineWidth = 2.5; ctx.strokeStyle = gr; ctx.shadowColor = 'rgba(255,111,145,.5)'; ctx.shadowBlur = 8;
+    ctx.strokeRect(-w / 2, -h / 2, w, h); ctx.restore();
+  }
+  $('bdEmpty').style.display = BD.layers.length ? 'none' : 'flex';
+  bdSyncTools();
+}
+function bdFit() {
+  const st = $('bdStage'), cv = $('bdCanvas'); if (!st || !cv) return;
+  const r = st.getBoundingClientRect(), size = Math.floor(Math.min(r.width, r.height) - 4);
+  if (size < 60) return;
+  const d = window.devicePixelRatio || 1;
+  BD.size = size; BD.k = size / BD_UNITS;
+  cv.style.width = cv.style.height = size + 'px'; cv.width = cv.height = Math.round(size * d);
+  bdDraw();
+}
+function bdSyncTools() {
+  const has = BD.sel >= 0 && BD.layers[BD.sel];
+  $('bdTools').classList.toggle('on', !!has);
+  $('bdToolHint').style.display = has ? 'none' : 'block';
+  $('bdToolHint').textContent = BD.layers.length ? 'Tap a piece to edit it · drag to move · pinch to resize' : 'Pick assets below to start your collage';
+}
+
+async function bdAddLayer(src, opts) {
+  let img; try { img = await loadImg(src); } catch (e) { return null; }
+  const n = BD.layers.length, j = n ? (Math.random() - 0.5) * 160 : 0;
+  const l = Object.assign({ src, img, x: BD_UNITS / 2 + j, y: BD_UNITS / 2 + j, scale: 1, rot: 0 }, opts || {});
+  BD.layers.push(l); BD.sel = BD.layers.length - 1; bdDraw();
+  return l;
+}
+function bdPoint(e) {
+  const r = $('bdCanvas').getBoundingClientRect();
+  return { x: (e.clientX - r.left) / BD.k, y: (e.clientY - r.top) / BD.k };
+}
+function bdPointerDown(e) {
+  e.preventDefault();
+  $('bdCanvas').setPointerCapture(e.pointerId);
+  BD.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (BD.ptrs.size === 1) {
+    const p = bdPoint(e), i = bdHit(p.x, p.y);
+    BD.sel = i; bdDraw();
+    BD.gesture = i >= 0 ? { type: 'drag', lx: p.x, ly: p.y } : null;
+  } else if (BD.ptrs.size === 2 && BD.layers[BD.sel]) {
+    const [a, b] = [...BD.ptrs.values()], l = BD.layers[BD.sel];
+    BD.gesture = { type: 'pinch', d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, a0: Math.atan2(b.y - a.y, b.x - a.x), s0: l.scale, r0: l.rot };
+  }
+}
+function bdPointerMove(e) {
+  if (!BD.ptrs.has(e.pointerId)) return;
+  BD.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  const l = BD.layers[BD.sel], g = BD.gesture; if (!l || !g) return;
+  if (g.type === 'drag' && BD.ptrs.size === 1) {
+    const p = bdPoint(e); l.x += p.x - g.lx; l.y += p.y - g.ly; g.lx = p.x; g.ly = p.y; bdDraw();
+  } else if (g.type === 'pinch' && BD.ptrs.size === 2) {
+    const [a, b] = [...BD.ptrs.values()];
+    l.scale = clamp(g.s0 * (Math.hypot(a.x - b.x, a.y - b.y) / g.d0), 0.1, 4);
+    l.rot = g.r0 + (Math.atan2(b.y - a.y, b.x - a.x) - g.a0) * 180 / Math.PI; bdDraw();
+  }
+}
+function bdPointerUp(e) {
+  BD.ptrs.delete(e.pointerId);
+  if (BD.ptrs.size === 0) BD.gesture = null;
+  else if (BD.ptrs.size === 1) { const [a] = [...BD.ptrs.values()], p = bdPoint({ clientX: a.x, clientY: a.y }); BD.gesture = BD.layers[BD.sel] ? { type: 'drag', lx: p.x, ly: p.y } : null; }
+}
+function bdAction(a) {
+  const l = BD.layers[BD.sel]; if (!l) return;
+  if (a === 'scale+') l.scale = clamp(l.scale * 1.12, 0.1, 4);
+  else if (a === 'scale-') l.scale = clamp(l.scale / 1.12, 0.1, 4);
+  else if (a === 'rot+') l.rot += 15;
+  else if (a === 'rot-') l.rot -= 15;
+  else if (a === 'front' && BD.sel < BD.layers.length - 1) { BD.layers.splice(BD.sel, 1); BD.layers.push(l); BD.sel = BD.layers.length - 1; }
+  else if (a === 'back' && BD.sel > 0) { BD.layers.splice(BD.sel, 1); BD.layers.unshift(l); BD.sel = 0; }
+  else if (a === 'dup') { BD.layers.push(Object.assign({}, l, { x: l.x + 36, y: l.y + 36 })); BD.sel = BD.layers.length - 1; }
+  else if (a === 'del') { BD.layers.splice(BD.sel, 1); BD.sel = -1; }
+  bdDraw();
+}
+
+/* asset tray: same library, same access rules as the sheet */
+function bdRenderTray() {
+  const cats = allCategories(LIB.isAdmin);
+  if (!cats.find(c => c.key === BD.cat)) BD.cat = cats.length ? cats[0].key : null;
+  const keep = $('bdGroups').scrollLeft;
+  $('bdGroups').innerHTML =
+    '<label class="bd-group tool" for="bdUpload"><div class="th">' + ICON_UPLOAD + '</div><span>Upload</span></label>' +
+    cats.map(c => '<button class="bd-group' + (c.key === BD.cat ? ' active' : '') + '" data-bcat="' + esc(c.key) + '"><div class="th"><img loading="lazy" src="' + esc(groupThumb(c)) + '" alt=""></div><span>' + esc(c.shown) + '</span></button>').join('');
+  $('bdGroups').scrollLeft = keep;
+  const cat = cats.find(c => c.key === BD.cat);
+  $('bdGrid').innerHTML = cat ? cat.items.slice().sort((a, b) =>
+    (STICKER_LOGO_RE.test(b.name) ? 1 : 0) - (STICKER_LOGO_RE.test(a.name) ? 1 : 0) || a.label.localeCompare(b.label)).map(it =>
+    '<button class="bd-asset" data-src="' + esc(it.src) + '"><img loading="lazy" src="' + esc(it.src) + '" alt=""></button>').join('') : '';
+  $('bdGrid').scrollLeft = 0; $('bdGrid').scrollTop = 0;
+}
+
+/* window open / close */
+async function openBuilder(item) {
+  BD.layers = []; BD.sel = -1; BD.editItem = item || null; BD.open = true;
+  $('builder').hidden = false;
+  document.body.classList.add('bd-open');
+  $('bdIntro').hidden = !!item; $('bdMain').hidden = !item;
+  $('bdAdd').textContent = item ? 'Save changes' : 'Add to sheet';
+  $('bdTitle').textContent = item ? 'Edit your sticker' : 'Build your own sticker';
+  bdRenderTray();
+  if (item) {
+    bdFit();
+    for (const c of (item.collage || [])) await bdAddLayer(c.src, { x: c.x, y: c.y, scale: c.scale, rot: c.rot });
+    BD.sel = -1; bdDraw();
+  }
+  (item ? $('bdAdd') : $('bdStart')).focus();
+}
+function bdFromBlob(blob) {
+  if (!blob || !/^image\//.test(blob.type)) return;
+  const fr = new FileReader();
+  fr.onload = () => {
+    const im = new Image();
+    im.onload = () => {
+      const sc = Math.min(1, 900 / Math.max(im.naturalWidth, im.naturalHeight)), cv = document.createElement('canvas');
+      cv.width = Math.round(im.naturalWidth * sc); cv.height = Math.round(im.naturalHeight * sc);
+      cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
+      bdAddLayer(cv.toDataURL('image/png'));
+    };
+    im.src = fr.result;
+  };
+  fr.readAsDataURL(blob);
+}
+function bdStart() { $('bdIntro').hidden = true; $('bdMain').hidden = false; bdRenderTray(); bdFit(); bdDraw(); }
+function closeBuilder(force) {
+  if (!force && BD.layers.length && !confirm('Close without adding this sticker to your sheet?')) return;
+  BD.open = false; $('builder').hidden = true; document.body.classList.remove('bd-open');
+}
+
+// render the collage to a trimmed transparent PNG and hand it to the sheet
+async function bdFinish() {
+  if (!BD.layers.length) { alert('Add at least one asset to your sticker first.'); return; }
+  const px = BD_EXPORT_PX, k = px / BD_UNITS, cv = document.createElement('canvas');
+  cv.width = cv.height = px;
+  const ctx = cv.getContext('2d', { willReadFrequently: true }); ctx.imageSmoothingQuality = 'high';
+  BD.layers.forEach(l => {
+    ctx.save(); ctx.translate(l.x * k, l.y * k); ctx.rotate(l.rot * Math.PI / 180);
+    ctx.drawImage(l.img, -bdW(l) * k / 2, -bdH(l) * k / 2, bdW(l) * k, bdH(l) * k); ctx.restore();
+  });
+  const d = ctx.getImageData(0, 0, px, px).data;
+  let x0 = px, y0 = px, x1 = -1, y1 = -1;
+  for (let y = 0; y < px; y++) for (let x = 0; x < px; x++) {
+    if (d[(y * px + x) * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  if (x1 < 0) { alert('Your sticker is empty — move some pieces onto the canvas.'); return; }
+  const pad = 6, w = x1 - x0 + 1 + pad * 2, h = y1 - y0 + 1 + pad * 2, out = document.createElement('canvas');
+  out.width = w; out.height = h;
+  out.getContext('2d').drawImage(cv, x0 - pad, y0 - pad, w, h, 0, 0, w, h);
+  const url = out.toDataURL('image/png');
+  const collage = BD.layers.map(l => ({ src: l.src, x: l.x, y: l.y, scale: l.scale, rot: l.rot }));
+  const it = BD.editItem;
+  if (it && S.items.includes(it)) {
+    it.src = url; it.collage = collage; S.sel = it.id;
+    refreshUI(); scheduleBuild();
+  } else {
+    const added = addItem(url, 'My design');
+    if (added) added.collage = collage;
+  }
+  closeBuilder(true);
+}
+
 /* ═══════════════ wiring ═══════════════ */
 document.addEventListener('DOMContentLoaded', () => {
   // phone: the cut line is shown from the start; desktop starts without it
@@ -1155,7 +1369,14 @@ document.addEventListener('DOMContentLoaded', () => {
     LIB.category = g.dataset.cat; openPanel('lib');
   });
   $('panelClose').addEventListener('click', closePanel);
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.panel) closePanel(); });
+  document.addEventListener('keydown', e => {
+    if (BD.open) {
+      if (e.key === 'Escape') closeBuilder(false);
+      else if ((e.key === 'Delete' || e.key === 'Backspace') && BD.sel >= 0 && !/^(INPUT|TEXTAREA)$/.test((e.target || {}).tagName || '')) { e.preventDefault(); bdAction('del'); }
+      return;
+    }
+    if (e.key === 'Escape' && S.panel) closePanel();
+  });
   $('libGrid').addEventListener('click', e => {
     const it = e.target.closest('.st-lib-item'); if (!it) return;
     addItem(it.dataset.src, it.dataset.label);
@@ -1178,6 +1399,7 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (a === 'size-') changeSize(it, -5);
     else if (a === 'dup') changeQty(it, 1);
     else if (a === 'del') changeQty(it, -1);
+    else if (a === 'edit' && it.collage) openBuilder(it);
   };
   $('selBar').addEventListener('click', onSelClick);
   $('ptSize').addEventListener('click', onSelClick);
@@ -1209,9 +1431,30 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   $('fabPaste').addEventListener('click', pasteFromClipboard);
+
+  // build-your-own-sticker window
+  $('tryBtn').addEventListener('click', () => openBuilder(null));
+  $('bdStart').addEventListener('click', bdStart);
+  $('bdClose').addEventListener('click', () => closeBuilder(false));
+  $('bdAdd').addEventListener('click', bdFinish);
+  $('bdClear').addEventListener('click', () => { BD.layers = []; BD.sel = -1; bdDraw(); });
+  $('bdTools').addEventListener('click', e => { const b = e.target.closest('[data-bd]'); if (b) bdAction(b.dataset.bd); });
+  $('bdGroups').addEventListener('click', e => { const g = e.target.closest('[data-bcat]'); if (g) { BD.cat = g.dataset.bcat; bdRenderTray(); } });
+  $('bdGrid').addEventListener('click', e => { const a = e.target.closest('[data-src]'); if (a) bdAddLayer(a.dataset.src); });
+  $('bdUpload').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) bdFromBlob(f); });
+  const bdc = $('bdCanvas');
+  bdc.addEventListener('pointerdown', bdPointerDown);
+  bdc.addEventListener('pointermove', bdPointerMove);
+  bdc.addEventListener('pointerup', bdPointerUp);
+  bdc.addEventListener('pointercancel', bdPointerUp);
+  bdc.addEventListener('wheel', e => {
+    const l = BD.layers[BD.sel]; if (!l) return;
+    e.preventDefault(); l.scale = clamp(l.scale * (e.deltaY < 0 ? 1.07 : 1 / 1.07), 0.1, 4); bdDraw();
+  }, { passive: false });
+  if ('ResizeObserver' in window) new ResizeObserver(bdFit).observe($('bdStage'));
   document.addEventListener('paste', e => {   // Ctrl/Cmd+V with a copied image
     const f = [...((e.clipboardData && e.clipboardData.files) || [])].find(x => /^image\//.test(x.type));
-    if (f) { e.preventDefault(); addImageBlob(f, 'Pasted photo'); }
+    if (f) { e.preventDefault(); if (BD.open) bdFromBlob(f); else addImageBlob(f, 'Pasted photo'); }
   });
   const onLayout = () => { if (DESKTOP.matches && !S.panel && LIB.category) openPanel('lib'); fitPaper(); };
   if (DESKTOP.addEventListener) DESKTOP.addEventListener('change', onLayout); else DESKTOP.addListener(onLayout);

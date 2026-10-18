@@ -7,7 +7,7 @@
 <meta name="description" content="Pick stickers, set the white holder, and arrange them on an A4 sheet automatically.">
 <meta name="robots" content="noindex, nofollow">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stickers.css?v=17">
+<link rel="stylesheet" href="stickers.css?v=18">
 </head>
 <body>
 <canvas id="bgFx" aria-hidden="true"></canvas>
@@ -32,18 +32,27 @@
           <span class="st-step"><button data-sel="qty-" id="selQtyMinus" aria-label="Fewer copies">−</button><b id="selQty"></b><button data-sel="qty+" aria-label="Add a copy">+</button></span></div>
         <div class="st-sel-grp"><span class="st-mini">Size</span>
           <span class="st-step"><button data-sel="size-" aria-label="Smaller">−</button><b id="selSize"></b><button data-sel="size+" aria-label="Bigger">+</button></span></div>
+        <button class="st-selbar-edit" id="selEdit" data-sel="edit" style="display:none;">✎ Edit design</button>
       </div>
       <div class="st-hint" id="selHint">Tap a sticker on the sheet to change it</div>
     </div>
 
     <div class="st-paper-area" id="paperArea">
       <div class="st-sheet-tabs" id="sheetTabs"></div>
+      <button class="st-try" id="tryBtn" type="button" aria-label="Try me: build your own sticker">
+        <svg class="st-try-star" viewBox="0 0 100 100" aria-hidden="true">
+          <defs><linearGradient id="tryG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9ad77a"/><stop offset=".5" stop-color="#ffc277"/><stop offset="1" stop-color="#ff6f91"/></linearGradient></defs>
+          <polygon points="50.0,3.0 57.0,21.9 68.0,6.6 67.2,26.7 83.2,16.8 74.8,35.0 93.4,32.0 78.7,45.7 97.0,50.0 78.1,57.0 93.4,68.0 73.3,67.2 83.2,83.2 65.0,74.8 68.0,93.4 54.3,78.7 50.0,97.0 43.0,78.1 32.0,93.4 32.8,73.3 16.8,83.2 25.2,65.0 6.6,68.0 21.3,54.3 3.0,50.0 21.9,43.0 6.6,32.0 26.7,32.8 16.8,16.8 35.0,25.2 32.0,6.6 45.7,21.3" fill="url(#tryG)" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/>
+        </svg>
+        <span class="st-try-label">Try<br>me</span>
+      </button>
       <div class="st-sheet-wrap" id="sheetWrap"><canvas id="sheetCanvas" width="1050" height="1485"></canvas><canvas id="fxCanvas" aria-hidden="true"></canvas>
         <!-- phone only: tiny tools that sit right next to the tapped sticker -->
         <div class="st-pt" id="ptSize" style="display:none;">
           <button data-sel="size-" aria-label="Smaller">−</button><button data-sel="size+" aria-label="Bigger">+</button></div>
         <div class="st-pt st-pt-v" id="ptSide" style="display:none;">
           <button data-sel="dup" aria-label="Duplicate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg></button>
+          <button id="ptEdit" data-sel="edit" aria-label="Edit design" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></button>
           <button class="del" data-sel="del" aria-label="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5"/></svg></button></div>
       </div>
       <div class="st-paper-hint" id="sheetEmpty">Pick a group,<br>then tap stickers to add them</div>
@@ -94,10 +103,51 @@
   <input type="file" id="uploadInput" accept="image/png,image/webp,image/jpeg" style="display:none">
 </main>
 
+<!-- BUILD YOUR OWN STICKER: separate window -->
+<div class="bd" id="builder" hidden role="dialog" aria-modal="true" aria-labelledby="bdTitle">
+  <div class="bd-win">
+    <header class="bd-head">
+      <h2 id="bdTitle">Build your own sticker</h2>
+      <button class="bd-x" id="bdClose" aria-label="Close">✕</button>
+    </header>
+
+    <div class="bd-intro" id="bdIntro">
+      <div class="bd-intro-art" aria-hidden="true">✦</div>
+      <h3>Build your own sticker</h3>
+      <p>Mix any assets from the library into one brand-new sticker. Move, resize, rotate and layer the pieces however you like, then add your creation to the sheet — you can come back and edit it any time.</p>
+      <ol class="bd-steps"><li><b>1</b> Pick assets</li><li><b>2</b> Arrange them</li><li><b>3</b> Add to sheet</li></ol>
+      <button class="st-btn bd-start" id="bdStart">Start building</button>
+    </div>
+
+    <div class="bd-main" id="bdMain" hidden>
+      <div class="bd-stage" id="bdStage">
+        <canvas id="bdCanvas"></canvas>
+        <div class="bd-empty" id="bdEmpty">Tap an asset to add it</div>
+      </div>
+      <div class="bd-tools" id="bdTools">
+        <div class="bd-tool-hint" id="bdToolHint"></div>
+        <div class="bd-tgrp"><button data-bd="scale-" aria-label="Smaller">−</button><span>Size</span><button data-bd="scale+" aria-label="Bigger">+</button></div>
+        <div class="bd-tgrp"><button data-bd="rot-" aria-label="Rotate left">↺</button><span>Rotate</span><button data-bd="rot+" aria-label="Rotate right">↻</button></div>
+        <div class="bd-tgrp"><button data-bd="back">Back</button><span>Layer</span><button data-bd="front">Front</button></div>
+        <div class="bd-tgrp"><button data-bd="dup">Copy</button><button class="del" data-bd="del">Delete</button></div>
+      </div>
+      <div class="bd-tray">
+        <div class="bd-groups" id="bdGroups"></div>
+        <div class="bd-grid" id="bdGrid"></div>
+      </div>
+      <footer class="bd-foot">
+        <button class="st-btn ghost" id="bdClear">Clear</button>
+        <button class="st-btn" id="bdAdd">Add to sheet</button>
+      </footer>
+    </div>
+    <input type="file" id="bdUpload" accept="image/png,image/webp,image/jpeg" style="display:none">
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js?v=10"></script>
-<script src="stickers.js?v=13"></script>
+<script src="stickers.js?v=14"></script>
 </body>
 </html>
