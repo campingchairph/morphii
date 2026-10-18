@@ -182,16 +182,17 @@ h1,h2,h3,.st-logo{font-family:'Baloo 2',cursive;}
 }
 
 /* ═══════════ "TRY ME" ninja-star button ═══════════ */
-.st-try{position:absolute;top:0;right:0;z-index:5;width:66px;height:66px;border:none;background:none;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;animation:stBob 2.6s ease-in-out infinite;filter:drop-shadow(0 4px 8px rgba(255,111,145,.45));}
+.st-try{position:absolute;top:0;right:0;z-index:5;width:78px;height:78px;border:none;background:none;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;animation:stBob 2.6s ease-in-out infinite;filter:drop-shadow(0 4px 8px rgba(255,111,145,.45));}
 .st-try-star{position:absolute;inset:0;width:100%;height:100%;animation:stSpin 14s linear infinite;}
-.st-try-label{position:relative;font-family:'Baloo 2',cursive;font-weight:800;font-size:13px;line-height:.95;text-align:center;color:var(--ink);text-shadow:0 1px 0 rgba(255,255,255,.7);}
+.st-try-label{position:relative;display:flex;flex-direction:column;align-items:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:9.5px;line-height:.95;text-align:center;color:var(--ink);text-shadow:0 1px 0 rgba(255,255,255,.7);}
+.st-try-label b{font-size:17px;line-height:.9;color:#d6154f;letter-spacing:.5px;text-shadow:0 1px 0 rgba(255,255,255,.85);}
 .st-try:hover{animation-duration:1.2s;}
 .st-try:hover .st-try-star{animation-duration:3s;}
 .st-try:active{transform:scale(.92);}
 @keyframes stSpin{to{transform:rotate(360deg);}}
 @keyframes stBob{0%,100%{transform:translateY(0) scale(1);}50%{transform:translateY(-3px) scale(1.07);}}
 @media(prefers-reduced-motion:reduce){.st-try,.st-try-star{animation:none;}}
-@media(min-width:901px){.st-try{width:78px;height:78px;top:4px;right:4px;}.st-try-label{font-size:15px;}}
+@media(min-width:901px){.st-try{width:92px;height:92px;top:4px;right:4px;}.st-try-label{font-size:11px;}.st-try-label b{font-size:20px;}}
 
 /* ═══════════ BUILD YOUR OWN STICKER window ═══════════ */
 .st-selbar-edit{border:none;border-radius:14px;padding:0 11px;height:26px;background:#fff;color:var(--ink);font-size:12px;font-weight:800;cursor:pointer;}
