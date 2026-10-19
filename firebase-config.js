@@ -452,6 +452,144 @@ async function pushFileToGithub(repoPath, base64Content, commitMessage) {
   return res.json();
 }
 
+/* ── STICKER DESIGNERS (marketplace) ───────────
+   Designers sign in with Google and get a profile in morphii_designers/{uid}:
+     { uid, email, displayName, uploadsEver, paidListed, paidSlots, paidUntil?, lastStickerId?, lastDeletedId?, createdAt }
+   uploadsEver  lifetime upload counter. It can ONLY go up (rules), so the 5 free uploads are
+                never replenished — not even when the designer deletes stickers.
+   Upload #1–#5 are free for life. Every upload after that needs an active pass: ₱1 per
+   sticker slot for 30 days (paidSlots / paidUntil are set by an admin after the payment is
+   confirmed). paidListed = how many paid-tier (#6+) stickers are currently kept.
+   Stickers live in morphii_designer_stickers/{id} (metadata + small thumb) with the full
+   image in the sub-document data/full. New stickers are 'pending' until an admin approves.
+   Payments are manual (GCash/Shopee): designers file a request in morphii_designer_payments,
+   an admin confirms it and the pass is activated. Designers keep 80% of every sale. */
+const DESIGNER_FREE_UPLOADS = 5;
+const DESIGNER_PESO_PER_SLOT = 1;
+const DESIGNER_PASS_DAYS = 30;
+const DESIGNER_REVENUE_SHARE = 0.8;
+const DESIGNER_PRICE_MAX = 99;
+
+const _dCol = () => DB.collection('morphii_designers');
+const _sCol = () => DB.collection('morphii_designer_stickers');
+const _pCol = () => DB.collection('morphii_designer_payments');
+const _serverTs = () => firebase.firestore.FieldValue.serverTimestamp();
+const _withId = d => (d.exists ? Object.assign({ id: d.id }, d.data()) : null);
+const _ms = t => (t && t.toMillis ? t.toMillis() : 0);
+
+// is this sticker visible in the public premium library right now?
+function designerStickerLive(st) {
+  return st.status === 'approved' && (st.seq <= DESIGNER_FREE_UPLOADS || _ms(st.paidUntil) > Date.now());
+}
+async function getDesigner(uid) {
+  if (!DB) return null;
+  return _withId(await _dCol().doc(uid).get());
+}
+async function createDesigner(user, displayName) {
+  if (!DB) throw new Error('Firebase not configured yet');
+  await _dCol().doc(user.uid).set({
+    uid: user.uid, email: user.email || '', displayName: String(displayName).slice(0, 40),
+    uploadsEver: 0, paidListed: 0, paidSlots: 0, createdAt: _serverTs(),
+  });
+  return getDesigner(user.uid);
+}
+async function renameDesigner(uid, displayName) {
+  await _dCol().doc(uid).update({ displayName: String(displayName).slice(0, 40) });
+}
+async function getMyDesignerStickers(uid) {
+  const snap = await _sCol().where('designerId', '==', uid).get();
+  return snap.docs.map(_withId).sort((a, b) => b.seq - a.seq);
+}
+// One atomic batch: the sticker, its full image, and the counter bump. The rules only allow
+// the counter to rise by exactly one together with a matching sticker, so quota can't be skipped.
+async function uploadDesignerSticker(d, s) {
+  const seq = d.uploadsEver + 1, paid = seq > DESIGNER_FREE_UPLOADS;
+  const ref = _sCol().doc(), batch = DB.batch();
+  batch.set(ref, {
+    designerId: d.uid, designerName: d.displayName, name: String(s.name).slice(0, 40), seq,
+    price: s.price, status: 'pending', thumb: s.thumb, w: s.w, h: s.h,
+    paidUntil: paid ? (d.paidUntil || null) : null, createdAt: _serverTs(),
+  });
+  batch.set(ref.collection('data').doc('full'), { png: s.full });
+  const upd = { uploadsEver: seq, lastStickerId: ref.id };
+  if (paid) upd.paidListed = d.paidListed + 1;
+  batch.update(_dCol().doc(d.uid), upd);
+  await batch.commit();
+  return ref.id;
+}
+// Deleting never gives the upload back (uploadsEver is untouched); it only frees a paid slot.
+async function deleteDesignerSticker(d, st) {
+  const ref = _sCol().doc(st.id), batch = DB.batch();
+  batch.delete(ref.collection('data').doc('full'));
+  batch.delete(ref);
+  if (st.seq > DESIGNER_FREE_UPLOADS) batch.update(_dCol().doc(d.uid), { paidListed: Math.max(0, d.paidListed - 1), lastDeletedId: st.id });
+  await batch.commit();
+}
+async function updateDesignerSticker(id, fields) {
+  await _sCol().doc(id).update({ name: String(fields.name).slice(0, 40), price: fields.price });
+}
+async function getApprovedDesignerStickers() {
+  if (!DB) return [];
+  try {
+    const snap = await _sCol().where('status', '==', 'approved').limit(500).get();
+    return snap.docs.map(_withId).filter(designerStickerLive).sort((a, b) => _ms(b.createdAt) - _ms(a.createdAt));
+  } catch (e) { return []; }
+}
+async function getDesignerStickerFull(id) {
+  const d = await _sCol().doc(id).collection('data').doc('full').get();
+  return d.exists ? d.data().png : null;
+}
+async function requestDesignerPayment(d, slots, ref) {
+  await _pCol().add({
+    designerId: d.uid, designerName: d.displayName, slots, amount: slots * DESIGNER_PESO_PER_SLOT,
+    ref: String(ref || '').slice(0, 60), status: 'pending', createdAt: _serverTs(),
+  });
+}
+async function getMyDesignerPayments(uid) {
+  const snap = await _pCol().where('designerId', '==', uid).get();
+  return snap.docs.map(_withId).sort((a, b) => _ms(b.createdAt) - _ms(a.createdAt));
+}
+// how designers are told to pay (GCash name/number + instructions) — editable by admins
+async function getDesignerPayInfo() {
+  if (!DB) return {};
+  try { const d = await DB.collection('morphii_config').doc('designerPay').get(); return (d.exists && d.data()) || {}; }
+  catch (e) { return {}; }
+}
+async function saveDesignerPayInfo(cfg) {
+  return DB.collection('morphii_config').doc('designerPay').set({
+    gcashName: cfg.gcashName || '', gcashNumber: cfg.gcashNumber || '', note: cfg.note || '',
+  });
+}
+// ── admin only (enforced by the Firestore rules, not just the UI)
+async function adminGetDesignerStickers(status) {
+  const snap = await _sCol().where('status', '==', status).get();
+  return snap.docs.map(_withId).sort((a, b) => _ms(a.createdAt) - _ms(b.createdAt));
+}
+async function adminSetStickerStatus(id, status) { await _sCol().doc(id).update({ status }); }
+async function adminGetDesigners() {
+  const snap = await _dCol().get();
+  return snap.docs.map(_withId).sort((a, b) => _ms(b.createdAt) - _ms(a.createdAt));
+}
+async function adminGetPayments(status) {
+  const snap = await _pCol().where('status', '==', status).get();
+  return snap.docs.map(_withId).sort((a, b) => _ms(a.createdAt) - _ms(b.createdAt));
+}
+// Confirms a payment: grants `slots` paid slots and 30 more days, then stamps the new expiry
+// on the designer's paid-tier stickers so the library keeps (or restores) them.
+async function adminApprovePayment(pay) {
+  const dref = _dCol().doc(pay.designerId), dsnap = await dref.get();
+  if (!dsnap.exists) throw new Error('Designer not found');
+  const cur = _ms(dsnap.data().paidUntil), base = Math.max(Date.now(), cur);
+  const until = firebase.firestore.Timestamp.fromMillis(base + DESIGNER_PASS_DAYS * 86400000);
+  const stickers = (await _sCol().where('designerId', '==', pay.designerId).get()).docs.filter(x => x.data().seq > DESIGNER_FREE_UPLOADS);
+  const batch = DB.batch();
+  batch.update(_pCol().doc(pay.id), { status: 'approved', decidedAt: _serverTs() });
+  batch.update(dref, { paidSlots: pay.slots, paidUntil: until });
+  stickers.slice(0, 400).forEach(x => batch.update(x.ref, { paidUntil: until }));
+  await batch.commit();
+}
+async function adminRejectPayment(id) { await _pCol().doc(id).update({ status: 'rejected', decidedAt: _serverTs() }); }
+
 /* ── Firestore Security Rules ──────────────────
    Publish these in Firebase Console → Firestore → Rules:
 
@@ -466,7 +604,6 @@ async function pushFileToGithub(repoPath, base64Content, commitMessage) {
        match /morphii_config/{docId} {
          allow read: if true;
          allow write: if request.auth != null
-           && request.auth.token.email_verified == true
            && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
        }
        match /morphii_costs/{costId} {
@@ -501,6 +638,105 @@ async function pushFileToGithub(repoPath, base64Content, commitMessage) {
        }
        match /morphii_funeral/{docId} {
          allow read, write: if request.auth != null
+           && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+       }
+       match /morphii_designers/{uid} {
+         allow read: if request.auth != null
+           && (request.auth.uid == uid
+               || request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com']);
+         allow create: if request.auth != null && request.auth.uid == uid
+           && request.resource.data.keys().hasOnly(['uid','email','displayName','uploadsEver','paidListed','paidSlots','createdAt'])
+           && request.resource.data.uid == uid
+           && request.resource.data.uploadsEver == 0
+           && request.resource.data.paidListed == 0
+           && request.resource.data.paidSlots == 0
+           && request.resource.data.displayName is string
+           && request.resource.data.displayName.size() <= 40;
+         allow update: if (request.auth != null
+             && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'])
+           || (request.auth != null && request.auth.uid == uid && (
+               // rename
+               request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName'])
+               // upload #1-#5: the free lifetime points (counter can only rise by 1, with a matching sticker)
+               || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uploadsEver','lastStickerId'])
+                   && request.resource.data.uploadsEver == resource.data.uploadsEver + 1
+                   && request.resource.data.uploadsEver <= 5
+                   && getAfter(/databases/$(database)/documents/morphii_designer_stickers/$(request.resource.data.lastStickerId)).data.seq == request.resource.data.uploadsEver
+                   && getAfter(/databases/$(database)/documents/morphii_designer_stickers/$(request.resource.data.lastStickerId)).data.designerId == uid)
+               // upload #6+: needs an active pass with a free slot
+               || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uploadsEver','lastStickerId','paidListed'])
+                   && request.resource.data.uploadsEver == resource.data.uploadsEver + 1
+                   && request.resource.data.uploadsEver > 5
+                   && resource.data.get('paidUntil', null) != null
+                   && resource.data.paidUntil > request.time
+                   && request.resource.data.paidListed == resource.data.paidListed + 1
+                   && request.resource.data.paidListed <= resource.data.paidSlots
+                   && getAfter(/databases/$(database)/documents/morphii_designer_stickers/$(request.resource.data.lastStickerId)).data.seq == request.resource.data.uploadsEver
+                   && getAfter(/databases/$(database)/documents/morphii_designer_stickers/$(request.resource.data.lastStickerId)).data.designerId == uid)
+               // deleting a paid sticker frees its slot (never the lifetime counter)
+               || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['paidListed','lastDeletedId'])
+                   && request.resource.data.paidListed == resource.data.paidListed - 1
+                   && request.resource.data.paidListed >= 0
+                   && !existsAfter(/databases/$(database)/documents/morphii_designer_stickers/$(request.resource.data.lastDeletedId))
+                   && get(/databases/$(database)/documents/morphii_designer_stickers/$(request.resource.data.lastDeletedId)).data.seq > 5
+                   && get(/databases/$(database)/documents/morphii_designer_stickers/$(request.resource.data.lastDeletedId)).data.designerId == uid)
+             ));
+         allow delete: if false;
+       }
+       match /morphii_designer_stickers/{sid} {
+         allow read: if resource.data.status == 'approved'
+           || (request.auth != null && resource.data.designerId == request.auth.uid)
+           || (request.auth != null && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com']);
+         allow create: if request.auth != null
+           && request.resource.data.designerId == request.auth.uid
+           && request.resource.data.keys().hasOnly(['designerId','designerName','name','seq','price','status','thumb','w','h','paidUntil','createdAt'])
+           && request.resource.data.status == 'pending'
+           && request.resource.data.price is int && request.resource.data.price >= 0 && request.resource.data.price <= 99
+           && request.resource.data.name is string && request.resource.data.name.size() <= 40
+           && request.resource.data.thumb is string && request.resource.data.thumb.size() < 60000
+           && request.resource.data.seq == getAfter(/databases/$(database)/documents/morphii_designers/$(request.auth.uid)).data.uploadsEver
+           && getAfter(/databases/$(database)/documents/morphii_designers/$(request.auth.uid)).data.uploadsEver
+              == get(/databases/$(database)/documents/morphii_designers/$(request.auth.uid)).data.uploadsEver + 1
+           && (request.resource.data.seq <= 5
+               ? request.resource.data.paidUntil == null
+               : request.resource.data.paidUntil == get(/databases/$(database)/documents/morphii_designers/$(request.auth.uid)).data.get('paidUntil', null));
+         allow update: if (request.auth != null
+             && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'])
+           || (request.auth != null && resource.data.designerId == request.auth.uid
+               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','price'])
+               && request.resource.data.price is int && request.resource.data.price >= 0 && request.resource.data.price <= 99);
+         allow delete: if request.auth != null
+           && (resource.data.designerId == request.auth.uid
+               || request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com']);
+         match /data/{docId} {
+           allow read: if (request.auth != null && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'])
+             || (request.auth != null && get(/databases/$(database)/documents/morphii_designer_stickers/$(sid)).data.designerId == request.auth.uid)
+             || (get(/databases/$(database)/documents/morphii_designer_stickers/$(sid)).data.status == 'approved'
+                 && get(/databases/$(database)/documents/morphii_designer_stickers/$(sid)).data.price == 0);
+           // only as part of creating a brand-new sticker
+           allow create: if request.auth != null
+             && !exists(/databases/$(database)/documents/morphii_designer_stickers/$(sid))
+             && existsAfter(/databases/$(database)/documents/morphii_designer_stickers/$(sid))
+             && getAfter(/databases/$(database)/documents/morphii_designer_stickers/$(sid)).data.designerId == request.auth.uid
+             && request.resource.data.keys().hasOnly(['png'])
+             && request.resource.data.png is string && request.resource.data.png.size() < 900000;
+           allow delete: if request.auth != null
+             && (get(/databases/$(database)/documents/morphii_designer_stickers/$(sid)).data.designerId == request.auth.uid
+                 || request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com']);
+         }
+       }
+       match /morphii_designer_payments/{pid} {
+         allow create: if request.auth != null
+           && request.resource.data.designerId == request.auth.uid
+           && request.resource.data.keys().hasOnly(['designerId','designerName','slots','amount','ref','status','createdAt'])
+           && request.resource.data.status == 'pending'
+           && request.resource.data.slots is int && request.resource.data.slots >= 1 && request.resource.data.slots <= 2000
+           && request.resource.data.amount == request.resource.data.slots
+           && request.resource.data.ref is string && request.resource.data.ref.size() <= 60;
+         allow read: if request.auth != null
+           && (resource.data.designerId == request.auth.uid
+               || request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com']);
+         allow update, delete: if request.auth != null
            && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
        }
      }

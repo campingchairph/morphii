@@ -70,7 +70,8 @@ const S = {
   sel: null,            // id of the item whose sticker is selected (tapped on the sheet)
   stats: { stickers: 0, usedPct: 0 },
 };
-let LIB = { sets: {}, order: {}, collection: 'shared', category: null, hidden: new Set(), isAdmin: false };
+let LIB = { sets: {}, order: {}, collection: 'shared', category: null, hidden: new Set(), isAdmin: false,
+  source: 'main', premium: { loaded: false, loading: false, list: [] } };   // source: 'main' library or the designers' 'premium' library
 let nextId = 1;
 let buildGen = 0;
 let buildTimer = null;
@@ -185,16 +186,38 @@ function groupThumb(c) {
 }
 const ICON_PASTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M9 5H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-3"/><path d="M9 12h6M9 16h6"/></svg>';
 const ICON_UPLOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>';
+const ICON_STAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9L12 3z"/></svg>';
+// the Premium Library: approved stickers uploaded by designer accounts, one group per designer
+function premiumCategories() {
+  const by = {};
+  LIB.premium.list.forEach(st => {
+    (by[st.designerId] = by[st.designerId] || { key: 'p:' + st.designerId, label: st.designerName, shown: st.designerName, items: [] }).items.push({
+      label: st.name, src: st.thumb, name: '', premium: { id: st.id, price: st.price || 0, designer: st.designerName },
+    });
+  });
+  return Object.values(by).sort((a, b) => a.label.localeCompare(b.label));
+}
+const libCategories = () => (LIB.source === 'premium' ? premiumCategories() : allCategories(LIB.isAdmin));
+async function setSource(name) {
+  LIB.source = name; LIB.category = null;
+  if (name === 'premium' && !LIB.premium.loaded && !LIB.premium.loading) {
+    LIB.premium.loading = true; renderLibrary();
+    try { LIB.premium.list = await getApprovedDesignerStickers(); } catch (e) { LIB.premium.list = []; }
+    LIB.premium.loaded = true; LIB.premium.loading = false;
+  }
+  openPanel('lib');
+}
 const ICON_ADMIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6l8-3z"/></svg>';
 
 // the menu along the bottom: tools first, then every group of the library as a thumbnail
 function renderLibrary() {
-  const cats = allCategories(LIB.isAdmin);
+  const cats = libCategories();
   if (!cats.find(c => c.key === LIB.category)) LIB.category = cats.length ? cats[0].key : null;
   const strip = $('libCats'), keep = strip.scrollLeft;
   const tool = (name, label, icon) =>
     '<button class="st-group tool' + (S.panel === name ? ' active' : '') + '" data-panel="' + name + '"><div class="th">' + icon + '</div><span>' + label + '</span></button>';
   strip.innerHTML =
+    '<button class="st-group tool' + (LIB.source === 'premium' ? ' active' : '') + '" data-act="source"><div class="th">' + ICON_STAR + '</div><span>' + (LIB.source === 'premium' ? 'Main' : 'Premium') + '</span></button>' +
     '<label class="st-group tool desk" for="uploadInput"><div class="th">' + ICON_UPLOAD + '</div><span>Upload</span></label>' +
     '<button class="st-group tool desk" data-act="paste"><div class="th">' + ICON_PASTE + '</div><span>Paste</span></button>' +
     (LIB.isAdmin ? tool('admin', 'Admin', ICON_ADMIN) : '') +
@@ -202,19 +225,26 @@ function renderLibrary() {
     cats.map(c =>
       '<button class="st-group' + (S.panel === 'lib' && c.key === LIB.category ? ' active' : '') + (LIB.hidden.has(c.key) ? ' is-hidden' : '') + '" data-cat="' + esc(c.key) + '">' +
       '<div class="th"><img loading="lazy" src="' + esc(groupThumb(c)) + '" alt=""></div><span>' + esc(c.shown) + '</span></button>').join('');
+  if (LIB.source === 'premium' && !cats.length) strip.insertAdjacentHTML('beforeend', '<span class="st-prem-note">' + (LIB.premium.loading ? 'Loading designers…' : 'No designer stickers yet') + '</span>');
   strip.scrollLeft = keep;
   renderGrid();
 }
 // all the assets of the chosen group, shown in the bottom pop-up
 function renderGrid() {
-  const cat = allCategories(LIB.isAdmin).find(c => c.key === LIB.category);
-  if (!cat) { $('libGrid').innerHTML = '<div class="st-empty">Nothing here yet.</div>'; updatePanelHead(null); return; }
+  const cat = libCategories().find(c => c.key === LIB.category);
+  if (!cat) {
+    $('libGrid').innerHTML = LIB.source === 'premium'
+      ? '<div class="st-empty">' + (LIB.premium.loading ? 'Loading the Premium Library…' : 'No designer stickers yet.<br><a href="designer.html">Become a designer →</a>') + '</div>'
+      : '<div class="st-empty">Nothing here yet.</div>';
+    delete $('libGrid').dataset.cat; updatePanelHead(null); return;
+  }
   const items = cat.items.slice().sort((a, b) =>
     (STICKER_LOGO_RE.test(b.name) ? 1 : 0) - (STICKER_LOGO_RE.test(a.name) ? 1 : 0) || a.label.localeCompare(b.label));
   const same = $('libGrid').dataset.cat === cat.key;
   if (!same) {
-    $('libGrid').innerHTML = items.map(it =>
-      '<div class="st-lib-item" data-src="' + esc(it.src) + '" data-label="' + esc(it.label) + '"><img loading="lazy" src="' + esc(it.src) + '" alt=""></div>').join('');
+    $('libGrid').innerHTML = items.map(it => it.premium
+      ? '<div class="st-lib-item" data-pid="' + esc(it.premium.id) + '"><img loading="lazy" src="' + esc(it.src) + '" alt=""><span class="st-ptag' + (it.premium.price ? '' : ' free') + '">' + (it.premium.price ? '₱' + it.premium.price : 'Free') + '</span></div>'
+      : '<div class="st-lib-item" data-src="' + esc(it.src) + '" data-label="' + esc(it.label) + '"><img loading="lazy" src="' + esc(it.src) + '" alt=""></div>').join('');
     $('libGrid').dataset.cat = cat.key;
     $('pane-lib').parentElement.scrollTop = 0;
   }
@@ -223,7 +253,7 @@ function renderGrid() {
 }
 function updatePanelHead(cat) {
   const t = $('panelTitle'), sub = $('panelSub');
-  if (S.panel === 'lib') { t.textContent = cat ? cat.shown : 'Stickers'; sub.textContent = 'Tap to add · tap again for more'; }
+  if (S.panel === 'lib') { t.textContent = cat ? cat.shown : (LIB.source === 'premium' ? 'Premium Library' : 'Stickers'); sub.textContent = LIB.source === 'premium' ? 'By designers · tap to add' : 'Tap to add · tap again for more'; }
   else if (S.panel === 'admin') { t.textContent = 'Admin'; sub.textContent = ''; }
 }
 function openPanel(name) {
@@ -696,6 +726,8 @@ function renderSummary() {
     lo === hi ? 'All ' + lo + ' mm' : 'Mixed ' + lo + '–' + hi + ' mm',
   ];
   if (sheets) parts.push(sheets + ' sheet' + (sheets > 1 ? 's' : ''), Math.round(S.stats.usedPct) + '% used');
+  const prem = S.items.filter(i => i.premium && i.premium.price).reduce((n, i) => n + i.premium.price, 0);
+  if (prem) parts.push('Premium ₱' + prem);
   box.innerHTML =
     '<div class="st-sum-line"><b class="n">' + total + '</b><b>sticker' + (total !== 1 ? 's' : '') + '</b>' +
     parts.map(t => '<i class="sep">|</i><span class="dim">' + t + '</span>').join('') + '</div>' +
@@ -973,6 +1005,15 @@ function addItem(src, label) {
   FX.queue.push({ id: it.id, k: it.qty - 1 });
   refreshUI(); scheduleBuild();
   return it;
+}
+async function addPremium(pid) {
+  const st = LIB.premium.list.find(x => x.id === pid); if (!st) return;
+  let src = st.thumb;
+  if (!st.price) {                                   // free for everyone: use the full-resolution image
+    try { src = (await getDesignerStickerFull(pid)) || st.thumb; } catch (e) { src = st.thumb; }
+  }
+  const it = addItem(src, st.name);
+  if (it) it.premium = { id: pid, price: st.price || 0, designer: st.designerName };
 }
 function changeQty(it, d) {
   if (d > 0 && totalQty() >= MAX_INSTANCES) return;
@@ -1357,6 +1398,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // library menu (bottom) + pop-up
   $('libCats').addEventListener('click', e => {
     if (e.target.closest('[data-act="paste"]')) { pasteFromClipboard(); return; }
+    if (e.target.closest('[data-act="source"]')) { setSource(LIB.source === 'premium' ? 'main' : 'premium'); return; }
     const tool = e.target.closest('[data-panel]');
     if (tool) {
       const n = tool.dataset.panel;
@@ -1379,6 +1421,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   $('libGrid').addEventListener('click', e => {
     const it = e.target.closest('.st-lib-item'); if (!it) return;
+    if (it.dataset.pid) { addPremium(it.dataset.pid); return; }
     addItem(it.dataset.src, it.dataset.label);
   });
   $('uploadInput').addEventListener('change', e => { handleUpload(e.target.files[0]); e.target.value = ''; });

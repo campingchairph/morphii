@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Designer Studio — Sell Your Stickers | Morphii</title>
+<meta name="description" content="Upload your sticker designs to Morphii's premium library and earn when customers use them.">
+<meta name="robots" content="noindex, nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="designer.css?v=1">
+</head>
+<body>
+
+<header class="ds-header">
+  <div class="ds-logo">morphii<span class="dot">.</span> <small>Designer Studio</small></div>
+  <div class="ds-head-right">
+    <span class="ds-user" id="userLine"></span>
+    <button class="ds-link" id="signOutBtn" hidden>Sign out</button>
+    <a class="ds-link" href="stickers.html">← Sticker sheets</a>
+  </div>
+</header>
+
+<main class="ds-main">
+
+  <!-- 1 · signed out -->
+  <section id="viewOut" hidden>
+    <div class="ds-hero">
+      <h1>Sell your stickers on Morphii</h1>
+      <p>Upload your own sticker designs to the Premium Library. Customers add them to their sticker sheets — and you earn <b>80%</b> every time one is used.</p>
+      <button class="ds-btn ds-google" id="googleBtn">Continue with Google</button>
+      <div class="ds-err" id="signErr"></div>
+    </div>
+    <div class="ds-rules">
+      <div class="ds-rule"><b>5 free uploads</b><span>Every designer account gets 5 free uploads for life. They never come back — deleting a sticker does not give the upload back.</span></div>
+      <div class="ds-rule"><b>₱1 per extra sticker</b><span>After your 5 free uploads, each additional sticker costs ₱1 for every 30 days it stays listed.</span></div>
+      <div class="ds-rule"><b>We review first</b><span>Every upload is checked before it appears in the library. Only upload your own original work.</span></div>
+      <div class="ds-rule"><b>You set the price</b><span>Choose ₱0 (free for everyone) up to ₱99 per sticker. You keep 80% of each sale.</span></div>
+    </div>
+  </section>
+
+  <!-- 2 · signed in, no designer account yet -->
+  <section id="viewCreate" hidden>
+    <div class="ds-card">
+      <h2>Create your designer account</h2>
+      <p class="ds-sub">This name appears under your stickers in the library.</p>
+      <label class="ds-label" for="nameInput">Designer name</label>
+      <input class="ds-input" id="nameInput" maxlength="40" placeholder="e.g. Mara's Doodles">
+      <label class="ds-check"><input type="checkbox" id="agreeBox"> I will only upload original designs that I own the rights to, and I understand that my 5 free uploads are lifetime and cannot be restored.</label>
+      <button class="ds-btn" id="createBtn">Create designer account</button>
+      <div class="ds-err" id="createErr"></div>
+    </div>
+  </section>
+
+  <!-- 3 · dashboard -->
+  <section id="viewDash" hidden>
+    <div class="ds-card ds-points">
+      <div class="ds-points-top">
+        <div><span class="ds-big" id="freeLeft">5</span><span class="ds-of"> / 5 free uploads left</span></div>
+        <div class="ds-dots" id="dots" aria-hidden="true"></div>
+      </div>
+      <p class="ds-note">Free uploads are yours for life and <b>never come back</b> — even if you delete a sticker.</p>
+      <div class="ds-next" id="nextLine"></div>
+    </div>
+
+    <div class="ds-card">
+      <h2>Upload a sticker</h2>
+      <div class="ds-upload">
+        <label class="ds-drop" id="dropArea" for="fileInput">
+          <img id="prevImg" alt="" hidden>
+          <span id="dropText">Choose an image<br><small>PNG with a transparent background works best</small></span>
+        </label>
+        <input type="file" id="fileInput" accept="image/png,image/webp,image/jpeg" hidden>
+        <div class="ds-upload-form">
+          <label class="ds-label" for="stName">Sticker name</label>
+          <input class="ds-input" id="stName" maxlength="40" placeholder="e.g. Happy mango">
+          <label class="ds-label" for="stPrice">Price for customers (₱)</label>
+          <input class="ds-input" id="stPrice" type="number" min="0" max="99" step="1" value="5">
+          <div class="ds-earn" id="earnLine"></div>
+          <button class="ds-btn" id="uploadBtn" disabled>Upload for review</button>
+          <div class="ds-msg" id="uploadMsg"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-card">
+      <h2>Designer pass <span class="ds-chip" id="passChip"></span></h2>
+      <p class="ds-sub">Needed for upload #6 and beyond: <b>₱1 per sticker slot, for 30 days</b>. Slots hold your paid stickers (#6+). Pay by GCash, then tell us below — we confirm it and switch your pass on.</p>
+      <div class="ds-stats" id="passStats"></div>
+      <div class="ds-pay" id="payInfo"></div>
+      <div class="ds-pay-form">
+        <div><label class="ds-label" for="slotsInput">Slots to activate</label><input class="ds-input" id="slotsInput" type="number" min="1" max="2000" value="10"></div>
+        <div><label class="ds-label" for="refInput">GCash reference no.</label><input class="ds-input" id="refInput" maxlength="60" placeholder="From your GCash receipt"></div>
+        <button class="ds-btn" id="payBtn">I've paid ₱<span id="payAmt">10</span></button>
+      </div>
+      <div class="ds-msg" id="payMsg"></div>
+      <div id="payList"></div>
+    </div>
+
+    <div class="ds-card">
+      <h2>Your stickers <span class="ds-count" id="myCount"></span></h2>
+      <div class="ds-grid" id="myGrid"></div>
+    </div>
+  </section>
+
+  <div class="ds-loading" id="loading">Loading…</div>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js?v=11"></script>
+<script src="designer.js?v=1"></script>
+</body>
+</html>
