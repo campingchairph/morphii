@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>Designers Admin — Morphii</title>
+<title>Stickers Admin — Morphii</title>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -66,18 +66,34 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
 
 <div id="adminScreen">
   <div class="hd">
-    <div class="logo">morphii<span>.</span> designers</div>
+    <div class="logo">morphii<span>.</span> stickers</div>
     <div class="hd-r"><span id="who"></span><a href="orders-admin.html">Orders</a><button class="link" id="outBtn">Sign out</button></div>
   </div>
   <div class="main">
     <div class="tabs">
-      <button class="tab on" data-tab="review">Review <span class="n" id="nReview">0</span></button>
+      <button class="tab on" data-tab="orders">Sheet orders <span class="n" id="nOrders">0</span></button>
+      <button class="tab" data-tab="pricing">Sheet pricing</button>
+      <button class="tab" data-tab="review">Review <span class="n" id="nReview">0</span></button>
       <button class="tab" data-tab="pay">Payments <span class="n" id="nPay">0</span></button>
       <button class="tab" data-tab="designers">Designers</button>
       <button class="tab" data-tab="settings">Payment details</button>
     </div>
 
-    <div id="tab-review">
+    <div id="tab-orders">
+      <div class="card"><h2>Sticker sheet orders</h2>
+        <p class="hint">Customers pay on Shopee and send their order number in chat. <b>Open layout</b> loads the sheets so you can download the print PNG and cut-line SVG. For phone orders, <b>Send text</b> opens your messaging app with the confirmation already written.</p>
+        <div id="orderList"></div></div>
+    </div>
+
+    <div id="tab-pricing" hidden>
+      <div class="card"><h2>Price per A4 sheet</h2>
+        <p class="hint">The tier with the biggest “from” that the customer’s sheet count reaches sets the price for every sheet. Customers see the total before they send.</p>
+        <div id="tierRows"></div>
+        <div class="row" style="display:flex;gap:10px;margin-top:10px;"><button class="btn ghost" id="tierAdd">+ Add tier</button><button class="btn" id="tierSave">Save pricing</button></div>
+      </div>
+    </div>
+
+    <div id="tab-review" hidden>
       <div class="card"><h2>Stickers waiting for review</h2>
         <p class="hint">Approve only original work. Approved stickers appear in the Premium Library right away (free-tier uploads always; paid-tier uploads while the designer’s pass is active).</p>
         <div class="grid" id="reviewGrid"></div></div>
@@ -110,7 +126,7 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js?v=11"></script>
+<script src="firebase-config.js?v=12"></script>
 <script>
 (function () {
   'use strict';
@@ -122,11 +138,12 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
   // every action re-checks the live admin sign-in; the Firestore rules are the real lock
   const guard = () => { const u = AUTH && AUTH.currentUser; if (!(u && isAdmin(u))) throw new Error('Admin sign-in required'); };
 
-  let PENDING = [], PAYS = [], DESIGNERS = [], LIVE = [];
+  let PENDING = [], PAYS = [], DESIGNERS = [], LIVE = [], ORDERS = [], TIERS = [];
 
   async function refresh() {
     guard();
-    [PENDING, PAYS, DESIGNERS, LIVE] = await Promise.all([adminGetDesignerStickers('pending'), adminGetPayments('pending'), adminGetDesigners(), adminGetDesignerStickers('approved')]);
+    [PENDING, PAYS, DESIGNERS, LIVE, ORDERS] = await Promise.all([adminGetDesignerStickers('pending'), adminGetPayments('pending'), adminGetDesigners(), adminGetDesignerStickers('approved'), getStickerOrders().catch(() => [])]);
+    $('nOrders').textContent = ORDERS.filter(o => o.status === 'new').length;
     $('nReview').textContent = PENDING.length; $('nPay').textContent = PAYS.length;
     const card = (s, btns) => '<div class="sc" data-id="' + s.id + '"><div class="th"><img src="' + esc(s.thumb) + '" alt=""></div><b>' + esc(s.name) + '</b>' +
       '<div class="m">by ' + esc(s.designerName) + '<br>#' + s.seq + (s.seq <= DESIGNER_FREE_UPLOADS ? ' · free tier' : ' · paid tier') + ' · ' + (s.price ? '₱' + s.price : 'free') + '</div>' + btns + '</div>';
@@ -135,6 +152,13 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
       '<tr data-id="' + p.id + '"><td>' + fd(p.createdAt) + '</td><td>' + esc(p.designerName) + '</td><td>' + p.slots + '</td><td>₱' + p.amount + '</td><td>' + esc(p.ref) + '</td><td><button class="btn ok" data-a="confirm">Confirm</button> <button class="btn no" data-a="decline">Decline</button></td></tr>').join('') + '</table>' : '<div class="empty">No payments waiting.</div>';
     $('designerTable').innerHTML = DESIGNERS.length ? '<table><tr><th>Designer</th><th>Email</th><th>Uploads (lifetime)</th><th>Paid kept</th><th>Slots</th><th>Pass until</th></tr>' + DESIGNERS.map(d =>
       '<tr><td>' + esc(d.displayName) + '</td><td>' + esc(d.email) + '</td><td>' + d.uploadsEver + '</td><td>' + (d.paidListed || 0) + '</td><td>' + (d.paidSlots || 0) + '</td><td>' + fd(d.paidUntil) + '</td></tr>').join('') + '</table>' : '<div class="empty">No designers yet.</div>';
+    const STATUSES = ['new', 'confirmed', 'paid', 'printing', 'done', 'cancelled'];
+    const smsBody = o => 'Hi ' + o.customerName + '! This is Morphii. Your sticker sheet order ' + o.code + ' (' + o.sheets + ' sheet' + (o.sheets > 1 ? 's' : '') + ', total ₱' + o.total + ') is confirmed. Please pay on Shopee and send this order number in chat. Thank you!';
+    $('orderList').innerHTML = ORDERS.length ? '<table><tr><th>Order</th><th>When</th><th>Customer</th><th>Contact</th><th>Sheets</th><th>Total</th><th>Status</th><th></th></tr>' + ORDERS.map(o =>
+      '<tr data-code="' + esc(o.code) + '"><td><b>' + esc(o.code) + '</b></td><td>' + fd(o.createdAt) + '</td><td>' + esc(o.customerName) + (o.notes ? '<br><small style="color:var(--dim)">' + esc(o.notes) + '</small>' : '') + '</td><td>' + esc(o.customerEmail || o.customerPhone || '') + '</td><td>' + o.sheets + ' (' + o.stickers + ')</td><td>₱' + o.total + '</td>' +
+      '<td><select class="inp" style="width:auto;margin:0;padding:6px 8px;font-size:12px" data-a="status">' + STATUSES.map(s => '<option' + (s === o.status ? ' selected' : '') + '>' + s + '</option>').join('') + '</select></td>' +
+      '<td><a class="btn ghost" style="text-decoration:none;display:inline-block;padding:7px 12px;font-size:12px" target="_blank" href="stickers.html?order=' + encodeURIComponent(o.code) + '">Open layout</a>' +
+      (o.contactMethod === 'phone' && o.customerPhone ? ' <a class="btn" style="text-decoration:none;display:inline-block;padding:7px 12px;font-size:12px" href="sms:' + esc(o.customerPhone) + '?body=' + encodeURIComponent(smsBody(o)) + '">Send text</a>' : '') + '</td></tr>').join('') + '</table>' : '<div class="empty">No sheet orders yet.</div>';
     $('liveGrid').innerHTML = LIVE.length ? LIVE.map(s => card(s, '<div class="row"><button class="btn no" data-a="reject">Take down</button></div>')).join('') : '<div class="empty">No approved stickers yet.</div>';
   }
   const run = async (fn, msg) => { try { guard(); await fn(); toast(msg); await refresh(); } catch (e) { toast('Failed: ' + (e.code || e.message)); } };
@@ -148,7 +172,7 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
     $('outBtn').addEventListener('click', () => AUTH && AUTH.signOut());
     document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
       document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
-      ['review', 'pay', 'designers', 'settings'].forEach(n => { $('tab-' + n).hidden = n !== t.dataset.tab; });
+      ['orders', 'pricing', 'review', 'pay', 'designers', 'settings'].forEach(n => { $('tab-' + n).hidden = n !== t.dataset.tab; });
     }));
     const stickerAction = e => {
       const b = e.target.closest('[data-a]'); if (!b) return;
@@ -163,6 +187,18 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
       if (b.dataset.a === 'confirm') { if (confirm('Confirm ₱' + p.amount + ' from ' + p.designerName + '?\nThis activates ' + p.slots + ' slots for 30 days.')) run(() => adminApprovePayment(p), 'Pass activated'); }
       else run(() => adminRejectPayment(p.id), 'Declined');
     });
+    $('orderList').addEventListener('change', e => {
+      const sel = e.target.closest('[data-a="status"]'); if (!sel) return;
+      run(() => updateStickerOrder(sel.closest('[data-code]').dataset.code, { status: sel.value }), 'Status updated');
+    });
+    const drawTiers = () => {
+      $('tierRows').innerHTML = TIERS.map((t, i) => '<div style="display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;margin-bottom:8px" data-i="' + i + '"><span class="hint" style="margin:0">From</span><input class="inp" style="width:90px;margin:0" type="number" min="1" value="' + t.min + '" data-f="min"><span class="hint" style="margin:0">sheet(s) →  ₱</span><input class="inp" style="width:110px;margin:0" type="number" min="0" value="' + t.price + '" data-f="price"><span class="hint" style="margin:0">each</span><button class="btn no" style="padding:6px 12px;font-size:12px" data-a="del">✕</button></div>').join('');
+    };
+    window.__drawTiers = drawTiers;
+    $('tierRows').addEventListener('input', e => { const f = e.target.dataset.f; if (f) TIERS[+e.target.closest('[data-i]').dataset.i][f] = +e.target.value; });
+    $('tierRows').addEventListener('click', e => { if (e.target.dataset.a === 'del') { TIERS.splice(+e.target.closest('[data-i]').dataset.i, 1); drawTiers(); } });
+    $('tierAdd').addEventListener('click', () => { TIERS.push({ min: (TIERS[TIERS.length - 1] || { min: 0 }).min + 1, price: 100 }); drawTiers(); });
+    $('tierSave').addEventListener('click', () => run(() => saveStickerPricing(TIERS), 'Pricing saved'));
     $('paySave').addEventListener('click', () => run(() => saveDesignerPayInfo({ gcashName: $('payName').value.trim(), gcashNumber: $('payNum').value.trim(), note: $('payNote').value.trim() }), 'Saved'));
   }
 
@@ -178,6 +214,7 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
       try {
         const info = await getDesignerPayInfo();
         $('payName').value = info.gcashName || ''; $('payNum').value = info.gcashNumber || ''; $('payNote').value = info.note || '';
+        TIERS = (await getStickerPricing()).tiers.map(t => Object.assign({}, t)); window.__drawTiers && window.__drawTiers();
         await refresh();
       } catch (e) { toast('Load failed: ' + (e.code || e.message) + ' — are the Firestore rules published?'); }
     });

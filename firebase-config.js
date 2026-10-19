@@ -590,6 +590,67 @@ async function adminApprovePayment(pay) {
 }
 async function adminRejectPayment(id) { await _pCol().doc(id).update({ status: 'rejected', decidedAt: _serverTs() }); }
 
+/* ── STICKER SHEET ORDERS ───────────────────────
+   morphii_sticker_orders/{code}   code = "S-" + 6 chars, used as the document id.
+   Because the code IS the id, a repeated code is refused by the rules (no public updates),
+   so every order number is unique. Customers can only create; admins read/update.
+   Doc: { code, status:'new'|'confirmed'|'paid'|'printing'|'done'|'cancelled',
+          contactMethod:'email'|'phone', customerName, customerEmail, customerPhone, notes,
+          sheets, stickers, pricePerSheet, sheetTotal, premiumTotal, total,
+          premium:[{id,designer,name,price}], settings:{style,border,color,showCut},
+          items:[{src,label,sizeMm,qty,premium?}], createdAt }
+   item.src is a library URL, 'asset:<n>' (an uploaded/built image stored in the order's
+   assets/<n> sub-document) or 'premium:<stickerId>' (a designer sticker, full image fetched by admin).
+   Pricing is per A4 sheet with volume tiers kept in morphii_config/stickerPricing. */
+const DEFAULT_STICKER_TIERS = [{ min: 1, price: 120 }, { min: 2, price: 100 }, { min: 5, price: 85 }, { min: 10, price: 70 }];
+async function getStickerPricing() {
+  if (!DB) return { tiers: DEFAULT_STICKER_TIERS };
+  try {
+    const d = await DB.collection('morphii_config').doc('stickerPricing').get();
+    const t = d.exists && Array.isArray(d.data().tiers) ? d.data().tiers.filter(x => x.min >= 1 && x.price >= 0) : null;
+    return { tiers: t && t.length ? t : DEFAULT_STICKER_TIERS };
+  } catch (e) { return { tiers: DEFAULT_STICKER_TIERS }; }
+}
+async function saveStickerPricing(tiers) {
+  const clean = tiers.map(t => ({ min: Math.max(1, Math.round(+t.min)), price: Math.max(0, Math.round(+t.price)) })).sort((a, b) => a.min - b.min);
+  return DB.collection('morphii_config').doc('stickerPricing').set({ tiers: clean });
+}
+// price per sheet = the tier with the biggest "min" that the sheet count reaches
+function stickerSheetPrice(tiers, sheets) {
+  const t = tiers.slice().sort((a, b) => b.min - a.min).find(x => sheets >= x.min) || tiers.slice().sort((a, b) => a.min - b.min)[0];
+  return { each: t.price, total: t.price * sheets };
+}
+function generateStickerOrderCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return 'S-' + Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+// order + attached images in one atomic batch; retries with a fresh code if the code was already taken
+async function submitStickerOrder(order, assets) {
+  if (!DB) throw new Error('Firebase not configured yet');
+  let lastErr;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const code = generateStickerOrderCode(), ref = DB.collection('morphii_sticker_orders').doc(code), batch = DB.batch();
+    batch.set(ref, Object.assign({}, order, { code, status: 'new', createdAt: firebase.firestore.FieldValue.serverTimestamp() }));
+    (assets || []).forEach((png, i) => batch.set(ref.collection('assets').doc(String(i)), { png }));
+    try { await batch.commit(); return code; }
+    catch (e) { lastErr = e; if (e.code !== 'permission-denied') throw e; }   // denied = code collision (or a bad payload)
+  }
+  throw lastErr;
+}
+async function getStickerOrders() {
+  const snap = await DB.collection('morphii_sticker_orders').orderBy('createdAt', 'desc').limit(200).get();
+  return snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+}
+async function getStickerOrder(code) {
+  const d = await DB.collection('morphii_sticker_orders').doc(code).get();
+  return d.exists ? Object.assign({ id: d.id }, d.data()) : null;
+}
+async function getStickerOrderAssets(code) {
+  const snap = await DB.collection('morphii_sticker_orders').doc(code).collection('assets').get();
+  const out = {}; snap.docs.forEach(d => { out[d.id] = d.data().png; }); return out;
+}
+async function updateStickerOrder(code, fields) { return DB.collection('morphii_sticker_orders').doc(code).update(fields); }
+
 /* ── Firestore Security Rules ──────────────────
    Publish these in Firebase Console → Firestore → Rules:
 
@@ -635,6 +696,27 @@ async function adminRejectPayment(id) { await _pCol().doc(id).update({ status: '
        match /morphii_funeral_contacts/{contactId} {
          allow read, write: if request.auth != null
            && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+       }
+       match /morphii_sticker_orders/{code} {
+         allow create: if code.matches('S-[A-Z2-9]{6}')
+           && request.resource.data.keys().hasOnly(['code','status','contactMethod','customerName','customerEmail','customerPhone','notes','sheets','stickers','pricePerSheet','sheetTotal','premiumTotal','total','premium','settings','items','createdAt'])
+           && request.resource.data.code == code
+           && request.resource.data.status == 'new'
+           && request.resource.data.contactMethod in ['email','phone']
+           && request.resource.data.customerName is string
+           && request.resource.data.customerName.size() >= 1 && request.resource.data.customerName.size() <= 80
+           && request.resource.data.sheets is int && request.resource.data.sheets >= 1 && request.resource.data.sheets <= 60
+           && request.resource.data.items is list && request.resource.data.items.size() <= 150;
+         allow read, update, delete: if request.auth != null
+           && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+         match /assets/{aid} {
+           allow create: if !exists(/databases/$(database)/documents/morphii_sticker_orders/$(code))
+             && existsAfter(/databases/$(database)/documents/morphii_sticker_orders/$(code))
+             && request.resource.data.keys().hasOnly(['png'])
+             && request.resource.data.png is string && request.resource.data.png.size() < 900000;
+           allow read, delete: if request.auth != null
+             && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+         }
        }
        match /morphii_funeral/{docId} {
          allow read, write: if request.auth != null

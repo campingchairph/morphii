@@ -774,6 +774,7 @@ function renderPreview() {
   renderSummary(); renderSelBar();
   drawSheetPreview();
   positionTools();
+  updateOrderBtn();
 }
 function drawSheetPreview() {
   const cv = $('sheetCanvas'), ppmm = 5;
@@ -1025,7 +1026,7 @@ function applyAuth() {
   const admin = isAdminNow();
   if (admin === LIB.isAdmin && admin === !!$('pane-admin').firstChild) return;
   LIB.isAdmin = admin;
-  if (admin) mountAdmin(); else unmountAdmin();
+  if (admin) { mountAdmin(); loadOrderForAdmin(new URLSearchParams(location.search).get('order')); } else unmountAdmin();
   if (Object.keys(LIB.sets).length) { renderLibrary(); }
 }
 // one tick box per group of the main library, plus select all
@@ -1067,14 +1068,14 @@ function download(blob, name) {
 function exportFiles(kind) {
   guard();
   if (kind === 'svg') {
-    S.pages.forEach((pg, i) => download(new Blob([pageSvg(pg)], { type: 'image/svg+xml' }), 'sticker-sheet-' + (i + 1) + '-cutline.svg'));
+    S.pages.forEach((pg, i) => download(new Blob([pageSvg(pg)], { type: 'image/svg+xml' }), (S.orderCode || 'sticker-sheet') + '-' + (i + 1) + '-cutline.svg'));
     return;
   }
   S.pages.forEach((pg, i) => {
     const cv = document.createElement('canvas');
     cv.width = Math.round(PAGE_W * EXPORT_PPMM); cv.height = Math.round(PAGE_H * EXPORT_PPMM);
     drawPage(cv.getContext('2d'), pg, EXPORT_PPMM, kind);
-    cv.toBlob(b => download(b, 'sticker-sheet-' + (i + 1) + (kind === 'proof' ? '-proof' : '-print') + '.png'));
+    cv.toBlob(b => download(b, (S.orderCode || 'sticker-sheet') + '-' + (i + 1) + (kind === 'proof' ? '-proof' : '-print') + '.png'));
   });
 }
 
@@ -1288,6 +1289,164 @@ async function bdFinish() {
   closeBuilder(true);
 }
 
+/* ═══════════════ REVIEW & ORDER ═══════════════
+   Full-screen preview of the sheets (swipe between them), the price, then contact details
+   and send. The order is saved to morphii_sticker_orders under a unique S-XXXXXX code. */
+const RV = { open: false, idx: 0, step: 'price', method: 'email', pricing: { tiers: DEFAULT_STICKER_TIERS }, q: null, count: 0, drag: null, busy: false };
+const peso = n => '₱' + (Math.round(n * 100) / 100).toLocaleString('en-PH');
+
+// what the customer pays: sheets (tiered) + one fee per premium designer sticker
+function quote() {
+  const sheets = S.pages.length, sp = stickerSheetPrice(RV.pricing.tiers, sheets);
+  const premium = S.items.filter(i => i.premium && i.premium.price > 0).map(i => ({ id: i.premium.id, designer: i.premium.designer, name: i.label, price: i.premium.price }));
+  const premiumTotal = premium.reduce((n, x) => n + x.price, 0);
+  return { sheets, stickers: S.stats.stickers, each: sp.each, sheetTotal: sp.total, premium, premiumTotal, total: sp.total + premiumTotal };
+}
+const sheetFill = pg => pg.placements.reduce((n, p) => n + p.inst.geom.area, 0) / (PAGE_W * PAGE_H) * 100;
+function updateOrderBtn() {
+  const has = S.pages.length > 0;
+  $('orderBtn').hidden = !has;
+  if (has) $('orderBtnPrice').textContent = peso(quote().total);
+}
+
+function rvGo(i, animate) {
+  RV.idx = clamp(i, 0, RV.count - 1);
+  const tr = $('rvTrack');
+  tr.style.transition = animate ? 'transform .28s ease' : 'none';
+  tr.style.transform = 'translateX(' + (-RV.idx * 100) + '%)';
+  $('rvTitle').textContent = RV.count > 1 ? 'Sheet ' + (RV.idx + 1) + ' of ' + RV.count : 'Your sheet';
+  $('rvDots').innerHTML = RV.count > 1 ? Array.from({ length: RV.count }, (_, k) => '<button class="' + (k === RV.idx ? 'on' : '') + '" data-dot="' + k + '" aria-label="Sheet ' + (k + 1) + '"></button>').join('') : '';
+  $('rvPrev').hidden = RV.idx === 0 || RV.count < 2; $('rvNext').hidden = RV.idx >= RV.count - 1;
+  $('rvHint').hidden = RV.count < 2;
+}
+function rvStep(step) {
+  RV.step = step;
+  $('review').dataset.step = step;
+  $('rvPrice').hidden = step !== 'price'; $('rvForm').hidden = step !== 'form'; $('rvDone').hidden = step !== 'done';
+  $('rvCard').scrollTop = 0;
+}
+function renderPricePane() {
+  const q = RV.q;
+  let h = '<div class="rv-lines"><div class="rv-line"><span>' + q.sheets + ' A4 sheet' + (q.sheets > 1 ? 's' : '') + ' × ' + peso(q.each) + '</span><b>' + peso(q.sheetTotal) + '</b></div>';
+  q.premium.forEach(p => { h += '<div class="rv-line sub"><span>Premium: ' + esc(p.name) + ' <em>by ' + esc(p.designer) + '</em></span><b>' + peso(p.price) + '</b></div>'; });
+  h += '<div class="rv-line total"><span>Total</span><b>' + peso(q.total) + '</b></div></div>';
+  const last = S.pages[S.pages.length - 1], fill = last ? sheetFill(last) : 100;
+  h += '<div class="rv-meta">' + q.stickers + ' sticker' + (q.stickers !== 1 ? 's' : '') + ' on ' + q.sheets + ' sheet' + (q.sheets > 1 ? 's' : '') + ' · cut and ready to peel</div>';
+  if (q.sheets >= 1 && fill < 35) h += '<div class="rv-tip">Sheet ' + q.sheets + ' is only ' + Math.round(fill) + '% full — you can add more stickers to it at no extra cost.</div>';
+  $('rvLines').innerHTML = h;
+  $('rvAgreeTotal').textContent = peso(q.total);
+}
+async function openReview() {
+  if (!S.pages.length) return;
+  RV.q = quote(); RV.count = S.pages.length; RV.busy = false;
+  const ppmm = 4, tr = $('rvTrack'); tr.innerHTML = '';
+  S.pages.forEach(pg => {
+    const cv = document.createElement('canvas'); cv.width = Math.round(PAGE_W * ppmm); cv.height = Math.round(PAGE_H * ppmm);
+    drawPage(cv.getContext('2d'), pg, ppmm, 'preview', { showCut: S.settings.showCut, margin: 0 });
+    const slide = document.createElement('div'); slide.className = 'rv-slide'; slide.appendChild(cv); tr.appendChild(slide);
+  });
+  $('rvErr').textContent = ''; $('rvAgree').checked = false;
+  renderPricePane(); rvStep('price'); rvGo(S.pageIdx, false);
+  $('review').hidden = false; document.body.classList.add('rv-open'); RV.open = true;
+  $('rvApprove').focus();
+}
+function closeReview() { RV.open = false; $('review').hidden = true; document.body.classList.remove('rv-open'); }
+
+/* contact + send */
+function normalisePhone(v) {
+  const d = String(v).replace(/[^\d+]/g, '');
+  const m = d.match(/^(?:\+?63|0)(9\d{9})$/);
+  return m ? '+63' + m[1] : null;
+}
+// keep an attached image under the 900 KB the rules allow
+async function fitDataUrl(url, limit) {
+  if (url.length <= limit) return url;
+  const img = await loadImg(url); let k = 0.85, out = url;
+  for (let i = 0; i < 8 && out.length > limit; i++, k *= 0.82) {
+    const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(img.naturalWidth * k)); cv.height = Math.max(1, Math.round(img.naturalHeight * k));
+    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); out = cv.toDataURL('image/png');
+  }
+  return out;
+}
+async function sendOrder() {
+  if (RV.busy) return;
+  const err = m => { $('rvErr').textContent = m; };
+  const name = $('rvName').value.trim(), notes = $('rvNotes').value.trim(), email = $('rvEmail').value.trim();
+  const phone = normalisePhone($('rvPhone').value);
+  if (name.length < 1) return err('Please enter your name.');
+  if (RV.method === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return err('Please enter a valid email address.');
+  if (RV.method === 'phone' && !phone) return err('Please enter a valid Philippine mobile number, like 0917 123 4567.');
+  if (!$('rvAgree').checked) return err('Please tick the box to approve your order.');
+  err(''); RV.busy = true; $('rvSend').disabled = true; $('rvSend').textContent = 'Sending…';
+  try {
+    const q = RV.q, assets = [];
+    const items = [];
+    for (const i of S.items) {
+      let src = i.src;
+      if (i.premium) src = 'premium:' + i.premium.id;
+      else if (src.startsWith('data:')) { assets.push(await fitDataUrl(src, 850000)); src = 'asset:' + (assets.length - 1); }
+      const row = { src, label: i.label, sizeMm: i.sizeMm, qty: i.qty };
+      if (i.premium) row.premium = { id: i.premium.id, price: i.premium.price, designer: i.premium.designer };
+      items.push(row);
+    }
+    const order = {
+      contactMethod: RV.method, customerName: name, customerEmail: RV.method === 'email' ? email : null, customerPhone: RV.method === 'phone' ? phone : null,
+      notes, sheets: q.sheets, stickers: q.stickers, pricePerSheet: q.each, sheetTotal: q.sheetTotal, premiumTotal: q.premiumTotal, total: q.total,
+      premium: q.premium, settings: { style: S.settings.style, border: S.settings.border, color: S.settings.color, showCut: S.settings.showCut }, items,
+    };
+    const code = await submitStickerOrder(order, assets);
+    let emailOk = false;
+    if (RV.method === 'email' && typeof sendConfirmationEmail === 'function') {
+      const r = await sendConfirmationEmail({
+        to_email: email, to_name: name, code,
+        product: 'Sticker Sheets (' + q.sheets + ' sheet' + (q.sheets > 1 ? 's' : '') + ' · ' + q.stickers + ' stickers)',
+        size: 'A4 · Total ' + peso(q.total),
+      });
+      emailOk = !!(r && r.sent);
+    }
+    showOrderDone(code, emailOk, phone);
+  } catch (e) {
+    err('Something went wrong sending your order: ' + (e.code === 'permission-denied' ? 'the order was refused — please try again.' : (e.message || e)));
+  }
+  RV.busy = false; $('rvSend').disabled = false; $('rvSend').textContent = 'Send order';
+}
+function showOrderDone(code, emailOk, phone) {
+  const q = RV.q;
+  $('rvCode').textContent = code;
+  $('rvDoneNote').textContent = RV.method === 'email'
+    ? (emailOk ? 'We emailed these details to you — if you don’t see them in a few minutes, check your Spam or Junk folder.' : 'We couldn’t send the confirmation email automatically — please screenshot or write down your order number now.')
+    : 'We’ll text your confirmation to ' + phone + ' with this order number.';
+  $('rvPay').innerHTML = '<li>Pay on Shopee for <b>' + q.sheets + ' A4 sheet' + (q.sheets > 1 ? 's' : '') + '</b> (' + peso(q.sheetTotal) + ').</li>' +
+    (q.premiumTotal ? '<li>Your premium designer stickers (' + peso(q.premiumTotal) + ') are paid separately — we’ll message you how.</li>' : '') +
+    '<li>Send your order number in the Shopee chat.</li><li>We’ll match it to your layout, confirm, and start printing.</li>';
+  rvStep('done');
+}
+
+/* admin: open a customer's order (stickers.html?order=S-XXXXXX) to download its print files */
+const hooks = {};
+async function loadOrderForAdmin(code) {
+  if (!code || S.orderCode === code) return;
+  S.orderCode = code;
+  const bar = $('orderBanner'); bar.hidden = false; bar.textContent = 'Loading order ' + code + '…';
+  try {
+    guard();
+    const o = await getStickerOrder(code);
+    if (!o) { bar.textContent = 'Order ' + code + ' not found.'; return; }
+    const assets = await getStickerOrderAssets(code), items = [];
+    for (const it of o.items) {
+      let src = it.src;
+      if (src.startsWith('asset:')) src = assets[src.slice(6)];
+      else if (src.startsWith('premium:')) { try { src = await getDesignerStickerFull(src.slice(8)); } catch (e) { src = null; } }
+      if (src) items.push({ id: nextId++, src, label: it.label, sizeMm: it.sizeMm, qty: it.qty, premium: it.premium });
+    }
+    S.items = items; S.sel = null; S.selK = null;
+    Object.assign(S.settings, o.settings || {});
+    if (hooks.syncSettings) hooks.syncSettings();
+    refreshUI(); scheduleBuild();
+    bar.innerHTML = '<b>' + esc(code) + '</b> · ' + esc(o.customerName) + ' · ' + esc(o.customerEmail || o.customerPhone || '') + ' · ' + o.sheets + ' sheet' + (o.sheets > 1 ? 's' : '') + ' · ₱' + o.total + ' · ' + esc(o.status);
+  } catch (e) { bar.textContent = 'Couldn’t load that order: ' + (e.code || e.message); }
+}
+
 /* ═══════════════ wiring ═══════════════ */
 document.addEventListener('DOMContentLoaded', () => {
   // phone: the cut line is shown from the start; desktop starts without it
@@ -1315,6 +1474,12 @@ document.addEventListener('DOMContentLoaded', () => {
   $('swPop').addEventListener('click', onSwatch);
   $('fabColor').addEventListener('click', e => { e.stopPropagation(); $('swPop').classList.toggle('open'); });
   document.addEventListener('click', e => { if (!e.target.closest('#swPop,#fabColor')) $('swPop').classList.remove('open'); });
+  hooks.syncSettings = () => {
+    document.querySelectorAll('#styleChips [data-style]').forEach(c => c.classList.toggle('active', c.dataset.style === S.settings.style));
+    border.value = S.settings.border; setBorderTxt(); syncSwatches(); $('setShowCut').checked = !!S.settings.showCut;
+    const hide = S.settings.style === 'none' ? 'none' : '';
+    $('borderRow').style.display = $('swatches').style.display = $('fabColor').style.display = hide;
+  };
   $('setShowCut').addEventListener('change', e => { S.settings.showCut = e.target.checked; drawSheetPreview(); });
   $('styleChips').addEventListener('click', e => {
     const b = e.target.closest('[data-style]'); if (!b) return;
@@ -1345,6 +1510,12 @@ document.addEventListener('DOMContentLoaded', () => {
   $('libTools').addEventListener('click', onDockClick);
   $('panelClose').addEventListener('click', closePanel);
   document.addEventListener('keydown', e => {
+    if (RV.open) {
+      if (e.key === 'Escape') closeReview();
+      else if (e.key === 'ArrowLeft') rvGo(RV.idx - 1, true);
+      else if (e.key === 'ArrowRight') rvGo(RV.idx + 1, true);
+      return;
+    }
     if (BD.open) {
       if (e.key === 'Escape') closeBuilder(false);
       else if ((e.key === 'Delete' || e.key === 'Backspace') && BD.sel >= 0 && !/^(INPUT|TEXTAREA)$/.test((e.target || {}).tagName || '')) { e.preventDefault(); bdAction('del'); }
@@ -1426,6 +1597,40 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   $('fabPaste').addEventListener('click', pasteFromClipboard);
+
+  // review & order
+  getStickerPricing().then(p => { RV.pricing = p; updateOrderBtn(); });
+  $('orderBtn').addEventListener('click', openReview);
+  $('rvBack').addEventListener('click', () => { if (!RV.busy) closeReview(); });
+  $('rvPrev').addEventListener('click', () => rvGo(RV.idx - 1, true));
+  $('rvNext').addEventListener('click', () => rvGo(RV.idx + 1, true));
+  $('rvDots').addEventListener('click', e => { const b = e.target.closest('[data-dot]'); if (b) rvGo(+b.dataset.dot, true); });
+  const stage = $('rvStage');
+  stage.addEventListener('pointerdown', e => {
+    if (RV.count < 2 || e.target.closest('button')) return;
+    RV.drag = { x: e.clientX, dx: 0 }; stage.setPointerCapture(e.pointerId); $('rvTrack').style.transition = 'none';
+  });
+  stage.addEventListener('pointermove', e => {
+    const d = RV.drag; if (!d) return;
+    d.dx = e.clientX - d.x; $('rvTrack').style.transform = 'translateX(' + (-RV.idx * 100 + d.dx / (stage.clientWidth || 1) * 100) + '%)';
+  });
+  const endDrag = () => {
+    const d = RV.drag; if (!d) return; RV.drag = null;
+    const w = stage.clientWidth || 1;
+    rvGo(RV.idx + (d.dx < -w * 0.15 ? 1 : d.dx > w * 0.15 ? -1 : 0), true);
+  };
+  ['pointerup', 'pointercancel'].forEach(ev => stage.addEventListener(ev, endDrag));
+  $('rvApprove').addEventListener('click', () => { rvStep('form'); $('rvName').focus(); });
+  $('rvBackPrice').addEventListener('click', () => rvStep('price'));
+  $('rvMethod').addEventListener('click', e => {
+    const b = e.target.closest('[data-m]'); if (!b) return;
+    RV.method = b.dataset.m;
+    $('rvMethod').querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+    $('rvEmail').hidden = RV.method !== 'email'; $('rvPhone').hidden = RV.method !== 'phone';
+  });
+  $('rvForm').addEventListener('submit', e => { e.preventDefault(); sendOrder(); });
+  $('rvCopy').addEventListener('click', () => { try { navigator.clipboard.writeText($('rvCode').textContent); $('rvCopy').textContent = 'Copied ✓'; } catch (e) {} });
+  $('rvNew').addEventListener('click', () => location.reload());
 
   // build-your-own-sticker window
   $('tryBtn').addEventListener('click', () => openBuilder(null));

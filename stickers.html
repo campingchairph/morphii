@@ -7,7 +7,7 @@
 <meta name="description" content="Pick stickers, set the white holder, and arrange them on an A4 sheet automatically.">
 <meta name="robots" content="noindex, nofollow">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stickers.css?v=22">
+<link rel="stylesheet" href="stickers.css?v=24">
 </head>
 <body>
 
@@ -22,6 +22,7 @@
 
   <!-- the sheet -->
   <section class="st-view" id="viewCol">
+    <div class="st-orderbanner" id="orderBanner" hidden></div>
     <div class="st-summary" id="summary"></div>
 
     <div class="st-ctx">
@@ -37,6 +38,9 @@
     </div>
 
     <div class="st-paper-area" id="paperArea">
+      <button class="st-order" id="orderBtn" type="button" hidden aria-label="Review and order your sticker sheets">
+        <span>Review &amp; order</span><b id="orderBtnPrice"></b>
+      </button>
       <button class="st-try" id="tryBtn" type="button" aria-label="Create new sticker: build your own sticker">
         <svg class="st-try-star" viewBox="0 0 100 100" aria-hidden="true">
           <defs><linearGradient id="tryG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9ad77a"/><stop offset=".5" stop-color="#ffc277"/><stop offset="1" stop-color="#ff6f91"/></linearGradient></defs>
@@ -105,6 +109,49 @@
 </main>
 
 <!-- BUILD YOUR OWN STICKER: separate window -->
+<!-- REVIEW & ORDER: full-screen preview, price, contact, send -->
+<div class="rv" id="review" hidden role="dialog" aria-modal="true" aria-label="Review your sticker order" data-step="price">
+  <header class="rv-head">
+    <button class="rv-back" id="rvBack">← Back to edit</button>
+    <div class="rv-title" id="rvTitle">Your sheet</div>
+    <span class="rv-spacer"></span>
+  </header>
+  <div class="rv-stage" id="rvStage">
+    <div class="rv-track" id="rvTrack"></div>
+    <button class="rv-nav prev" id="rvPrev" aria-label="Previous sheet" hidden>‹</button>
+    <button class="rv-nav next" id="rvNext" aria-label="Next sheet" hidden>›</button>
+  </div>
+  <div class="rv-dots" id="rvDots"></div>
+  <div class="rv-swipehint" id="rvHint" hidden>Swipe to see every sheet</div>
+  <div class="rv-card" id="rvCard">
+    <div id="rvPrice">
+      <div id="rvLines"></div>
+      <button class="rv-go" id="rvApprove">Approve &amp; send</button>
+    </div>
+    <form id="rvForm" hidden novalidate>
+      <div class="rv-q">How should we reach you?</div>
+      <div class="st-seg rv-method" id="rvMethod"><button type="button" class="active" data-m="email">Email</button><button type="button" data-m="phone">Phone number</button></div>
+      <input class="rv-in" id="rvName" placeholder="Your name" maxlength="80" autocomplete="name">
+      <input class="rv-in" id="rvEmail" type="email" placeholder="Email address" autocomplete="email">
+      <input class="rv-in" id="rvPhone" type="tel" placeholder="Mobile number, e.g. 0917 123 4567" autocomplete="tel" hidden>
+      <textarea class="rv-in" id="rvNotes" rows="2" maxlength="300" placeholder="Notes (optional)"></textarea>
+      <label class="rv-check"><input type="checkbox" id="rvAgree"> I approve this layout and the total of <b id="rvAgreeTotal"></b></label>
+      <div class="rv-err" id="rvErr"></div>
+      <div class="rv-actions"><button type="button" class="rv-ghost" id="rvBackPrice">‹ Back</button><button type="submit" class="rv-go" id="rvSend">Send order</button></div>
+    </form>
+    <div id="rvDone" hidden>
+      <div class="rv-done-icon">🎉</div>
+      <h3>Order sent!</h3>
+      <p class="rv-meta">Your order number</p>
+      <div class="rv-code" id="rvCode"></div>
+      <button class="rv-ghost" id="rvCopy">Copy number</button>
+      <p class="rv-meta" id="rvDoneNote"></p>
+      <ol class="rv-steps" id="rvPay"></ol>
+      <button class="rv-go" id="rvNew">Start a new sheet</button>
+    </div>
+  </div>
+</div>
+
 <div class="st-zoom" id="zoomView" hidden aria-hidden="true"><div><img id="zoomImg" alt=""></div></div>
 
 <div class="bd" id="builder" hidden role="dialog" aria-modal="true" aria-labelledby="bdTitle">
@@ -150,7 +197,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js?v=11"></script>
-<script src="stickers.js?v=17"></script>
+<script src="firebase-config.js?v=12"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="email-config.js"></script>
+<script src="stickers.js?v=18"></script>
 </body>
 </html>
