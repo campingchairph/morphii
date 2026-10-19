@@ -156,7 +156,6 @@ async function loadLibrary() {
   renderLibrary();
   renderAdminLib();   // no-op unless an admin is signed in
   if (DESKTOP.matches && !S.panel && LIB.category) openPanel('lib');
-  bgSync();
 }
 // every group from every collection, in one list (collection order, then the admin's group order)
 function allCategories(includeHidden) {
@@ -749,7 +748,7 @@ function renderSelBar() {
   $('selQtyMinus').title = it.qty <= 1 ? 'Remove this sticker' : 'Fewer copies';
 }
 function refreshUI() {
-  bgSync(); updateBadges(); renderSummary(); renderSelBar();
+  updateBadges(); renderSummary(); renderSelBar();
   $('sheetEmpty').style.display = S.items.length ? 'none' : 'flex';
 }
 // "SHEET 2 of 3" tag on the paper's top-left corner + a pile of paper behind it when there is more than one sheet
@@ -914,94 +913,6 @@ function poofCopy(it, k) {
 function poofAll() {
   const pg = S.pages[S.pageIdx]; if (!pg) return;
   pg.placements.slice(0, 40).forEach((pl, i) => setTimeout(() => fxPoof(pl), i * 25));
-}
-
-/* ═══════════════ floating background stickers (same idea as the pin designer) ═══════════════
-   15 of the added stickers drift behind everything at 40% opacity and bounce off the screen
-   edges and each other. Before anything is added, random library stickers fill in. */
-const BG = { bodies: [], raf: 0, last: 0, w: 0, h: 0, dpr: 1 };
-function bgResize() {
-  const cv = $('bgFx'); if (!cv) return;
-  BG.dpr = window.devicePixelRatio || 1; BG.w = window.innerWidth; BG.h = window.innerHeight;
-  cv.width = Math.round(BG.w * BG.dpr); cv.height = Math.round(BG.h * BG.dpr);
-  cv.getContext('2d').setTransform(BG.dpr, 0, 0, BG.dpr, 0, 0);
-  BG.bodies.forEach(b => { b.x = clamp(b.x, b.r, Math.max(b.r, BG.w - b.r)); b.y = clamp(b.y, b.r, Math.max(b.r, BG.h - b.r)); });
-}
-function bgPool() {
-  if (S.items.length) return S.items.map(i => i.src);
-  const all = [];
-  allCategories(false).forEach(c => c.items.forEach(it => all.push(it.src)));
-  return all;
-}
-function bgSetSrc(b, src) {
-  b.src = src; b.img = null;
-  loadImg(src).then(img => { if (b.src === src) b.img = img; }).catch(() => {});
-}
-function bgSpawn(src) {
-  const size = 26 + Math.random() * 34, r = size / 2;
-  let x, y, tries = 0;
-  do {
-    x = r + Math.random() * Math.max(1, BG.w - size); y = r + Math.random() * Math.max(1, BG.h - size); tries++;
-  } while (BG.bodies.some(o => Math.hypot(x - o.x, y - o.y) < r + o.r) && tries < 60);
-  const a = Math.random() * Math.PI * 2, sp = 10 + Math.random() * 16;
-  const b = { x, y, r, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, rot: Math.random() * 360, rs: (Math.random() < 0.5 ? -1 : 1) * (4 + Math.random() * 6), src: '', img: null };
-  bgSetSrc(b, src);
-  BG.bodies.push(b);
-}
-// keep the floaters in step with what is on the sheet (without making them jump)
-function bgSync() {
-  if (!BG.w || !$('bgFx')) return;
-  const pool = bgPool(); if (!pool.length) return;
-  const pick = () => pool[Math.floor(Math.random() * pool.length)];
-  if (!BG.bodies.length) { for (let i = 0; i < 15; i++) bgSpawn(pick()); }
-  else {
-    const have = new Set(pool);
-    BG.bodies.forEach(b => { if (!have.has(b.src)) bgSetSrc(b, pick()); });
-    if (S.items.length) {
-      new Set(pool).forEach(src => {
-        if (BG.bodies.some(b => b.src === src)) return;
-        const dupe = BG.bodies.find(b => BG.bodies.filter(o => o.src === b.src).length > 1) || BG.bodies[Math.floor(Math.random() * BG.bodies.length)];
-        bgSetSrc(dupe, src);
-      });
-    }
-  }
-  if (!BG.raf) { BG.last = performance.now(); BG.raf = requestAnimationFrame(bgTick); }
-}
-function bgTick(now) {
-  const dt = Math.min(0.05, (now - BG.last) / 1000), bs = BG.bodies; BG.last = now;
-  const still = reducedMotion();
-  if (!still) {
-    bs.forEach(b => {
-      b.x += b.vx * dt; b.y += b.vy * dt; b.rot += b.rs * dt;
-      if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); } else if (b.x > BG.w - b.r) { b.x = BG.w - b.r; b.vx = -Math.abs(b.vx); }
-      if (b.y < b.r) { b.y = b.r; b.vy = Math.abs(b.vy); } else if (b.y > BG.h - b.r) { b.y = BG.h - b.r; b.vy = -Math.abs(b.vy); }
-    });
-    for (let i = 0; i < bs.length; i++) for (let j = i + 1; j < bs.length; j++) {
-      const a = bs[i], c = bs[j], dx = c.x - a.x, dy = c.y - a.y, d = Math.hypot(dx, dy), min = a.r + c.r;
-      if (d >= min || d === 0) continue;
-      const nx = dx / d, ny = dy / d, over = (min - d) / 2;
-      a.x -= nx * over; a.y -= ny * over; c.x += nx * over; c.y += ny * over;
-      const ma = a.r * a.r, mc = c.r * c.r, vr = (a.vx - c.vx) * nx + (a.vy - c.vy) * ny;
-      if (vr > 0) {
-        const j2 = (2 * vr) / (1 / ma + 1 / mc);
-        a.vx -= (j2 / ma) * nx; a.vy -= (j2 / ma) * ny; c.vx += (j2 / mc) * nx; c.vy += (j2 / mc) * ny;
-      }
-    }
-    bs.forEach(b => {   // keep the drift gentle, never frantic or frozen
-      const sp = Math.hypot(b.vx, b.vy), t = Math.min(32, Math.max(9, sp));
-      if (sp > 0) { b.vx *= t / sp; b.vy *= t / sp; }
-    });
-  }
-  const ctx = $('bgFx').getContext('2d');
-  ctx.clearRect(0, 0, BG.w, BG.h);
-  ctx.globalAlpha = 0.4;
-  bs.forEach(b => {
-    if (!b.img) return;
-    const sz = b.r * 2, ar = b.img.naturalWidth / b.img.naturalHeight, w = ar >= 1 ? sz : sz * ar, h = ar >= 1 ? sz / ar : sz;
-    ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.rot * Math.PI / 180); ctx.drawImage(b.img, -w / 2, -h / 2, w, h); ctx.restore();
-  });
-  ctx.globalAlpha = 1;
-  BG.raf = requestAnimationFrame(bgTick);
 }
 
 /* ═══════════════ editing the sheet ═══════════════ */
@@ -1543,8 +1454,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const onLayout = () => { if (DESKTOP.matches && !S.panel && LIB.category) openPanel('lib'); fitPaper(); };
   if (DESKTOP.addEventListener) DESKTOP.addEventListener('change', onLayout); else DESKTOP.addListener(onLayout);
   if ('ResizeObserver' in window) new ResizeObserver(fitPaper).observe($('paperArea'));
-  window.addEventListener('resize', () => { fitPaper(); bgResize(); });
-  bgResize();
+  window.addEventListener('resize', fitPaper);
   refreshUI(); renderLibrary(); renderSheetBadge(); fitPaper(); drawSheetPreview();
   loadLibrary();
   if (typeof AUTH !== 'undefined' && AUTH) AUTH.onAuthStateChanged(applyAuth);
