@@ -29,8 +29,8 @@ h1,h2,h3,.st-logo{font-family:'Baloo 2',cursive;}
 .st-summary,.st-ctx{display:none;}
 
 /* paper */
-.st-paper-area{position:relative;flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;}
-.st-sheet-wrap{position:relative;line-height:0;}
+.st-paper-area{position:relative;flex:1 1 auto;min-height:0;display:flex;align-items:flex-start;justify-content:center;padding-top:12px;}
+.st-sheet-wrap{position:relative;line-height:0;isolation:isolate;}
 .st-sheet-wrap canvas{display:block;background:#fff;box-shadow:0 6px 22px rgba(0,0,0,.18);border-radius:2px;cursor:pointer;}
 .st-sheet-wrap #fxCanvas{position:absolute;left:0;top:0;pointer-events:none;z-index:2;background:transparent;box-shadow:none;border-radius:0;cursor:default;}
 .st-paper-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;font-size:14px;font-weight:800;color:var(--ink-dim);pointer-events:none;line-height:1.5;}
@@ -182,7 +182,7 @@ h1,h2,h3,.st-logo{font-family:'Baloo 2',cursive;}
 }
 
 /* ═══════════ "TRY ME" ninja-star button ═══════════ */
-.st-try{position:absolute;top:0;right:0;z-index:5;width:78px;height:78px;border:none;background:none;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;animation:stBob 2.6s ease-in-out infinite;filter:drop-shadow(0 4px 8px rgba(255,111,145,.45));}
+.st-try{position:absolute;bottom:0;right:2px;z-index:5;width:78px;height:78px;border:none;background:none;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;animation:stBob 2.6s ease-in-out infinite;filter:drop-shadow(0 4px 8px rgba(255,111,145,.45));}
 .st-try-star{position:absolute;inset:0;width:100%;height:100%;animation:stSpin 14s linear infinite;}
 .st-try-label{position:relative;display:flex;flex-direction:column;align-items:center;font-family:'Baloo 2',cursive;font-weight:800;font-size:9.5px;line-height:.95;text-align:center;color:var(--ink);text-shadow:0 1px 0 rgba(255,255,255,.7);}
 .st-try-label b{font-size:17px;line-height:.9;color:#d6154f;letter-spacing:.5px;text-shadow:0 1px 0 rgba(255,255,255,.85);}
@@ -192,7 +192,7 @@ h1,h2,h3,.st-logo{font-family:'Baloo 2',cursive;}
 @keyframes stSpin{to{transform:rotate(360deg);}}
 @keyframes stBob{0%,100%{transform:translateY(0) scale(1);}50%{transform:translateY(-3px) scale(1.07);}}
 @media(prefers-reduced-motion:reduce){.st-try,.st-try-star{animation:none;}}
-@media(min-width:901px){.st-try{width:92px;height:92px;top:4px;right:4px;}.st-try-label{font-size:11px;}.st-try-label b{font-size:20px;}}
+@media(min-width:901px){.st-try{width:92px;height:92px;bottom:2px;right:6px;}.st-try-label{font-size:11px;}.st-try-label b{font-size:20px;}}
 
 /* ═══════════ BUILD YOUR OWN STICKER window ═══════════ */
 .st-selbar-edit{border:none;border-radius:14px;padding:0 11px;height:26px;background:#fff;color:var(--ink);font-size:12px;font-weight:800;cursor:pointer;}
@@ -256,3 +256,62 @@ h1,h2,h3,.st-logo{font-family:'Baloo 2',cursive;}
 .st-ptag.free{color:#2f7a3e;}
 .st-prem-note{align-self:center;font-size:11px;font-weight:800;color:var(--ink-dim);padding:0 10px;white-space:nowrap;}
 .st-empty a{color:var(--coral);font-weight:800;}
+
+/* ── sheet tag + pile of paper ── */
+.st-pile{position:absolute;inset:0;z-index:-1;pointer-events:none;}
+.st-pile i{position:absolute;inset:0;background:#fbfaf5;border-radius:2px;box-shadow:0 2px 8px rgba(0,0,0,.16);}
+.st-pile i:nth-child(1){transform:translate(6px,6px) rotate(.7deg);}
+.st-pile i:nth-child(2){transform:translate(12px,11px) rotate(-.9deg);background:#f6f4ec;}
+.st-pile i:nth-child(3){transform:translate(18px,15px) rotate(1.1deg);background:#f1efe5;}
+.st-pile.pop i{animation:stPile .5s cubic-bezier(.2,1.4,.4,1) both;}
+@keyframes stPile{from{opacity:0;transform:translate(0,0);}}
+.st-sheetbadge{position:absolute;left:-7px;top:-13px;z-index:4;display:flex;align-items:center;gap:4px;padding:3px 9px 3px 10px;border-radius:14px;background:var(--grad);box-shadow:0 5px 14px rgba(255,111,145,.45);line-height:1;transform:rotate(-3deg);border:2px solid #fff;}
+.st-sheetbadge .sb-txt{display:flex;align-items:baseline;gap:4px;color:var(--ink);}
+.st-sheetbadge small{font-family:'Baloo 2',cursive;font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;}
+.st-sheetbadge b{font-family:'Baloo 2',cursive;font-size:25px;font-weight:800;color:#fff;text-shadow:0 1px 0 rgba(34,48,31,.35),0 2px 6px rgba(34,48,31,.25);}
+.st-sheetbadge em{font-style:normal;font-size:11px;font-weight:800;}
+.st-sheetbadge button{width:22px;height:22px;border-radius:50%;border:none;background:#fff;color:var(--ink);font-size:15px;font-weight:900;line-height:1;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.2);padding:0;display:flex;align-items:center;justify-content:center;}
+.st-sheetbadge button:disabled{opacity:.35;cursor:default;}
+.st-sheetbadge.pop{animation:stBadgePop .55s cubic-bezier(.2,1.5,.4,1);}
+@keyframes stBadgePop{0%{transform:rotate(-3deg) scale(.5);}100%{transform:rotate(-3deg) scale(1);}}
+.st-sheet-wrap.flip canvas#sheetCanvas{animation:stFlipNext .4s ease;}
+.st-sheet-wrap.flip[data-flip="prev"] canvas#sheetCanvas{animation-name:stFlipPrev;}
+@keyframes stFlipNext{0%{transform:translateX(26px) rotate(2.2deg);opacity:.2;}100%{transform:none;opacity:1;}}
+@keyframes stFlipPrev{0%{transform:translateX(-26px) rotate(-2.2deg);opacity:.2;}100%{transform:none;opacity:1;}}
+
+/* ── Border / None: gradient rounded box; star slider handle ── */
+.st-seg{padding:3px;gap:2px;border-radius:999px;background:var(--grad);box-shadow:0 3px 10px rgba(255,111,145,.22);}
+.st-seg button{border:none;border-radius:999px;padding:4px 13px;font-size:12.5px;font-weight:800;color:var(--ink);background:none;}
+.st-seg button:hover{color:var(--ink);}
+.st-seg button.active{background:#fff;font-weight:900;box-shadow:0 1px 5px rgba(0,0,0,.16);}
+.st-range::-webkit-slider-thumb{width:24px;height:24px;border:none;border-radius:0;box-shadow:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.2l2.9 6.1 6.7.9-4.9 4.7 1.2 6.6L12 17.2 6.1 20.5l1.2-6.6L2.4 9.2l6.7-.9z' fill='%23ff6f91' stroke='%23ffffff' stroke-width='1.7' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;filter:drop-shadow(0 1px 2px rgba(0,0,0,.3));}
+.st-range::-moz-range-thumb{width:22px;height:22px;border:none;border-radius:0;box-shadow:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.2l2.9 6.1 6.7.9-4.9 4.7 1.2 6.6L12 17.2 6.1 20.5l1.2-6.6L2.4 9.2l6.7-.9z' fill='%23ff6f91' stroke='%23ffffff' stroke-width='1.7' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;}
+
+/* ── floating border-colour tool (phone) ── */
+.st-fab-color{border:2.5px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.22);background:#fff;}
+.st-fab-color svg{width:17px;height:17px;}
+.st-swpop{display:none;position:absolute;left:46px;bottom:4px;z-index:6;grid-template-columns:repeat(4,28px);gap:8px;padding:10px;border-radius:16px;background:rgba(255,255,255,.97);box-shadow:0 8px 24px rgba(0,0,0,.22);}
+.st-swpop.open{display:grid;}
+.st-swpop .st-sw{width:28px;height:28px;}
+.st-holder-bar .st-swatches{display:none;}
+
+/* ── dock: tools stay put, only the groups scroll sideways ── */
+.st-dock{display:flex;align-items:flex-start;}
+.st-dock-tools{flex:0 0 auto;display:flex;gap:2px;padding-right:6px;margin-right:6px;border-right:1px solid var(--border);}
+.st-dock .st-groups{flex:1 1 auto;min-width:0;}
+.st-dock-sep{display:none !important;}
+
+/* ── hold a library asset to zoom ── */
+.st-lib-item{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
+.st-zoom{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(34,48,31,.55);backdrop-filter:blur(5px);pointer-events:none;}
+.st-zoom[hidden]{display:none;}
+.st-zoom>div{width:min(76vw,340px);aspect-ratio:1;border-radius:24px;padding:16px;background:#fff repeating-conic-gradient(#efefe9 0% 25%,#fff 0% 50%) 50%/22px 22px;box-shadow:0 20px 60px rgba(0,0,0,.4);animation:stZoomIn .16s ease-out;}
+.st-zoom img{width:100%;height:100%;object-fit:contain;}
+@keyframes stZoomIn{from{transform:scale(.8);opacity:0;}}
+
+@media(min-width:901px){
+  .st-holder-bar .st-swatches{display:flex;}
+  .st-swpop{display:none !important;}
+  .st-dock{flex-direction:column;align-items:stretch;}
+  .st-dock-tools{border-right:none;margin:0;padding:0 0 4px;flex-wrap:wrap;}
+}

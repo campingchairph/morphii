@@ -216,13 +216,12 @@ function renderLibrary() {
   const strip = $('libCats'), keep = strip.scrollLeft;
   const tool = (name, label, icon) =>
     '<button class="st-group tool' + (S.panel === name ? ' active' : '') + '" data-panel="' + name + '"><div class="th">' + icon + '</div><span>' + label + '</span></button>';
-  strip.innerHTML =
+  $('libTools').innerHTML =
     '<button class="st-group tool' + (LIB.source === 'premium' ? ' active' : '') + '" data-act="source"><div class="th">' + ICON_STAR + '</div><span>' + (LIB.source === 'premium' ? 'Main' : 'Premium') + '</span></button>' +
     '<label class="st-group tool desk" for="uploadInput"><div class="th">' + ICON_UPLOAD + '</div><span>Upload</span></label>' +
     '<button class="st-group tool desk" data-act="paste"><div class="th">' + ICON_PASTE + '</div><span>Paste</span></button>' +
-    (LIB.isAdmin ? tool('admin', 'Admin', ICON_ADMIN) : '') +
-    '<i class="st-dock-sep' + (LIB.isAdmin ? '' : ' desk') + '"></i>' +
-    cats.map(c =>
+    (LIB.isAdmin ? tool('admin', 'Admin', ICON_ADMIN) : '');
+  strip.innerHTML = cats.map(c =>
       '<button class="st-group' + (S.panel === 'lib' && c.key === LIB.category ? ' active' : '') + (LIB.hidden.has(c.key) ? ' is-hidden' : '') + '" data-cat="' + esc(c.key) + '">' +
       '<div class="th"><img loading="lazy" src="' + esc(groupThumb(c)) + '" alt=""></div><span>' + esc(c.shown) + '</span></button>').join('');
   if (LIB.source === 'premium' && !cats.length) strip.insertAdjacentHTML('beforeend', '<span class="st-prem-note">' + (LIB.premium.loading ? 'Loading designers…' : 'No designer stickers yet') + '</span>');
@@ -253,7 +252,7 @@ function renderGrid() {
 }
 function updatePanelHead(cat) {
   const t = $('panelTitle'), sub = $('panelSub');
-  if (S.panel === 'lib') { t.textContent = cat ? cat.shown : (LIB.source === 'premium' ? 'Premium Library' : 'Stickers'); sub.textContent = LIB.source === 'premium' ? 'By designers · tap to add' : 'Tap to add · tap again for more'; }
+  if (S.panel === 'lib') { t.textContent = cat ? cat.shown : (LIB.source === 'premium' ? 'Premium Library' : 'Stickers'); sub.textContent = LIB.source === 'premium' ? 'By designers · tap to add · hold to zoom' : 'Tap to add · hold to zoom'; }
   else if (S.panel === 'admin') { t.textContent = 'Admin'; sub.textContent = ''; }
 }
 function openPanel(name) {
@@ -753,10 +752,21 @@ function refreshUI() {
   bgSync(); updateBadges(); renderSummary(); renderSelBar();
   $('sheetEmpty').style.display = S.items.length ? 'none' : 'flex';
 }
+// "SHEET 2 of 3" tag on the paper's top-left corner + a pile of paper behind it when there is more than one sheet
+function renderSheetBadge() {
+  const n = Math.max(1, S.pages.length), i = Math.min(S.pageIdx, n - 1) + 1, b = $('sheetBadge');
+  b.innerHTML = (n > 1 ? '<button data-pg="-1" aria-label="Previous sheet"' + (i === 1 ? ' disabled' : '') + '>‹</button>' : '') +
+    '<span class="sb-txt"><small>Sheet</small><b>' + i + '</b>' + (n > 1 ? '<em>of ' + n + '</em>' : '') + '</span>' +
+    (n > 1 ? '<button data-pg="1" aria-label="Next sheet"' + (i === n ? ' disabled' : '') + '>›</button>' : '');
+  $('sheetPile').innerHTML = '<i></i>'.repeat(Math.min(3, n - 1));
+  if (n > (S.prevSheets || 1)) {                       // a new sheet just appeared
+    [b, $('sheetPile')].forEach(el => { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); });
+  }
+  S.prevSheets = n;
+}
 function renderPreview() {
   $('sheetEmpty').style.display = S.items.length ? 'none' : 'flex';
-  $('sheetTabs').innerHTML = S.pages.length > 1
-    ? S.pages.map((_, i) => '<button class="st-chip' + (i === S.pageIdx ? ' active' : '') + '" data-page="' + i + '">Sheet ' + (i + 1) + '</button>').join('') : '';
+  renderSheetBadge();
   const warn = [];
   if (S.oversize.length) warn.push(S.oversize.length + ' sticker' + (S.oversize.length > 1 ? 's are' : ' is') + ' too big for A4 — tap it and make it smaller.');
   if (S.stats.failed) warn.push(S.stats.failed + ' image' + (S.stats.failed > 1 ? 's' : '') + ' couldn’t be loaded.');
@@ -774,8 +784,8 @@ function drawSheetPreview() {
 }
 // keep the whole A4 sheet visible in whatever space the pop-up leaves it
 function fitPaper() {
-  const r = $('paperArea').getBoundingClientRect(), pad = 12;
-  const maxW = r.width - pad * 2, maxH = r.height - pad * 2 - (S.pages.length > 1 ? 22 : 0);
+  const r = $('paperArea').getBoundingClientRect(), pad = 12, below = DESKTOP.matches ? 60 : 50;
+  const maxW = r.width - pad * 2 - 14, maxH = r.height - pad - below;
   if (maxW < 40 || maxH < 40) return;
   const w = Math.min(maxW, maxH * PAGE_W / PAGE_H), cv = $('sheetCanvas');
   cv.style.width = w + 'px'; cv.style.height = (w * PAGE_H / PAGE_W) + 'px';
@@ -1378,25 +1388,35 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   border.addEventListener('input', () => { S.settings.border = +border.value; setBorderTxt(); scheduleBuild(); });
   setBorderTxt();
-  $('swatches').innerHTML = SWATCHES.map(sw =>
-    '<button class="st-sw' + (sw.id === S.settings.color ? ' active' : '') + '" role="radio" aria-checked="' + (sw.id === S.settings.color) + '" aria-label="' + sw.name + '" data-sw="' + sw.id + '" style="background:' + swatchCss(sw) + '"></button>').join('');
-  $('swatches').addEventListener('click', e => {
+  const swHtml = SWATCHES.map(sw =>
+    '<button class="st-sw" role="radio" aria-label="' + sw.name + '" data-sw="' + sw.id + '" style="background:' + swatchCss(sw) + '"></button>').join('');
+  $('swatches').innerHTML = swHtml; $('swPop').innerHTML = swHtml;
+  const syncSwatches = () => {
+    document.querySelectorAll('.st-sw').forEach(x => { const on = x.dataset.sw === S.settings.color; x.classList.toggle('active', on); x.setAttribute('aria-checked', on); });
+    $('fabColor').style.background = swatchCss(SWATCHES.find(x => x.id === S.settings.color) || SWATCHES[0]);
+  };
+  syncSwatches();
+  const onSwatch = e => {
     const b = e.target.closest('[data-sw]'); if (!b) return;
-    S.settings.color = b.dataset.sw;
-    $('swatches').querySelectorAll('.st-sw').forEach(x => { const on = x === b; x.classList.toggle('active', on); x.setAttribute('aria-checked', on); });
-    drawSheetPreview();
-  });
+    S.settings.color = b.dataset.sw; syncSwatches(); $('swPop').classList.remove('open'); drawSheetPreview();
+  };
+  $('swatches').addEventListener('click', onSwatch);
+  $('swPop').addEventListener('click', onSwatch);
+  $('fabColor').addEventListener('click', e => { e.stopPropagation(); $('swPop').classList.toggle('open'); });
+  document.addEventListener('click', e => { if (!e.target.closest('#swPop,#fabColor')) $('swPop').classList.remove('open'); });
   $('setShowCut').addEventListener('change', e => { S.settings.showCut = e.target.checked; drawSheetPreview(); });
   $('styleChips').addEventListener('click', e => {
     const b = e.target.closest('[data-style]'); if (!b) return;
     S.settings.style = b.dataset.style;
     document.querySelectorAll('#styleChips [data-style]').forEach(c => c.classList.toggle('active', c === b));
-    $('borderRow').style.display = $('swatches').style.display = S.settings.style === 'none' ? 'none' : '';
+    const hide = S.settings.style === 'none' ? 'none' : '';
+    $('borderRow').style.display = $('swatches').style.display = $('fabColor').style.display = hide;
+    if (hide) $('swPop').classList.remove('open');
     scheduleBuild();
   });
 
   // library menu (bottom) + pop-up
-  $('libCats').addEventListener('click', e => {
+  const onDockClick = e => {
     if (e.target.closest('[data-act="paste"]')) { pasteFromClipboard(); return; }
     if (e.target.closest('[data-act="source"]')) { setSource(LIB.source === 'premium' ? 'main' : 'premium'); return; }
     const tool = e.target.closest('[data-panel]');
@@ -1409,7 +1429,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const g = e.target.closest('[data-cat]'); if (!g) return;
     if (S.panel === 'lib' && LIB.category === g.dataset.cat) { closePanel(); return; }
     LIB.category = g.dataset.cat; openPanel('lib');
-  });
+  };
+  $('libCats').addEventListener('click', onDockClick);
+  $('libTools').addEventListener('click', onDockClick);
   $('panelClose').addEventListener('click', closePanel);
   document.addEventListener('keydown', e => {
     if (BD.open) {
@@ -1419,7 +1441,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (e.key === 'Escape' && S.panel) closePanel();
   });
+  let lp = null, lpFired = false;
+  const endLp = () => { if (lp) { clearTimeout(lp.timer); lp = null; } $('zoomView').hidden = true; };
+  $('libGrid').addEventListener('pointerdown', e => {
+    const it = e.target.closest('.st-lib-item'); if (!it) return;
+    lpFired = false; const img = it.querySelector('img');
+    lp = { x: e.clientX, y: e.clientY, timer: setTimeout(() => {
+      lpFired = true; $('zoomImg').src = img.src; $('zoomView').hidden = false;
+      if (navigator.vibrate) navigator.vibrate(12);
+    }, 420) };
+  });
+  $('libGrid').addEventListener('pointermove', e => { if (lp && Math.hypot(e.clientX - lp.x, e.clientY - lp.y) > 10) { clearTimeout(lp.timer); lp = null; } });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => $('libGrid').addEventListener(ev, endLp));
+  $('libGrid').addEventListener('contextmenu', e => e.preventDefault());
   $('libGrid').addEventListener('click', e => {
+    if (lpFired) { lpFired = false; return; }               // that touch was a zoom, not an add
     const it = e.target.closest('.st-lib-item'); if (!it) return;
     if (it.dataset.pid) { addPremium(it.dataset.pid); return; }
     addItem(it.dataset.src, it.dataset.label);
@@ -1455,9 +1491,14 @@ document.addEventListener('DOMContentLoaded', () => {
     S.items.forEach(i => { i.sizeMm = clamp(i.sizeMm + d, 10, 190); });
     refreshUI(); scheduleBuild();
   });
-  $('sheetTabs').addEventListener('click', e => {
-    const b = e.target.closest('[data-page]'); if (!b) return;
-    S.pageIdx = +b.dataset.page; renderPreview();
+  $('sheetBadge').addEventListener('click', e => {
+    const b = e.target.closest('[data-pg]'); if (!b || b.disabled) return;
+    const dir = +b.dataset.pg, to = clamp(S.pageIdx + dir, 0, S.pages.length - 1);
+    if (to === S.pageIdx) return;
+    S.pageIdx = to; S.sel = null; S.selK = null;
+    const wrap = $('sheetWrap'); wrap.dataset.flip = dir > 0 ? 'next' : 'prev';
+    wrap.classList.remove('flip'); void wrap.offsetWidth; wrap.classList.add('flip');
+    renderPreview();
   });
 
   // admin (delegated; each handler re-checks admin status)
@@ -1504,7 +1545,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if ('ResizeObserver' in window) new ResizeObserver(fitPaper).observe($('paperArea'));
   window.addEventListener('resize', () => { fitPaper(); bgResize(); });
   bgResize();
-  refreshUI(); renderLibrary(); fitPaper(); drawSheetPreview();
+  refreshUI(); renderLibrary(); renderSheetBadge(); fitPaper(); drawSheetPreview();
   loadLibrary();
   if (typeof AUTH !== 'undefined' && AUTH) AUTH.onAuthStateChanged(applyAuth);
 

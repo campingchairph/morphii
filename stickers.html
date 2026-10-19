@@ -7,7 +7,7 @@
 <meta name="description" content="Pick stickers, set the white holder, and arrange them on an A4 sheet automatically.">
 <meta name="robots" content="noindex, nofollow">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stickers.css?v=20">
+<link rel="stylesheet" href="stickers.css?v=21">
 </head>
 <body>
 <canvas id="bgFx" aria-hidden="true"></canvas>
@@ -38,7 +38,6 @@
     </div>
 
     <div class="st-paper-area" id="paperArea">
-      <div class="st-sheet-tabs" id="sheetTabs"></div>
       <button class="st-try" id="tryBtn" type="button" aria-label="Create new sticker: build your own sticker">
         <svg class="st-try-star" viewBox="0 0 100 100" aria-hidden="true">
           <defs><linearGradient id="tryG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9ad77a"/><stop offset=".5" stop-color="#ffc277"/><stop offset="1" stop-color="#ff6f91"/></linearGradient></defs>
@@ -46,7 +45,7 @@
         </svg>
         <span class="st-try-label">Create<b>NEW</b>Sticker</span>
       </button>
-      <div class="st-sheet-wrap" id="sheetWrap"><canvas id="sheetCanvas" width="1050" height="1485"></canvas><canvas id="fxCanvas" aria-hidden="true"></canvas>
+      <div class="st-sheet-wrap" id="sheetWrap"><div class="st-pile" id="sheetPile" aria-hidden="true"></div><div class="st-sheetbadge" id="sheetBadge"></div><canvas id="sheetCanvas" width="1050" height="1485"></canvas><canvas id="fxCanvas" aria-hidden="true"></canvas>
         <!-- phone only: tiny tools that sit right next to the tapped sticker -->
         <div class="st-pt" id="ptSize" style="display:none;">
           <button data-sel="size-" aria-label="Smaller">−</button><button data-sel="size+" aria-label="Bigger">+</button></div>
@@ -65,7 +64,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg><span>Upload</span></label>
         <button class="st-fab" id="fabPaste" title="Paste a copied photo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M9 5H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-3"/><path d="M9 12h6M9 16h6"/></svg><span>Paste</span></button>
+        <button class="st-fab st-fab-color" id="fabColor" aria-label="Border colour" aria-haspopup="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#22301F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.2 6 10.5A6 6 0 016 13.5C6 9.2 12 3 12 3z" fill="rgba(255,255,255,.75)"/></svg></button>
       </div>
+      <div class="st-swpop" id="swPop" role="radiogroup" aria-label="Border colour"></div>
     </div>
 
     <!-- white holder: always visible under the sheet -->
@@ -97,13 +99,15 @@
         <div id="pane-admin" hidden></div>
       </div>
     </div>
-    <nav class="st-dock" aria-label="Sticker library"><div class="st-groups" id="libCats"></div></nav>
+    <nav class="st-dock" aria-label="Sticker library"><div class="st-dock-tools" id="libTools"></div><div class="st-groups" id="libCats"></div></nav>
   </section>
 
   <input type="file" id="uploadInput" accept="image/png,image/webp,image/jpeg" style="display:none">
 </main>
 
 <!-- BUILD YOUR OWN STICKER: separate window -->
+<div class="st-zoom" id="zoomView" hidden aria-hidden="true"><div><img id="zoomImg" alt=""></div></div>
+
 <div class="bd" id="builder" hidden role="dialog" aria-modal="true" aria-labelledby="bdTitle">
   <div class="bd-win">
     <header class="bd-head">
@@ -148,6 +152,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js?v=11"></script>
-<script src="stickers.js?v=15"></script>
+<script src="stickers.js?v=16"></script>
 </body>
 </html>
