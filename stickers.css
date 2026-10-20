@@ -374,3 +374,8 @@ h1,h2,h3,.st-logo{font-family:'Baloo 2',cursive;}
 .rv .st-seg button{flex:1;}
 .rv-open .st-try{animation-play-state:paused;}
 .rv-line.total b,.rv-code{background-image:linear-gradient(100deg,#4f9a2e,#ec7f1f 55%,#e0245e);}
+.st-order i{font-style:normal;font-size:18px;line-height:1;color:var(--coral);}
+.rv-copies{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--sage-light);border-radius:12px;padding:8px 12px;margin-bottom:10px;font-size:13px;font-weight:800;}
+.rv-step button{width:28px;height:28px;font-size:17px;}
+.rv-step button:disabled{opacity:.3;cursor:default;}
+.rv-step b{min-width:34px;font-size:15px;}

@@ -724,8 +724,6 @@ function renderSummary() {
     lo === hi ? 'All ' + lo + ' mm' : 'Mixed ' + lo + '–' + hi + ' mm',
   ];
   if (sheets) parts.push(sheets + ' sheet' + (sheets > 1 ? 's' : ''), Math.round(S.stats.usedPct) + '% used');
-  const prem = S.items.filter(i => i.premium && i.premium.price).reduce((n, i) => n + i.premium.price, 0);
-  if (prem) parts.push('Premium ₱' + prem);
   box.innerHTML =
     '<div class="st-sum-line"><b class="n">' + total + '</b><b>sticker' + (total !== 1 ? 's' : '') + '</b>' +
     parts.map(t => '<i class="sep">|</i><span class="dim">' + t + '</span>').join('') + '</div>' +
@@ -1292,21 +1290,23 @@ async function bdFinish() {
 /* ═══════════════ REVIEW & ORDER ═══════════════
    Full-screen preview of the sheets (swipe between them), the price, then contact details
    and send. The order is saved to morphii_sticker_orders under a unique S-XXXXXX code. */
-const RV = { open: false, idx: 0, step: 'price', method: 'email', pricing: { tiers: DEFAULT_STICKER_TIERS }, q: null, count: 0, drag: null, busy: false };
+const RV = { open: false, idx: 0, step: 'price', method: 'email', pricing: { tiers: DEFAULT_STICKER_TIERS }, q: null, count: 0, drag: null, busy: false, copies: 1, minCopies: 1 };
 const peso = n => '₱' + (Math.round(n * 100) / 100).toLocaleString('en-PH');
 
-// what the customer pays: sheets (tiered) + one fee per premium designer sticker
+// What the customer pays. Pricing is per PRINTED A4 sheet: the layout's sheets x copies, with a
+// minimum order (smallest tier) and bulk tiers. Cutting is included. Premium designer stickers
+// add one fee per design, not per copy.
+const minPrintSheets = () => Math.max(1, Math.min(...RV.pricing.tiers.map(t => t.min)));
 function quote() {
-  const sheets = S.pages.length, sp = stickerSheetPrice(RV.pricing.tiers, sheets);
+  const sheets = S.pages.length, copies = Math.max(RV.copies, 1), printSheets = sheets * copies, sp = stickerSheetPrice(RV.pricing.tiers, printSheets);
   const premium = S.items.filter(i => i.premium && i.premium.price > 0).map(i => ({ id: i.premium.id, designer: i.premium.designer, name: i.label, price: i.premium.price }));
   const premiumTotal = premium.reduce((n, x) => n + x.price, 0);
-  return { sheets, stickers: S.stats.stickers, each: sp.each, sheetTotal: sp.total, premium, premiumTotal, total: sp.total + premiumTotal };
+  return { sheets, copies, printSheets, stickers: S.stats.stickers, each: sp.each, sheetTotal: sp.total, premium, premiumTotal, total: sp.total + premiumTotal };
 }
 const sheetFill = pg => pg.placements.reduce((n, p) => n + p.inst.geom.area, 0) / (PAGE_W * PAGE_H) * 100;
 function updateOrderBtn() {
   const has = S.pages.length > 0;
   $('orderBtn').hidden = !has;
-  if (has) $('orderBtnPrice').textContent = peso(quote().total);
 }
 
 function rvGo(i, animate) {
@@ -1326,18 +1326,23 @@ function rvStep(step) {
   $('rvCard').scrollTop = 0;
 }
 function renderPricePane() {
-  const q = RV.q;
-  let h = '<div class="rv-lines"><div class="rv-line"><span>' + q.sheets + ' A4 sheet' + (q.sheets > 1 ? 's' : '') + ' × ' + peso(q.each) + '</span><b>' + peso(q.sheetTotal) + '</b></div>';
+  const q = RV.q, minS = minPrintSheets();
+  let h = '<div class="rv-copies"><span>Copies of your ' + q.sheets + ' sheet' + (q.sheets > 1 ? 's' : '') + '</span><span class="st-step rv-step"><button type="button" data-cp="-1"' + (RV.copies <= RV.minCopies ? ' disabled' : '') + ' aria-label="Fewer copies">−</button><b>' + RV.copies + '</b><button type="button" data-cp="1" aria-label="More copies">+</button></span></div>';
+  h += '<div class="rv-lines"><div class="rv-line"><span>' + q.printSheets + ' A4 sheet' + (q.printSheets > 1 ? 's' : '') + ' × ' + peso(q.each) + '</span><b>' + peso(q.sheetTotal) + '</b></div>';
+  h += '<div class="rv-line sub"><span>' + q.sheets + ' sheet' + (q.sheets > 1 ? 's' : '') + (q.copies > 1 ? ' × ' + q.copies + ' copies' : '') + ' · cutting included</span><span></span></div>';
   q.premium.forEach(p => { h += '<div class="rv-line sub"><span>Premium: ' + esc(p.name) + ' <em>by ' + esc(p.designer) + '</em></span><b>' + peso(p.price) + '</b></div>'; });
   h += '<div class="rv-line total"><span>Total</span><b>' + peso(q.total) + '</b></div></div>';
+  h += '<div class="rv-meta">' + q.stickers + ' sticker' + (q.stickers !== 1 ? 's' : '') + ' per set · minimum order ' + minS + ' A4 sheets</div>';
+  const bulk = RV.pricing.tiers.slice().sort((a, b) => a.min - b.min).filter(t => t.min > q.printSheets).pop();
+  if (bulk && RV.pricing.tiers.length > 1) h += '<div class="rv-meta">Bulk price from ' + bulk.min + ' sheets: ' + peso(bulk.price) + ' each</div>';
   const last = S.pages[S.pages.length - 1], fill = last ? sheetFill(last) : 100;
-  h += '<div class="rv-meta">' + q.stickers + ' sticker' + (q.stickers !== 1 ? 's' : '') + ' on ' + q.sheets + ' sheet' + (q.sheets > 1 ? 's' : '') + ' · cut and ready to peel</div>';
-  if (q.sheets >= 1 && fill < 35) h += '<div class="rv-tip">Sheet ' + q.sheets + ' is only ' + Math.round(fill) + '% full — you can add more stickers to it at no extra cost.</div>';
+  if (last && fill < 35) h += '<div class="rv-tip">Sheet ' + q.sheets + ' is only ' + Math.round(fill) + '% full — you can add more stickers to it at no extra cost.</div>';
   $('rvLines').innerHTML = h;
   $('rvAgreeTotal').textContent = peso(q.total);
 }
 async function openReview() {
   if (!S.pages.length) return;
+  RV.minCopies = Math.max(1, Math.ceil(minPrintSheets() / S.pages.length)); RV.copies = RV.minCopies;
   RV.q = quote(); RV.count = S.pages.length; RV.busy = false;
   const ppmm = 4, tr = $('rvTrack'); tr.innerHTML = '';
   S.pages.forEach(pg => {
@@ -1391,7 +1396,7 @@ async function sendOrder() {
     }
     const order = {
       contactMethod: RV.method, customerName: name, customerEmail: RV.method === 'email' ? email : null, customerPhone: RV.method === 'phone' ? phone : null,
-      notes, sheets: q.sheets, stickers: q.stickers, pricePerSheet: q.each, sheetTotal: q.sheetTotal, premiumTotal: q.premiumTotal, total: q.total,
+      notes, sheets: q.sheets, copies: q.copies, printSheets: q.printSheets, stickers: q.stickers, pricePerSheet: q.each, sheetTotal: q.sheetTotal, premiumTotal: q.premiumTotal, total: q.total,
       premium: q.premium, settings: { style: S.settings.style, border: S.settings.border, color: S.settings.color, showCut: S.settings.showCut }, items,
     };
     const code = await submitStickerOrder(order, assets);
@@ -1399,7 +1404,7 @@ async function sendOrder() {
     if (RV.method === 'email' && typeof sendConfirmationEmail === 'function') {
       const r = await sendConfirmationEmail({
         to_email: email, to_name: name, code,
-        product: 'Sticker Sheets (' + q.sheets + ' sheet' + (q.sheets > 1 ? 's' : '') + ' · ' + q.stickers + ' stickers)',
+        product: 'Sticker Sheets (' + q.printSheets + ' A4 sheet' + (q.printSheets > 1 ? 's' : '') + ' · ' + q.stickers + ' stickers per set)',
         size: 'A4 · Total ' + peso(q.total),
       });
       emailOk = !!(r && r.sent);
@@ -1416,7 +1421,7 @@ function showOrderDone(code, emailOk, phone) {
   $('rvDoneNote').textContent = RV.method === 'email'
     ? (emailOk ? 'We emailed these details to you — if you don’t see them in a few minutes, check your Spam or Junk folder.' : 'We couldn’t send the confirmation email automatically — please screenshot or write down your order number now.')
     : 'We’ll text your confirmation to ' + phone + ' with this order number.';
-  $('rvPay').innerHTML = '<li>Pay on Shopee for <b>' + q.sheets + ' A4 sheet' + (q.sheets > 1 ? 's' : '') + '</b> (' + peso(q.sheetTotal) + ').</li>' +
+  $('rvPay').innerHTML = '<li>Pay on Shopee for <b>' + q.printSheets + ' A4 sheet' + (q.printSheets > 1 ? 's' : '') + '</b> (' + peso(q.sheetTotal) + ').</li>' +
     (q.premiumTotal ? '<li>Your premium designer stickers (' + peso(q.premiumTotal) + ') are paid separately — we’ll message you how.</li>' : '') +
     '<li>Send your order number in the Shopee chat.</li><li>We’ll match it to your layout, confirm, and start printing.</li>';
   rvStep('done');
@@ -1620,6 +1625,10 @@ document.addEventListener('DOMContentLoaded', () => {
     rvGo(RV.idx + (d.dx < -w * 0.15 ? 1 : d.dx > w * 0.15 ? -1 : 0), true);
   };
   ['pointerup', 'pointercancel'].forEach(ev => stage.addEventListener(ev, endDrag));
+  $('rvLines').addEventListener('click', e => {
+    const b = e.target.closest('[data-cp]'); if (!b || b.disabled) return;
+    RV.copies = clamp(RV.copies + +b.dataset.cp, RV.minCopies, 500); RV.q = quote(); renderPricePane();
+  });
   $('rvApprove').addEventListener('click', () => { rvStep('form'); $('rvName').focus(); });
   $('rvBackPrice').addEventListener('click', () => rvStep('price'));
   $('rvMethod').addEventListener('click', e => {

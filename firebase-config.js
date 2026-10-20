@@ -601,8 +601,12 @@ async function adminRejectPayment(id) { await _pCol().doc(id).update({ status: '
           items:[{src,label,sizeMm,qty,premium?}], createdAt }
    item.src is a library URL, 'asset:<n>' (an uploaded/built image stored in the order's
    assets/<n> sub-document) or 'premium:<stickerId>' (a designer sticker, full image fetched by admin).
-   Pricing is per A4 sheet with volume tiers kept in morphii_config/stickerPricing. */
-const DEFAULT_STICKER_TIERS = [{ min: 1, price: 120 }, { min: 2, price: 100 }, { min: 5, price: 85 }, { min: 10, price: 70 }];
+   Pricing is per PRINTED A4 sheet with volume tiers kept in morphii_config/stickerPricing.
+   A customer's layout can span several sheets (sheets) and can be printed several times
+   (copies); printSheets = sheets x copies is what is priced, and cutting is included.
+   The smallest tier's "min" is the minimum order (3 A4 sheets). */
+// The first tier's "min" is the minimum order (3 A4 sheets); the last tier is the discounted bulk price (50+).
+const DEFAULT_STICKER_TIERS = [{ min: 3, price: 100 }, { min: 10, price: 90 }, { min: 50, price: 75 }];
 async function getStickerPricing() {
   if (!DB) return { tiers: DEFAULT_STICKER_TIERS };
   try {
@@ -699,13 +703,15 @@ async function updateStickerOrder(code, fields) { return DB.collection('morphii_
        }
        match /morphii_sticker_orders/{code} {
          allow create: if code.matches('S-[A-Z2-9]{6}')
-           && request.resource.data.keys().hasOnly(['code','status','contactMethod','customerName','customerEmail','customerPhone','notes','sheets','stickers','pricePerSheet','sheetTotal','premiumTotal','total','premium','settings','items','createdAt'])
+           && request.resource.data.keys().hasOnly(['code','status','contactMethod','customerName','customerEmail','customerPhone','notes','sheets','copies','printSheets','stickers','pricePerSheet','sheetTotal','premiumTotal','total','premium','settings','items','createdAt'])
            && request.resource.data.code == code
            && request.resource.data.status == 'new'
            && request.resource.data.contactMethod in ['email','phone']
            && request.resource.data.customerName is string
            && request.resource.data.customerName.size() >= 1 && request.resource.data.customerName.size() <= 80
            && request.resource.data.sheets is int && request.resource.data.sheets >= 1 && request.resource.data.sheets <= 60
+           && request.resource.data.copies is int && request.resource.data.copies >= 1 && request.resource.data.copies <= 500
+           && request.resource.data.printSheets is int && request.resource.data.printSheets >= 1 && request.resource.data.printSheets <= 2000
            && request.resource.data.items is list && request.resource.data.items.size() <= 150;
          allow read, update, delete: if request.auth != null
            && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
