@@ -594,30 +594,38 @@ async function adminRejectPayment(id) { await _pCol().doc(id).update({ status: '
    morphii_sticker_orders/{code}   code = "S-" + 6 chars, used as the document id.
    Because the code IS the id, a repeated code is refused by the rules (no public updates),
    so every order number is unique. Customers can only create; admins read/update.
-   Doc: { code, status:'new'|'confirmed'|'paid'|'printing'|'done'|'cancelled',
+   Doc: { code, productLabel, status:'new'|'confirmed'|'paid'|'printing'|'done'|'cancelled',
           contactMethod:'email'|'phone', customerName, customerEmail, customerPhone, notes,
           sheets, stickers, pricePerSheet, sheetTotal, premiumTotal, total,
           premium:[{id,designer,name,price}], settings:{style,border,color,showCut},
           items:[{src,label,sizeMm,qty,premium?}], createdAt }
    item.src is a library URL, 'asset:<n>' (an uploaded/built image stored in the order's
    assets/<n> sub-document) or 'premium:<stickerId>' (a designer sticker, full image fetched by admin).
-   Pricing is per PRINTED A4 sheet with volume tiers kept in morphii_config/stickerPricing.
-   A customer's layout can span several sheets (sheets) and can be printed several times
-   (copies); printSheets = sheets x copies is what is priced, and cutting is included.
-   The smallest tier's "min" is the minimum order (3 A4 sheets). */
+   Pricing is per A4 sheet (regular glossy vinyl, cutting included) with a minimum number of
+   sheets per order and volume tiers, all kept in morphii_config/stickerPricing
+   { label, minSheets, tiers:[{min,price}] } and editable on the stickers admin page. */
 // The first tier's "min" is the minimum order (3 A4 sheets); the last tier is the discounted bulk price (50+).
-const DEFAULT_STICKER_TIERS = [{ min: 3, price: 100 }, { min: 10, price: 90 }, { min: 50, price: 75 }];
+const DEFAULT_STICKER_TIERS = [{ min: 3, price: 85 }, { min: 50, price: 75 }];
+const DEFAULT_STICKER_PRICING = { label: 'Glossy vinyl stickers', minSheets: 3, tiers: DEFAULT_STICKER_TIERS };
 async function getStickerPricing() {
-  if (!DB) return { tiers: DEFAULT_STICKER_TIERS };
+  if (!DB) return DEFAULT_STICKER_PRICING;
   try {
     const d = await DB.collection('morphii_config').doc('stickerPricing').get();
-    const t = d.exists && Array.isArray(d.data().tiers) ? d.data().tiers.filter(x => x.min >= 1 && x.price >= 0) : null;
-    return { tiers: t && t.length ? t : DEFAULT_STICKER_TIERS };
-  } catch (e) { return { tiers: DEFAULT_STICKER_TIERS }; }
+    if (!d.exists) return DEFAULT_STICKER_PRICING;
+    const x = d.data(), t = Array.isArray(x.tiers) ? x.tiers.filter(y => y.min >= 1 && y.price >= 0) : [];
+    return {
+      label: x.label || DEFAULT_STICKER_PRICING.label,
+      minSheets: x.minSheets >= 1 ? x.minSheets : DEFAULT_STICKER_PRICING.minSheets,
+      tiers: t.length ? t : DEFAULT_STICKER_TIERS,
+    };
+  } catch (e) { return DEFAULT_STICKER_PRICING; }
 }
-async function saveStickerPricing(tiers) {
-  const clean = tiers.map(t => ({ min: Math.max(1, Math.round(+t.min)), price: Math.max(0, Math.round(+t.price)) })).sort((a, b) => a.min - b.min);
-  return DB.collection('morphii_config').doc('stickerPricing').set({ tiers: clean });
+// cfg = { label, minSheets, tiers:[{min,price}] }
+async function saveStickerPricing(cfg) {
+  const tiers = cfg.tiers.map(t => ({ min: Math.max(1, Math.round(+t.min)), price: Math.max(0, Math.round(+t.price)) })).sort((a, b) => a.min - b.min);
+  return DB.collection('morphii_config').doc('stickerPricing').set({
+    label: String(cfg.label || 'Glossy vinyl stickers').slice(0, 60), minSheets: Math.max(1, Math.round(+cfg.minSheets || 3)), tiers,
+  });
 }
 // price per sheet = the tier with the biggest "min" that the sheet count reaches
 function stickerSheetPrice(tiers, sheets) {
@@ -703,15 +711,13 @@ async function updateStickerOrder(code, fields) { return DB.collection('morphii_
        }
        match /morphii_sticker_orders/{code} {
          allow create: if code.matches('S-[A-Z2-9]{6}')
-           && request.resource.data.keys().hasOnly(['code','status','contactMethod','customerName','customerEmail','customerPhone','notes','sheets','copies','printSheets','stickers','pricePerSheet','sheetTotal','premiumTotal','total','premium','settings','items','createdAt'])
+           && request.resource.data.keys().hasOnly(['code','status','contactMethod','customerName','customerEmail','customerPhone','notes','productLabel','sheets','stickers','pricePerSheet','sheetTotal','premiumTotal','total','premium','settings','items','createdAt'])
            && request.resource.data.code == code
            && request.resource.data.status == 'new'
            && request.resource.data.contactMethod in ['email','phone']
            && request.resource.data.customerName is string
            && request.resource.data.customerName.size() >= 1 && request.resource.data.customerName.size() <= 80
            && request.resource.data.sheets is int && request.resource.data.sheets >= 1 && request.resource.data.sheets <= 60
-           && request.resource.data.copies is int && request.resource.data.copies >= 1 && request.resource.data.copies <= 500
-           && request.resource.data.printSheets is int && request.resource.data.printSheets >= 1 && request.resource.data.printSheets <= 2000
            && request.resource.data.items is list && request.resource.data.items.size() <= 150;
          allow read, update, delete: if request.auth != null
            && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];

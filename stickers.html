@@ -7,7 +7,7 @@
 <meta name="description" content="Pick stickers, set the white holder, and arrange them on an A4 sheet automatically.">
 <meta name="robots" content="noindex, nofollow">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stickers.css?v=25">
+<link rel="stylesheet" href="stickers.css?v=26">
 </head>
 <body>
 
@@ -152,6 +152,18 @@
   </div>
 </div>
 
+<!-- shown when the customer tries to order with fewer sheets than the minimum -->
+<div class="mp" id="minPrompt" hidden role="alertdialog" aria-labelledby="mpTitle">
+  <div class="mp-card">
+    <div class="mp-icon" aria-hidden="true">📄</div>
+    <h2 id="mpTitle">Minimum of 3 sheets per order</h2>
+    <div class="mp-dots" id="mpDots"></div>
+    <div class="mp-count" id="mpCount"></div>
+    <p id="mpText"></p>
+    <button class="mp-btn" id="mpClose">Keep adding stickers</button>
+  </div>
+</div>
+
 <div class="st-zoom" id="zoomView" hidden aria-hidden="true"><div><img id="zoomImg" alt=""></div></div>
 
 <div class="bd" id="builder" hidden role="dialog" aria-modal="true" aria-labelledby="bdTitle">
@@ -197,9 +209,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js?v=13"></script>
+<script src="firebase-config.js?v=14"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="email-config.js"></script>
-<script src="stickers.js?v=19"></script>
+<script src="stickers.js?v=20"></script>
 </body>
 </html>

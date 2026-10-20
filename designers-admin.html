@@ -86,8 +86,10 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
     </div>
 
     <div id="tab-pricing" hidden>
-      <div class="card"><h2>Price per A4 sheet</h2>
-        <p class="hint">Priced per printed A4 sheet (sheets × copies); cutting is included. The <b>first tier’s “from” is the minimum order</b> (3 sheets), and the last tier is the discounted bulk price (50+). Customers see the total only on the final review screen.</p>
+      <div class="card"><h2>Sticker pricing</h2>
+        <div class="field"><label>Sticker type shown to customers</label><input class="inp" id="prLabel" maxlength="60" placeholder="Glossy vinyl stickers"></div>
+        <div class="field"><label>Minimum sheets per order</label><input class="inp" id="prMin" type="number" min="1" style="max-width:140px"></div>
+        <p class="hint" style="margin-top:12px">Price per A4 sheet, cutting included. Customers below the minimum get a big “minimum sheets per order” prompt and can’t check out. The tier with the biggest “from” that the sheet count reaches sets the price per sheet — use a high “from” (e.g. 50) for the discounted bulk price. Customers see the total only on the final review screen.</p>
         <div id="tierRows"></div>
         <div class="row" style="display:flex;gap:10px;margin-top:10px;"><button class="btn ghost" id="tierAdd">+ Add tier</button><button class="btn" id="tierSave">Save pricing</button></div>
       </div>
@@ -126,7 +128,7 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js?v=13"></script>
+<script src="firebase-config.js?v=14"></script>
 <script>
 (function () {
   'use strict';
@@ -138,7 +140,7 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
   // every action re-checks the live admin sign-in; the Firestore rules are the real lock
   const guard = () => { const u = AUTH && AUTH.currentUser; if (!(u && isAdmin(u))) throw new Error('Admin sign-in required'); };
 
-  let PENDING = [], PAYS = [], DESIGNERS = [], LIVE = [], ORDERS = [], TIERS = [];
+  let PENDING = [], PAYS = [], DESIGNERS = [], LIVE = [], ORDERS = [], TIERS = [], PRICING = {};
 
   async function refresh() {
     guard();
@@ -153,9 +155,9 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
     $('designerTable').innerHTML = DESIGNERS.length ? '<table><tr><th>Designer</th><th>Email</th><th>Uploads (lifetime)</th><th>Paid kept</th><th>Slots</th><th>Pass until</th></tr>' + DESIGNERS.map(d =>
       '<tr><td>' + esc(d.displayName) + '</td><td>' + esc(d.email) + '</td><td>' + d.uploadsEver + '</td><td>' + (d.paidListed || 0) + '</td><td>' + (d.paidSlots || 0) + '</td><td>' + fd(d.paidUntil) + '</td></tr>').join('') + '</table>' : '<div class="empty">No designers yet.</div>';
     const STATUSES = ['new', 'confirmed', 'paid', 'printing', 'done', 'cancelled'];
-    const smsBody = o => 'Hi ' + o.customerName + '! This is Morphii. Your sticker sheet order ' + o.code + ' (' + (o.printSheets || o.sheets) + ' A4 sheet' + ((o.printSheets || o.sheets) > 1 ? 's' : '') + ', total ₱' + o.total + ') is confirmed. Please pay on Shopee and send this order number in chat. Thank you!';
-    $('orderList').innerHTML = ORDERS.length ? '<table><tr><th>Order</th><th>When</th><th>Customer</th><th>Contact</th><th>Prints</th><th>Total</th><th>Status</th><th></th></tr>' + ORDERS.map(o =>
-      '<tr data-code="' + esc(o.code) + '"><td><b>' + esc(o.code) + '</b></td><td>' + fd(o.createdAt) + '</td><td>' + esc(o.customerName) + (o.notes ? '<br><small style="color:var(--dim)">' + esc(o.notes) + '</small>' : '') + '</td><td>' + esc(o.customerEmail || o.customerPhone || '') + '</td><td>' + (o.printSheets || o.sheets) + ' A4<br><small style="color:var(--dim)">' + o.sheets + ' sheet' + (o.sheets > 1 ? 's' : '') + ' × ' + (o.copies || 1) + ' · ' + o.stickers + ' stickers</small></td><td>₱' + o.total + '</td>' +
+    const smsBody = o => 'Hi ' + o.customerName + '! This is Morphii. Your sticker sheet order ' + o.code + ' (' + o.sheets + ' A4 sheet' + (o.sheets > 1 ? 's' : '') + ', total ₱' + o.total + ') is confirmed. Please pay on Shopee and send this order number in chat. Thank you!';
+    $('orderList').innerHTML = ORDERS.length ? '<table><tr><th>Order</th><th>When</th><th>Customer</th><th>Contact</th><th>Sheets</th><th>Total</th><th>Status</th><th></th></tr>' + ORDERS.map(o =>
+      '<tr data-code="' + esc(o.code) + '"><td><b>' + esc(o.code) + '</b></td><td>' + fd(o.createdAt) + '</td><td>' + esc(o.customerName) + (o.notes ? '<br><small style="color:var(--dim)">' + esc(o.notes) + '</small>' : '') + '</td><td>' + esc(o.customerEmail || o.customerPhone || '') + '</td><td>' + o.sheets + ' (' + o.stickers + ')<br><small style="color:var(--dim)">' + esc(o.productLabel || '') + '</small></td><td>₱' + o.total + '</td>' +
       '<td><select class="inp" style="width:auto;margin:0;padding:6px 8px;font-size:12px" data-a="status">' + STATUSES.map(s => '<option' + (s === o.status ? ' selected' : '') + '>' + s + '</option>').join('') + '</select></td>' +
       '<td><a class="btn ghost" style="text-decoration:none;display:inline-block;padding:7px 12px;font-size:12px" target="_blank" href="stickers.html?order=' + encodeURIComponent(o.code) + '">Open layout</a>' +
       (o.contactMethod === 'phone' && o.customerPhone ? ' <a class="btn" style="text-decoration:none;display:inline-block;padding:7px 12px;font-size:12px" href="sms:' + esc(o.customerPhone) + '?body=' + encodeURIComponent(smsBody(o)) + '">Send text</a>' : '') + '</td></tr>').join('') + '</table>' : '<div class="empty">No sheet orders yet.</div>';
@@ -197,8 +199,8 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
     window.__drawTiers = drawTiers;
     $('tierRows').addEventListener('input', e => { const f = e.target.dataset.f; if (f) TIERS[+e.target.closest('[data-i]').dataset.i][f] = +e.target.value; });
     $('tierRows').addEventListener('click', e => { if (e.target.dataset.a === 'del') { TIERS.splice(+e.target.closest('[data-i]').dataset.i, 1); drawTiers(); } });
-    $('tierAdd').addEventListener('click', () => { TIERS.push({ min: (TIERS[TIERS.length - 1] || { min: 0 }).min + 1, price: 100 }); drawTiers(); });
-    $('tierSave').addEventListener('click', () => run(() => saveStickerPricing(TIERS), 'Pricing saved'));
+    $('tierAdd').addEventListener('click', () => { TIERS.push({ min: (TIERS[TIERS.length - 1] || { min: 0 }).min + 10, price: 70 }); drawTiers(); });
+    $('tierSave').addEventListener('click', () => run(() => saveStickerPricing({ label: $('prLabel').value.trim(), minSheets: $('prMin').value, tiers: TIERS }), 'Pricing saved'));
     $('paySave').addEventListener('click', () => run(() => saveDesignerPayInfo({ gcashName: $('payName').value.trim(), gcashNumber: $('payNum').value.trim(), note: $('payNote').value.trim() }), 'Saved'));
   }
 
@@ -214,7 +216,7 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
       try {
         const info = await getDesignerPayInfo();
         $('payName').value = info.gcashName || ''; $('payNum').value = info.gcashNumber || ''; $('payNote').value = info.note || '';
-        TIERS = (await getStickerPricing()).tiers.map(t => Object.assign({}, t)); window.__drawTiers && window.__drawTiers();
+        PRICING = await getStickerPricing(); TIERS = PRICING.tiers.map(t => Object.assign({}, t)); $('prLabel').value = PRICING.label; $('prMin').value = PRICING.minSheets; window.__drawTiers && window.__drawTiers();
         await refresh();
       } catch (e) { toast('Load failed: ' + (e.code || e.message) + ' — are the Firestore rules published?'); }
     });

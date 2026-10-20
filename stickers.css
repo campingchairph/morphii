@@ -379,3 +379,16 @@ h1,h2,h3,.st-logo{font-family:'Baloo 2',cursive;}
 .rv-step button{width:28px;height:28px;font-size:17px;}
 .rv-step button:disabled{opacity:.3;cursor:default;}
 .rv-step b{min-width:34px;font-size:15px;}
+.rv-prod{font-family:'Baloo 2',cursive;font-size:15px;font-weight:800;}
+.rv-line span em{font-style:normal;font-size:12.5px;color:var(--ink-dim);font-weight:700;}
+.mp{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(27,35,26,.7);backdrop-filter:blur(5px);}
+.mp[hidden]{display:none;}
+.mp-card{width:min(420px,100%);background:#fff;border-radius:26px;padding:28px 24px 24px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.45);animation:stZoomIn .2s ease-out;}
+.mp-icon{font-size:46px;line-height:1;margin-bottom:6px;}
+.mp-card h2{font-family:'Baloo 2',cursive;font-size:28px;line-height:1.1;font-weight:800;margin-bottom:12px;}
+.mp-dots{display:flex;justify-content:center;gap:10px;margin-bottom:6px;}
+.mp-dots i{width:34px;height:46px;border-radius:4px;background:#ecebe3;border:2px dashed #c9c7b8;}
+.mp-dots i.on{background:var(--grad);border:2px solid #fff;box-shadow:0 4px 12px rgba(255,111,145,.4);}
+.mp-count{font-size:13px;font-weight:900;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-dim);margin-bottom:12px;}
+.mp-card p{font-size:14.5px;font-weight:700;color:var(--ink-dim);line-height:1.5;margin-bottom:18px;}
+.mp-btn{width:100%;padding:14px;border:none;border-radius:999px;background:var(--pill);color:#fff;font-family:'Baloo 2',cursive;font-size:18px;font-weight:800;cursor:pointer;}
