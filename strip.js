@@ -42,16 +42,44 @@
   }
   const doneCount = () => (state.strip ? state.strip.slots.filter(Boolean).length : 0);
   const complete = () => !!state.strip && state.strip.slots.every(Boolean);
+  // small on-screen preview of the design, watermarked like the rest of the pin previews
+  function watermarkedThumb() {
+    const px = 300, c = document.createElement('canvas'); c.width = c.height = px;
+    const x = c.getContext('2d'); drawDesignLayer(x, px);
+    x.save(); x.translate(px / 2, px / 2); x.rotate(-Math.PI / 6);
+    x.font = '800 20px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillStyle = 'rgba(255,255,255,0.5)'; x.strokeStyle = 'rgba(0,0,0,0.22)'; x.lineWidth = 2;
+    for (let y = -px; y <= px; y += 52) for (let xx = -px; xx <= px; xx += 118) {
+      const ox = ((y / 52) % 2 ? 59 : 0); x.strokeText('MORPHII', xx + ox, y); x.fillText('MORPHII', xx + ox, y);
+    }
+    x.restore();
+    return c.toDataURL('image/jpeg', 0.82);
+  }
   // snapshot the design on screen into the active circle
   function saveActiveSlot() {
     const st = state.strip; if (!st) return;
     if (!hasDesignContent()) { st.slots[st.active] = null; return; }
-    st.slots[st.active] = { snap: serializeCurrentDesign(), thumb: generateTemplateThumbnail(), png: compositeCleanDesign() };
+    st.slots[st.active] = { snap: serializeCurrentDesign(), thumb: watermarkedThumb(), png: compositeCleanDesign() };
   }
   // the design step shows a paste explainer every time it opens — not on every circle switch
   async function quietly(fn) {
     const orig = window.showPasteHint; window.showPasteHint = () => {};
     try { return await fn(); } finally { window.showPasteHint = orig; }
+  }
+
+  // circles as positioned HTML; `interactive` adds the pen / duplicate buttons
+  function stripCircles(g, st, interactive, flagEmpty) {
+    return g.pts.map(([x, y], i) => {
+      const style = 'left:' + ((x - g.d / 2) / g.W * 100) + '%;top:' + ((y - g.d / 2) / H * 100) + '%;width:' + (g.d / g.W * 100) + '%;';
+      const slot = st && st.slots[i];
+      if (!st) return '<div class="cs-c pv" style="' + style + '"><span>' + (i + 1) + '</span></div>';
+      const act = interactive && st.active === i;
+      return '<div class="cs-c ' + (slot ? 'full' : 'empty' + (flagEmpty ? ' need' : '')) + (act ? ' act' : '') + '" data-i="' + i + '" style="' + style + (slot ? 'background-image:url(' + slot.thumb + ');' : '') + '">' +
+        (!interactive ? '' : slot
+          ? '<button class="cs-b cs-edit" data-a="edit" aria-label="Edit pin ' + (i + 1) + '">✎</button><button class="cs-b cs-dup" data-a="dup" aria-label="Fill every empty circle with this design" title="Duplicate to every empty circle">⧉</button>'
+          : '<button class="cs-new" data-a="edit" aria-label="Design pin ' + (i + 1) + '"><b>✎</b><small>Design</small></button>') +
+        '</div>';
+    }).join('');
   }
 
   /* ── the window ── */
@@ -65,13 +93,15 @@
       '<div class="cs-side"><div class="cs-info" id="csInfo"></div><div class="cs-warn" id="csWarn" hidden></div>' +
       '<div class="cs-prog" id="csProgWrap"><div class="cs-bar"><i id="csBar"></i></div><span id="csProg"></span></div>' +
       '<div class="cs-how" id="csHow"></div></div></div>' +
-      '<div class="cs-foot"><button class="cs-go" id="csGo"></button></div>';
+      '<div class="cs-foot"><button class="cs-back" id="csBack" hidden>← Back to Edit</button><button class="cs-go" id="csGo"></button></div>';
     document.body.appendChild(ov);
     $('csClose').addEventListener('click', closeOv);
     $('csTabs').addEventListener('click', e => { const b = e.target.closest('[data-mm]'); if (b) { pvSize = +b.dataset.mm; render(); } });
     $('csStrip').addEventListener('click', onStripClick);
+    $('csBack').addEventListener('click', closeOv);
     $('csGo').addEventListener('click', () => {
-      if (mode === 'preview') { closeOv(); return; }
+      if (mode === 'confirm') { closeOv(); window.confirmSubmitDesign(); return; }
+      if (mode === 'preview' || mode === 'view') { closeOv(); return; }
       if (complete()) { closeOv(); window.goStep('submit'); }
       else { prompt = true; render(); }
     });
@@ -81,34 +111,29 @@
     if (!ov) build();
     mode = m; prompt = !!withPrompt;
     if (m === 'edit') { ensureStrip(); saveActiveSlot(); }
-    else pvSize = state.size || (enabledSizes().includes(58) ? 58 : enabledSizes()[0]);
+    else if (m === 'preview') pvSize = state.size || (enabledSizes().includes(58) ? 58 : enabledSizes()[0]);
     ov.hidden = false; document.body.classList.add('cs-open');
     render();
   }
   function closeOv() { if (ov) ov.hidden = true; document.body.classList.remove('cs-open'); updateChip(); }
+  window.openStripView = () => openOv('view');
 
   function render() {
-    const edit = mode === 'edit', mm = edit ? state.strip.size : pvSize, g = geometry(mm), st = state.strip;
-    $('csTitle').textContent = edit ? 'Your minimum order' : 'Minimum order preview';
-    $('csTabs').hidden = edit;
+    const edit = mode === 'edit', preview = mode === 'preview', st = state.strip;
+    const mm = preview ? pvSize : st.size, g = geometry(mm);
+    $('csTitle').textContent = edit ? 'Your minimum order' : preview ? 'Minimum order preview' : mode === 'confirm' ? 'Check your pins' : 'Your pins';
+    $('csTabs').hidden = !preview;
     $('csTabs').innerHTML = enabledSizes().map(s => '<button class="' + (s === mm ? 'on' : '') + '" data-mm="' + s + '">' + s + 'mm</button>').join('');
     const strip = $('csStrip');
     strip.style.aspectRatio = g.W + ' / ' + H;
-    strip.innerHTML = g.pts.map(([x, y], i) => {
-      const style = 'left:' + ((x - g.d / 2) / g.W * 100) + '%;top:' + ((y - g.d / 2) / H * 100) + '%;width:' + (g.d / g.W * 100) + '%;';
-      if (!edit) return '<div class="cs-c pv" style="' + style + '"><span>' + (i + 1) + '</span></div>';
-      const slot = st.slots[i], act = st.active === i;
-      return '<div class="cs-c ' + (slot ? 'full' : 'empty' + (prompt ? ' need' : '')) + (act ? ' act' : '') + '" data-i="' + i + '" style="' + style + (slot ? 'background-image:url(' + slot.thumb + ');' : '') + '">' +
-        (slot
-          ? '<button class="cs-b cs-edit" data-a="edit" aria-label="Edit pin ' + (i + 1) + '">✎</button><button class="cs-b cs-dup" data-a="dup" aria-label="Fill every empty circle with this design" title="Duplicate to every empty circle">⧉</button>'
-          : '<button class="cs-new" data-a="edit" aria-label="Design pin ' + (i + 1) + '"><b>✎</b><small>Design</small></button>') +
-        '</div>';
-    }).join('');
+    strip.innerHTML = stripCircles(g, preview ? null : st, edit, edit && prompt);
     const word = g.layout === 'column' ? 'in a single column' : g.layout === 'zigzag' ? 'in a zigzag' : 'in 2 columns';
     $('csInfo').innerHTML = '<b>' + mm + 'mm pins</b><span>' + g.count + ' pins per strip, ' + word + '. One A4 sheet cut lengthwise into a ' + g.W + 'mm-wide strip.</span>';
     $('csHow').innerHTML = edit
       ? '<b>How it works</b><span>Tap <b>✎</b> on a circle to design it, or design one pin and press <b>⧉</b> to copy it into every empty circle.</span>'
-      : '<b>Minimum order</b><span>Every circle on the strip is a pin. You’ll fill the strip with one design or a mix of designs before you can check out.</span>';
+      : preview
+        ? '<b>Minimum order</b><span>Every circle on the strip is a pin. You’ll fill the strip with one design or a mix of designs before you can check out.</span>'
+        : '<b>This is what we’ll print</b><span>Every circle below is one pin of your order, in the same position as on the cut strip. Scroll to see all ' + g.count + '.</span>';
     $('csProgWrap').hidden = !edit;
     $('csWarn').hidden = !(edit && prompt && !complete());
     $('csWarn').textContent = edit ? 'Please complete all ' + g.count + ' pins before checkout — ' + (g.count - doneCount()) + ' still empty.' : '';
@@ -117,10 +142,11 @@
       $('csBar').style.width = (done / g.count * 100) + '%';
       $('csProg').textContent = done + ' of ' + g.count + ' pins designed';
     }
-    const go = $('csGo');
-    go.disabled = false;
+    const go = $('csGo'), back = $('csBack');
+    back.hidden = mode !== 'confirm';
     go.className = 'cs-go' + (edit && !complete() ? ' soft' : '');
-    go.textContent = !edit ? 'Close preview' : complete() ? 'Continue to checkout ›' : 'Complete ' + (g.count - doneCount()) + ' more pin' + (g.count - doneCount() > 1 ? 's' : '') + ' to continue';
+    go.textContent = preview || mode === 'view' ? 'Close' : mode === 'confirm' ? '✓ Yes, Submit' : 'Continue to checkout ›';
+    if (edit && !complete()) { const n = g.count - doneCount(); go.textContent = 'Complete ' + n + ' more pin' + (n > 1 ? 's' : '') + ' to continue'; }
   }
 
   async function onStripClick(e) {
@@ -184,10 +210,20 @@
   };
   const origSummary = window.renderSubmitSummary;
   window.renderSubmitSummary = function () {
-    origSummary();
-    const st = state.strip; if (!st) return;
-    const thumbs = st.slots.map(s => '<i style="background-image:url(' + (s ? s.thumb : '') + ')"></i>').join('');
-    $('submitSummary').insertAdjacentHTML('beforeend', '<div class="cs-sum"><b>Minimum order · ' + st.count + ' × ' + st.size + 'mm pins</b><div class="cs-sum-row">' + thumbs + '</div></div>');
+    const st = state.strip;
+    if (!st || !complete()) { origSummary(); return; }
+    const g = geometry(st.size);
+    $('submitSummary').innerHTML =
+      '<div class="cs-sumbox" id="csSumBox" role="button" tabindex="0" aria-label="View your whole minimum order">' +
+      '<div class="cs-strip cs-mini" style="aspect-ratio:' + g.W + ' / ' + H + '">' + stripCircles(g, st, false, false) + '</div>' +
+      '<div class="cs-sumcap"><b>' + st.count + ' × ' + st.size + 'mm pins</b><span>Minimum order · tap to see every pin</span></div></div>';
+    const box = $('csSumBox'); box.addEventListener('click', () => openOv('view'));
+    box.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openOv('view'); });
+  };
+  // the final "Yes, Submit" check shows the whole strip too (a single 3D pin would hide the rest)
+  const origConfirm = window.openSubmitConfirmPreview;
+  window.openSubmitConfirmPreview = function () {
+    if (state.strip && complete()) openOv('confirm'); else origConfirm();
   };
   const origSubmit = window.submitOrder;
   window.submitOrder = async function (order) {
