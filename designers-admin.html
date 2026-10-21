@@ -73,6 +73,7 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
     <div class="tabs">
       <button class="tab on" data-tab="orders">Sheet orders <span class="n" id="nOrders">0</span></button>
       <button class="tab" data-tab="pricing">Sheet pricing</button>
+      <button class="tab" data-tab="strips">Pin minimum</button>
       <button class="tab" data-tab="review">Review <span class="n" id="nReview">0</span></button>
       <button class="tab" data-tab="pay">Payments <span class="n" id="nPay">0</span></button>
       <button class="tab" data-tab="designers">Designers</button>
@@ -83,6 +84,14 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
       <div class="card"><h2>Sticker sheet orders</h2>
         <p class="hint">Customers pay on Shopee and send their order number in chat. <b>Open layout</b> loads the sheets so you can download the print PNG and cut-line SVG. For phone orders, <b>Send text</b> opens your messaging app with the confirmation already written.</p>
         <div id="orderList"></div></div>
+    </div>
+
+    <div id="tab-strips" hidden>
+      <div class="card"><h2>Button pin minimum order (cut strip)</h2>
+        <p class="hint">A4 is cut lengthwise into one strip; the customer must complete every circle on it before checking out. Set how many pins fit per size, how they are arranged, and the strip width (mm). Defaults: 25mm = 14 (2 columns), 32mm = 7 (zigzag), 58mm = 4.</p>
+        <div id="stripRows"></div>
+        <button class="btn" id="stripSave" style="margin-top:10px">Save pin minimums</button>
+      </div>
     </div>
 
     <div id="tab-pricing" hidden>
@@ -128,7 +137,7 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js?v=14"></script>
+<script src="firebase-config.js?v=15"></script>
 <script>
 (function () {
   'use strict';
@@ -140,7 +149,7 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
   // every action re-checks the live admin sign-in; the Firestore rules are the real lock
   const guard = () => { const u = AUTH && AUTH.currentUser; if (!(u && isAdmin(u))) throw new Error('Admin sign-in required'); };
 
-  let PENDING = [], PAYS = [], DESIGNERS = [], LIVE = [], ORDERS = [], TIERS = [], PRICING = {};
+  let PENDING = [], PAYS = [], DESIGNERS = [], LIVE = [], ORDERS = [], TIERS = [], PRICING = {}, STRIPS = {};
 
   async function refresh() {
     guard();
@@ -174,7 +183,7 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
     $('outBtn').addEventListener('click', () => AUTH && AUTH.signOut());
     document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
       document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
-      ['orders', 'pricing', 'review', 'pay', 'designers', 'settings'].forEach(n => { $('tab-' + n).hidden = n !== t.dataset.tab; });
+      ['orders', 'pricing', 'strips', 'review', 'pay', 'designers', 'settings'].forEach(n => { $('tab-' + n).hidden = n !== t.dataset.tab; });
     }));
     const stickerAction = e => {
       const b = e.target.closest('[data-a]'); if (!b) return;
@@ -201,6 +210,19 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
     $('tierRows').addEventListener('click', e => { if (e.target.dataset.a === 'del') { TIERS.splice(+e.target.closest('[data-i]').dataset.i, 1); drawTiers(); } });
     $('tierAdd').addEventListener('click', () => { TIERS.push({ min: (TIERS[TIERS.length - 1] || { min: 0 }).min + 10, price: 70 }); drawTiers(); });
     $('tierSave').addEventListener('click', () => run(() => saveStickerPricing({ label: $('prLabel').value.trim(), minSheets: $('prMin').value, tiers: TIERS }), 'Pricing saved'));
+    const drawStrips = () => {
+      $('stripRows').innerHTML = Object.keys(STRIPS).sort((x, y) => x - y).map(mm => {
+        const v = STRIPS[mm];
+        return '<div style="display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:8px" data-mm="' + mm + '"><b style="width:56px">' + mm + 'mm</b>' +
+          '<span class="hint" style="margin:0">pins</span><input class="inp" style="width:80px;margin:0" type="number" min="1" value="' + v.count + '" data-f="count">' +
+          '<select class="inp" style="width:auto;margin:0" data-f="layout">' + ['column', 'zigzag', 'grid2'].map(l => '<option value="' + l + '"' + (l === v.layout ? ' selected' : '') + '>' + ({ column: 'single column', zigzag: 'zigzag', grid2: '2 columns' }[l]) + '</option>').join('') + '</select>' +
+          '<span class="hint" style="margin:0">strip width</span><input class="inp" style="width:80px;margin:0" type="number" min="40" value="' + v.width + '" data-f="width"><span class="hint" style="margin:0">mm</span></div>';
+      }).join('');
+    };
+    window.__drawStrips = drawStrips;
+    $('stripRows').addEventListener('input', e => { const f = e.target.dataset.f; if (f) STRIPS[e.target.closest('[data-mm]').dataset.mm][f] = f === 'layout' ? e.target.value : +e.target.value; });
+    $('stripRows').addEventListener('change', e => { const f = e.target.dataset.f; if (f === 'layout') STRIPS[e.target.closest('[data-mm]').dataset.mm].layout = e.target.value; });
+    $('stripSave').addEventListener('click', () => run(() => savePinStrips(STRIPS), 'Pin minimums saved'));
     $('paySave').addEventListener('click', () => run(() => saveDesignerPayInfo({ gcashName: $('payName').value.trim(), gcashNumber: $('payNum').value.trim(), note: $('payNote').value.trim() }), 'Saved'));
   }
 
@@ -217,6 +239,7 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
         const info = await getDesignerPayInfo();
         $('payName').value = info.gcashName || ''; $('payNum').value = info.gcashNumber || ''; $('payNote').value = info.note || '';
         PRICING = await getStickerPricing(); TIERS = PRICING.tiers.map(t => Object.assign({}, t)); $('prLabel').value = PRICING.label; $('prMin').value = PRICING.minSheets; window.__drawTiers && window.__drawTiers();
+        STRIPS = await getPinStrips(); window.__drawStrips && window.__drawStrips();
         await refresh();
       } catch (e) { toast('Load failed: ' + (e.code || e.message) + ' — are the Firestore rules published?'); }
     });

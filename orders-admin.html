@@ -644,7 +644,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js?v=14"></script>
+<script src="firebase-config.js?v=15"></script>
 <!-- jsPDF — used by doPrint() to write the exact page size directly into the
      PDF file itself, so the export is correct regardless of any browser
      print-dialog "Scale" setting (which is what was causing the 3% mismatch
@@ -812,6 +812,7 @@ function renderOrders(){
         <span class="adm-badge adm-badge-${o.status}">${o.status}</span>
         <div class="adm-card-title">${escHtml(o.productLabel||o.product||'')}</div>
         <div class="adm-card-meta">${o.size}mm Circle${o.paperSize ? ` (${o.paperSize}mm w/ bleed)` : ''} · ${escHtml(dt)}</div>
+        ${o.strip ? `<div class="adm-card-row"><b>Minimum strip:</b> ${o.strip.count} pins · ${o.strip.unique} unique design${o.strip.unique>1?'s':''}</div>` : ''}
         ${o.saveCode ? `<div class="adm-card-row"><b>Code:</b> <span style="font-family:monospace;letter-spacing:1px">${escHtml(o.saveCode)}</span></div>` : ''}
         <div class="adm-card-row"><b>Name:</b> ${escHtml(o.customerName)}</div>
         <div class="adm-card-row"><b>Email:</b> ${escHtml(o.customerEmail||o.customerContact)}</div>
@@ -1585,8 +1586,16 @@ let printScale = 1, printMg = 0;
 let orderQty = {};      // order id -> how many copies to pack
 let requestedTotal = 0; // total copies requested, for the "didn't fit" note
 
-function openPrintModal(){
+// Minimum-order strips hold several designs: the first lives on the order doc, the rest in
+// morphii_orders/{id}/designs/{n}. Fetched once, right before packing.
+async function loadStripDesigns(order){
+  if (!order.strip || order._stripDesigns) return;
+  const extra = await getPinOrderDesigns(order.id).catch(()=>({}));
+  order._stripDesigns = [order.designDataUrl, ...Array.from({length:Math.max(0,order.strip.unique-1)}, (_,i)=>extra[String(i+1)]||order.designDataUrl)];
+}
+async function openPrintModal(){
   if (selectedOrders.size===0) return;
+  await Promise.all(allOrders.filter(x=>selectedOrders.has(x.id)).map(loadStripDesigns));
   document.getElementById('printModal').classList.add('open');
   packPins();
   setTimeout(initPaperDrag, 100);
@@ -1613,7 +1622,12 @@ function packPins(){
   const items = [];
   orders.forEach(order => {
     const qty = Math.max(1, Math.min(99, parseInt(orderQty[order.id],10) || 1));
-    for (let i=0; i<qty; i++) items.push(order);
+    for (let i=0; i<qty; i++){
+      if (order.strip && order._stripDesigns){
+        // a strip order = one pin per circle, each with its own (possibly shared) design
+        order.strip.slots.forEach(k => items.push({ ...order, designDataUrl: order._stripDesigns[k] || order.designDataUrl }));
+      } else items.push(order);
+    }
   });
   requestedTotal = items.length;
 

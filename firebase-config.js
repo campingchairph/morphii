@@ -663,6 +663,52 @@ async function getStickerOrderAssets(code) {
 }
 async function updateStickerOrder(code, fields) { return DB.collection('morphii_sticker_orders').doc(code).update(fields); }
 
+/* ── BUTTON PIN MINIMUM ORDER (one cut strip) ────
+   A4 is cut lengthwise into an 84mm-wide strip (297mm long) and every circle on the strip is
+   a pin: 4 x 58mm, 7 x 32mm (zigzag), 14 x 25mm (2 columns). A customer must complete the
+   whole strip — one design per circle, duplicated or different — before checking out.
+   Layouts per size live in morphii_config/pinStrips (public read, admin write), editable on
+   the stickers admin page:  { "58": { count, layout:'column'|'zigzag'|'grid2', width }, ... }
+   A strip order stores order.strip = { size, count, layout, slots:[uniqueDesignIndex...], unique }.
+   Unique design #0 is order.designDataUrl; the others are in morphii_orders/{id}/designs/{n}. */
+const DEFAULT_PIN_STRIPS = {
+  25: { count: 14, layout: 'grid2',  width: 84 },
+  32: { count: 7,  layout: 'zigzag', width: 84 },
+  37: { count: 6,  layout: 'column', width: 84 },
+  44: { count: 5,  layout: 'column', width: 84 },
+  58: { count: 4,  layout: 'column', width: 84 },
+  75: { count: 3,  layout: 'column', width: 90 },
+};
+async function getPinStrips() {
+  const out = JSON.parse(JSON.stringify(DEFAULT_PIN_STRIPS));
+  if (!DB) return out;
+  try {
+    const d = await DB.collection('morphii_config').doc('pinStrips').get();
+    if (d.exists) Object.entries(d.data()).forEach(([mm, v]) => {
+      if (v && v.count >= 1 && ['column', 'zigzag', 'grid2'].includes(v.layout)) out[mm] = { count: Math.round(v.count), layout: v.layout, width: v.width >= 40 ? v.width : 84 };
+    });
+  } catch (e) {}
+  return out;
+}
+async function savePinStrips(map) {
+  const clean = {};
+  Object.entries(map).forEach(([mm, v]) => { clean[mm] = { count: Math.max(1, Math.round(+v.count)), layout: v.layout, width: Math.max(40, Math.round(+v.width) || 84) }; });
+  return DB.collection('morphii_config').doc('pinStrips').set(clean);
+}
+// strip order + its extra unique designs in one atomic batch (design #0 stays on the order doc)
+async function submitPinStripOrder(order, uniqueDesigns) {
+  if (!DB) throw new Error('Firebase not configured yet — see firebase-config.js');
+  const ref = DB.collection('morphii_orders').doc(), batch = DB.batch();
+  batch.set(ref, Object.assign({}, order, { status: 'pending', createdAt: firebase.firestore.FieldValue.serverTimestamp() }));
+  uniqueDesigns.slice(1).forEach((png, i) => batch.set(ref.collection('designs').doc(String(i + 1)), { png }));
+  await batch.commit();
+  return ref;
+}
+async function getPinOrderDesigns(orderId) {
+  const snap = await DB.collection('morphii_orders').doc(orderId).collection('designs').get();
+  const out = {}; snap.docs.forEach(d => { out[d.id] = d.data().png; }); return out;
+}
+
 /* ── Firestore Security Rules ──────────────────
    Publish these in Firebase Console → Firestore → Rules:
 
@@ -673,6 +719,15 @@ async function updateStickerOrder(code, fields) { return DB.collection('morphii_
          allow create: if true;
          allow read, update, delete: if request.auth != null
            && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+         // extra unique designs of a minimum-order strip (only while the order is being created)
+         match /designs/{did} {
+           allow create: if !exists(/databases/$(database)/documents/morphii_orders/$(orderId))
+             && existsAfter(/databases/$(database)/documents/morphii_orders/$(orderId))
+             && request.resource.data.keys().hasOnly(['png'])
+             && request.resource.data.png is string && request.resource.data.png.size() < 900000;
+           allow read, delete: if request.auth != null
+             && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+         }
        }
        match /morphii_config/{docId} {
          allow read: if true;
