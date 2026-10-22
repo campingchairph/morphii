@@ -635,6 +635,12 @@ async function pushAllAssetsToGithub(){
         tc.getContext('2d').drawImage(canvas, 0, 0, tc.width, tc.height);
         const thumb64 = tc.toDataURL('image/webp', 0.78).split(',')[1];
         await pushFileToGithub(`assets/pins-opt/thumb/${base}${folderPath}/${filename}.webp`, thumb64, `Thumbnail: ${folderPath}/${filename}`);
+        if (kindDef.folder === 'background'){
+          const ws = Math.min(1, 1600 / Math.max(canvas.width, canvas.height)), wc = document.createElement('canvas');
+          wc.width = Math.max(1, Math.round(canvas.width * ws)); wc.height = Math.max(1, Math.round(canvas.height * ws));
+          wc.getContext('2d').drawImage(canvas, 0, 0, wc.width, wc.height);
+          await pushFileToGithub(`assets/pins-opt/work/${base}${folderPath}/${filename}.webp`, wc.toDataURL('image/webp', 0.85).split(',')[1], `Working copy: ${folderPath}/${filename}`);
+        }
       } catch(e){ /* optional */ }
       results.push({ i, filename, ok:true });
       resetStickerSlot(i);

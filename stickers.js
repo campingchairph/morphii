@@ -63,6 +63,8 @@ const thumbImg = src => {
   const t = thumbOf(src);
   return '<img loading="lazy" decoding="async" src="' + esc(t) + '"' + (t !== src ? ' data-full="' + esc(src) + '" onerror="this.onerror=null;this.src=this.dataset.full"' : '') + ' alt="">';
 };
+const PINS_WORK_BASE = 'https://raw.githubusercontent.com/campingchairph/morphii/main/assets/pins-opt/work/';
+const workOf = src => (src && src.indexOf(PINS_RAW_BASE) === 0 && src.indexOf('/background/') > 0 ? PINS_WORK_BASE + src.slice(PINS_RAW_BASE.length) + '.webp' : null);
 const STICKER_LOGO_RE = /^logo\.[^.]+$/i;
 
 /* ── state ─────────────────────────────────────────────────── */
@@ -337,7 +339,9 @@ function getField(src, sizeMm) {
     const keys = Object.keys(FIELD_CACHE);
     if (keys.length > 40) delete FIELD_CACHE[keys[0]];
     FIELD_CACHE[key] = (async () => {
-      const img = await loadImg(src);
+      let img;
+      const w = workOf(src);
+      try { img = await loadImg(w || src); } catch (e) { img = await loadImg(src); }   // 1600px copy for backgrounds, original if missing
       const aspect = img.naturalWidth / img.naturalHeight;
       const wMm = aspect >= 1 ? sizeMm : sizeMm * aspect;
       const hMm = aspect >= 1 ? sizeMm / aspect : sizeMm;

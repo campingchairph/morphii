@@ -1,6 +1,10 @@
 """Builds small WebP thumbnails of every library asset so the pickers never download the full files.
 
   assets/pins/<path>/<name>.<ext>   ->   assets/pins-opt/thumb/<path>/<name>.<ext>.webp   (max 256px)
+  assets/pins/**/background/...     ->   assets/pins-opt/work/<path>/<name>.<ext>.webp    (max 1600px)
+
+Backgrounds are the heavy ones (3-8 MB each). The picker shows the thumbnail, and picking one loads the
+1600px "work" copy instead of the original (the artboard is only ~1000px).
 
 The designer (create.js / stickers.js) maps an asset URL to its thumbnail URL and falls back to the
 original if a thumbnail doesn't exist yet, so running this is optional for new uploads (the admin
@@ -17,26 +21,37 @@ Image.MAX_IMAGE_PIXELS = None
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 SRC = os.path.join(ROOT, 'assets', 'pins')
 DST = os.path.join(ROOT, 'assets', 'pins-opt', 'thumb')
+WORK = os.path.join(ROOT, 'assets', 'pins-opt', 'work')
+WORK_SIDE = 1600
 EXT = ('.png', '.jpg', '.jpeg', '.webp', '.gif')
 MAX_SIDE = 256
 FORCE = '--force' in sys.argv
 
 
+def save(im, out, side, q):
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    c = im.copy(); c.thumbnail((side, side), Image.LANCZOS)
+    c.save(out, 'WEBP', quality=q, method=4)
+
+
 def work(path):
     rel = os.path.relpath(path, SRC)
     out = os.path.join(DST, rel + '.webp')
-    if not FORCE and os.path.exists(out):
+    is_bg = '/background/' in ('/' + rel.replace(os.sep, '/'))
+    wout = os.path.join(WORK, rel + '.webp')
+    need_thumb = FORCE or not os.path.exists(out)
+    need_work = is_bg and (FORCE or not os.path.exists(wout))
+    if not (need_thumb or need_work):
         return 'skip'
     try:
-        os.makedirs(os.path.dirname(out), exist_ok=True)
         with Image.open(path) as im:
-            if im.format == 'JPEG':
+            if im.format == 'JPEG' and not need_work:
                 im.draft('RGB', (MAX_SIDE * 2, MAX_SIDE * 2))   # decode JPEGs at reduced size
             im.load()
             has_alpha = im.mode in ('RGBA', 'LA') or (im.mode == 'P' and 'transparency' in im.info)
             im = im.convert('RGBA' if has_alpha else 'RGB')
-            im.thumbnail((MAX_SIDE, MAX_SIDE), Image.LANCZOS)
-            im.save(out, 'WEBP', quality=78, method=4)
+            if need_thumb: save(im, out, MAX_SIDE, 78)
+            if need_work: save(im, wout, WORK_SIDE, 85)
         return 'ok'
     except Exception as e:
         return 'fail %s: %s' % (rel, e)

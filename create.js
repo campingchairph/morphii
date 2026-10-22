@@ -1736,7 +1736,7 @@ function bgToolPanelHtml(tool){
       ${BACKGROUND_PRESETS.length ? `
         <div class="cr-field-label" style="margin-top:0">Presets</div>
         <div class="cr-preset-grid">${BACKGROUND_PRESETS.map((p,i)=>
-          `<button class="cr-preset-thumb ${state.bg.img && state.bg.img.src===p.src ? 'active' : ''}" onclick="selectBgPreset(${i})">${thumbImg(p.src, p.label)}</button>`
+          `<button class="cr-preset-thumb ${state.bg.img && sameBgSrc(state.bg.img.src, p.src) ? 'active' : ''}" onclick="selectBgPreset(${i})">${thumbImg(p.src, p.label)}</button>`
         ).join('')}</div>` : ''}
       <button type="button" class="cr-upload-btn" onclick="document.getElementById('bgFileInput').click()">
         ${ICON_UPLOAD}<span id="bgUploadLabelText">Choose a Photo</span>
@@ -1895,7 +1895,13 @@ window.loadBgFromLink = loadBgFromLink;
 function selectBgPreset(i){
   const preset = BACKGROUND_PRESETS[i];
   if (!preset) return;
-  setBgImage(preset.src, true); // raw.githubusercontent.com sends CORS headers, so this loads clean (untainted)
+  const work = workOf(preset.src);
+  if (!work){ setBgImage(preset.src, true); return; } // raw.githubusercontent.com sends CORS headers, so this loads clean (untainted)
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => applyBgImage(img, false);
+  img.onerror = () => setBgImage(preset.src, true);   // no working copy yet — use the original
+  img.src = work;
 }
 window.selectBgPreset = selectBgPreset;
 
@@ -4145,6 +4151,13 @@ const PINS_RAW_BASE = 'https://raw.githubusercontent.com/campingchairph/morphii/
 // loading hundreds of them at once froze and crashed phones the first time the design page opened. If a thumbnail
 // doesn't exist yet the <img> falls back to the original.
 const PINS_THUMB_BASE = 'https://raw.githubusercontent.com/campingchairph/morphii/main/assets/pins-opt/thumb/';
+// Backgrounds also get a 1600px "work" copy (assets/pins-opt/work/...): the originals are 3-8 MB and the pin artboard
+// is only ~1000px, so picking one loads the work copy and falls back to the original if it doesn't exist yet.
+const PINS_WORK_BASE = 'https://raw.githubusercontent.com/campingchairph/morphii/main/assets/pins-opt/work/';
+function workOf(src){
+  return (src && src.indexOf(PINS_RAW_BASE)===0 && src.indexOf('/background/')>0) ? PINS_WORK_BASE + src.slice(PINS_RAW_BASE.length) + '.webp' : null;
+}
+function sameBgSrc(imgSrc, presetSrc){ return !!imgSrc && (imgSrc===presetSrc || imgSrc===workOf(presetSrc)); }
 function thumbOf(src){
   return (src && src.indexOf(PINS_RAW_BASE)===0) ? PINS_THUMB_BASE + src.slice(PINS_RAW_BASE.length) + '.webp' : src;
 }
