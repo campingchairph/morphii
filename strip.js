@@ -98,7 +98,7 @@
     $('csClose').addEventListener('click', closeOv);
     $('csTabs').addEventListener('click', e => { const b = e.target.closest('[data-mm]'); if (b) { pvSize = +b.dataset.mm; render(); } });
     $('csStrip').addEventListener('click', onStripClick);
-    $('csBack').addEventListener('click', closeOv);
+    $('csBack').addEventListener('click', () => { const was = mode; closeOv(); if (was === 'confirm') openOv('edit'); });   // Back to Edit = the strip editor, never a dead end
     $('csGo').addEventListener('click', () => {
       if (mode === 'confirm') { closeOv(); window.confirmSubmitDesign(); return; }
       if (mode === 'preview' || mode === 'view') { closeOv(); return; }
@@ -143,7 +143,8 @@
       $('csProg').textContent = done + ' of ' + g.count + ' pins designed';
     }
     const go = $('csGo'), back = $('csBack');
-    back.hidden = mode !== 'confirm';
+    back.hidden = !(mode === 'confirm' || (edit && complete()));
+    back.textContent = mode === 'confirm' ? '← Back to Edit' : '✎ Keep editing my pins';
     go.className = 'cs-go' + (edit && !complete() ? ' soft' : '');
     go.textContent = preview || mode === 'view' ? 'Close' : mode === 'confirm' ? '✓ Yes, Submit' : 'Continue to checkout ›';
     if (edit && !complete()) { const n = g.count - doneCount(); go.textContent = 'Complete ' + n + ' more pin' + (n > 1 ? 's' : '') + ' to continue'; }
@@ -216,9 +217,11 @@
     $('submitSummary').innerHTML =
       '<div class="cs-sumbox" id="csSumBox" role="button" tabindex="0" aria-label="View your whole minimum order">' +
       '<div class="cs-strip cs-mini" style="aspect-ratio:' + g.W + ' / ' + H + '">' + stripCircles(g, st, false, false) + '</div>' +
-      '<div class="cs-sumcap"><b>' + st.count + ' × ' + st.size + 'mm pins</b><span>Minimum order · tap to see every pin</span></div></div>';
-    const box = $('csSumBox'); box.addEventListener('click', () => openOv('view'));
-    box.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openOv('view'); });
+      '<div class="cs-sumcap"><b>' + st.count + ' × ' + st.size + 'mm pins</b><span>Tap to see and edit every pin</span></div></div>' +
+      '<button class="cs-editall" id="csEditAll" type="button">✎ Edit my pins</button>';
+    const box = $('csSumBox'); box.addEventListener('click', () => openOv('edit'));
+    box.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openOv('edit'); });
+    $('csEditAll').addEventListener('click', () => openOv('edit'));
   };
   // the final "Yes, Submit" check shows the whole strip too (a single 3D pin would hide the rest)
   const origConfirm = window.openSubmitConfirmPreview;
