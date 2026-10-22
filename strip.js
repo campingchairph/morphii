@@ -228,15 +228,41 @@
   window.openSubmitConfirmPreview = function () {
     if (state.strip && complete()) openOv('confirm'); else origConfirm();
   };
+  // Firestore caps a document at 1 MB and the rules cap each attached design at 900,000 characters; the builder's
+  // own "900 KB" limit is measured in decoded bytes, which can be ~1.2M characters — so re-encode anything big.
+  async function fitChars(url, limit) {
+    if (url.length <= limit) return url;
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    let k = 0.9, out = url;
+    for (let n = 0; n < 8 && out.length > limit; n++, k *= 0.85) {
+      const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
+      const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
+      out = c.toDataURL('image/jpeg', 0.86);
+    }
+    return out;
+  }
   const origSubmit = window.submitOrder;
   window.submitOrder = async function (order) {
     const st = state.strip;
     if (!st || !complete()) return origSubmit(order);
-    const uniq = [], slots = st.slots.map(s => { let k = uniq.indexOf(s.png); if (k < 0) { uniq.push(s.png); k = uniq.length - 1; } return k; });
-    return submitPinStripOrder(Object.assign({}, order, {
-      designDataUrl: uniq[0],
-      strip: { size: st.size, count: st.count, layout: st.layout, slots, unique: uniq.length },
-    }), uniq);
+    const raw = [], slots = st.slots.map(s => { let k = raw.indexOf(s.png); if (k < 0) { raw.push(s.png); k = raw.length - 1; } return k; });
+    const uniq = [];
+    for (const png of raw) uniq.push(await fitChars(png, 850000));
+    try {
+      return await submitPinStripOrder(Object.assign({}, order, {
+        designDataUrl: uniq[0],
+        strip: { size: st.size, count: st.count, layout: st.layout, slots, unique: uniq.length },
+      }), uniq);
+    } catch (e) {
+      console.error('Strip order failed:', e.code, e.message);
+      const admin = typeof AUTH !== 'undefined' && AUTH && AUTH.currentUser && typeof isAdmin === 'function' && isAdmin(AUTH.currentUser);
+      if (e.code === 'permission-denied') {
+        throw new Error(admin
+          ? 'Firestore refused the order (permission-denied). The latest rules from firebase-config.js probably aren’t published yet — publish them in Firebase Console → Firestore → Rules, then try again.'
+          : 'We couldn’t save your order just now. Please try again in a moment, or message us on Shopee.');
+      }
+      throw e;
+    }
   };
   const origMail = window.sendConfirmationEmail;
   if (origMail) window.sendConfirmationEmail = function (p) {
