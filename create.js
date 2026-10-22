@@ -1496,7 +1496,7 @@ const ICON_LOCK   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 const ICON_UNLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 017.6-1.8"/></svg>';
 
 function bgChipThumb(){
-  if (state.bg.imageOn && state.bg.img) return `<img src="${state.bg.img.src}" alt="">`;
+  if (state.bg.imageOn && state.bg.img) return `${thumbImg(state.bg.img.src)}`;
   if (state.bg.colorOn && state.bg.color){
     const g = state.bg.color;
     const css = g.grad4 ? `linear-gradient(135deg,${g.grad4[0]},${g.grad4[3]})` : `linear-gradient(135deg,${g.grad[0]},${g.grad[1]})`;
@@ -1595,7 +1595,7 @@ function addRowHtml(){
   const allItems = [
     { kind:'background', onclick:'quickSelectBackground()', icon: bgChipThumb(), label:'Background', thumb:true },
     { kind:'border', onclick:'quickAddBorder()', icon: ICON_BORDER, label:'Border' },
-    { kind:'character', onclick:'quickSelectCharacter()', icon: state.character ? `<img src="${state.character.img.src}" alt="">` : ICON_CHARACTER, label: isMemorialProduct() ? 'Person' : 'Character', thumb: !!state.character },
+    { kind:'character', onclick:'quickSelectCharacter()', icon: state.character ? `${thumbImg(state.character.img.src)}` : ICON_CHARACTER, label: isMemorialProduct() ? 'Person' : 'Character', thumb: !!state.character },
     { kind:'sticker', onclick:'quickAddSticker()', icon: ICON_STICKER, label: stickerToolLabel() },
     { kind:'shape', onclick:'quickAddShape()', icon: ICON_SHAPE, label:'Shapes' },
     { kind:'wordart', onclick:'quickAddWordArt()', icon: ICON_WORDART, label:'Word Art' },
@@ -1736,7 +1736,7 @@ function bgToolPanelHtml(tool){
       ${BACKGROUND_PRESETS.length ? `
         <div class="cr-field-label" style="margin-top:0">Presets</div>
         <div class="cr-preset-grid">${BACKGROUND_PRESETS.map((p,i)=>
-          `<button class="cr-preset-thumb ${state.bg.img && state.bg.img.src===p.src ? 'active' : ''}" onclick="selectBgPreset(${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`
+          `<button class="cr-preset-thumb ${state.bg.img && state.bg.img.src===p.src ? 'active' : ''}" onclick="selectBgPreset(${i})">${thumbImg(p.src, p.label)}</button>`
         ).join('')}</div>` : ''}
       <button type="button" class="cr-upload-btn" onclick="document.getElementById('bgFileInput').click()">
         ${ICON_UPLOAD}<span id="bgUploadLabelText">Choose a Photo</span>
@@ -2045,9 +2045,9 @@ window.closeLayersModal = closeLayersModal;
 
 const PLACED_ICON = { sticker: ICON_STICKER, shape: ICON_SHAPE, wordart: ICON_WORDART, letter: ICON_LETTER, border: ICON_BORDER };
 function layerThumbFor(d){
-  if (d.kind==='character') return state.character ? `<img src="${state.character.img.src}" alt="">` : ICON_CHARACTER;
+  if (d.kind==='character') return state.character ? `${thumbImg(state.character.img.src)}` : ICON_CHARACTER;
   if (d.kind==='background'){
-    if (state.bg.imageOn && state.bg.img) return `<img src="${state.bg.img.src}" alt="">`;
+    if (state.bg.imageOn && state.bg.img) return `${thumbImg(state.bg.img.src)}`;
     if (state.bg.colorOn && state.bg.color){
       const g = state.bg.color;
       const css = g.grad4 ? `linear-gradient(135deg,${g.grad4[0]},${g.grad4[3]})` : `linear-gradient(135deg,${g.grad[0]},${g.grad[1]})`;
@@ -2055,7 +2055,7 @@ function layerThumbFor(d){
     }
     return ICON_BG;
   }
-  if (PLACED_META[d.kind]){ const el=placedArray(d.kind).find(x=>x.id===d.id); return el ? `<img src="${el.img.src}" alt="">` : PLACED_ICON[d.kind]; }
+  if (PLACED_META[d.kind]){ const el=placedArray(d.kind).find(x=>x.id===d.id); return el ? `${thumbImg(el.img.src)}` : PLACED_ICON[d.kind]; }
   return ICON_TEXT;
 }
 function layerLabelFor(d){
@@ -2229,7 +2229,7 @@ window.closeLetterGroup = closeLetterGroup;
 function letterGroupGridHtml(onClickFor){
   if (!LETTER_GROUPS.length) return `<div class="cr-empty-hint">😢 No letters here yet — check back soon, or use Upload above.</div>`;
   return `<div class="cr-preset-grid">${LETTER_GROUPS.map(g=>
-    `<button class="cr-preset-thumb" onclick="${onClickFor(g.groupId)}" title="Letters ${g.groupId}"><img src="${g.thumbSrc}" alt="Letters ${g.groupId}"></button>`
+    `<button class="cr-preset-thumb" onclick="${onClickFor(g.groupId)}" title="Letters ${g.groupId}">${thumbImg(g.thumbSrc, 'Letters '+g.groupId)}</button>`
   ).join('')}</div>`;
 }
 
@@ -2280,7 +2280,7 @@ window.closeStickerGroup = closeStickerGroup;
 function stickerGroupGridHtml(onClickFor){
   if (!STICKER_GROUPS.length) return `<div class="cr-empty-hint">😢 No stickers here yet — check back soon, or use Upload above.</div>`;
   return `<div class="cr-preset-grid">${STICKER_GROUPS.map(g=>
-    `<button class="cr-preset-thumb" onclick="${onClickFor(g.groupId)}" title="${escHtml(g.label)}"><img src="${g.thumbSrc}" alt="${escHtml(g.label)}"></button>`
+    `<button class="cr-preset-thumb" onclick="${onClickFor(g.groupId)}" title="${escHtml(g.label)}">${thumbImg(g.thumbSrc, g.label)}</button>`
   ).join('')}</div>`;
 }
 
@@ -2291,7 +2291,7 @@ function stickerItemsGridHtml(groupId, activeSrc, onClickFor){
     <button class="cr-back-link" onclick="closeStickerGroup()">&larr; Back to categories</button>
     <div class="cr-preset-grid">${group.items.map(it=>{
       const flatIndex = STICKER_PRESETS.indexOf(it);
-      return `<button class="cr-preset-thumb ${activeSrc===it.src?'active':''}" onclick="${onClickFor(flatIndex)}" title="${escHtml(it.label)}"><img src="${it.src}" alt="${escHtml(it.label)}"></button>`;
+      return `<button class="cr-preset-thumb ${activeSrc===it.src?'active':''}" onclick="${onClickFor(flatIndex)}" title="${escHtml(it.label)}">${thumbImg(it.src, it.label)}</button>`;
     }).join('')}</div>`;
 }
 
@@ -2323,7 +2323,7 @@ function placedToolPanelHtml(kind, tool, id){
     return `
       ${isShape ? vectorShapeGridHtml(null, sid=>`addVectorShape('${sid}')`) : ''}
       ${presets.length ? `${isShape?'<div class="cr-field-label">More Presets</div>':''}<div class="cr-preset-grid">${presets.map((p,i)=>
-        `<button class="cr-preset-thumb" onclick="addPlacedFromPreset('${kind}',${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`
+        `<button class="cr-preset-thumb" onclick="addPlacedFromPreset('${kind}',${i})">${thumbImg(p.src, p.label)}</button>`
       ).join('')}</div>` : ''}`;
   }
 
@@ -2336,7 +2336,7 @@ function placedToolPanelHtml(kind, tool, id){
     return `
       ${isShape ? vectorShapeGridHtml(el.vectorShapeId, sid=>`swapToVectorShape('${kind}',${el.id},'${sid}')`) : ''}
       ${presets.length ? `${isShape?'<div class="cr-field-label">More Presets</div>':''}<div class="cr-preset-grid">${presets.map((p,i)=>
-        `<button class="cr-preset-thumb ${el.img && el.img.src===p.src ? 'active' : ''}" onclick="swapPlacedImage('${kind}',${el.id},${i})"><img src="${p.src}" alt="${escHtml(p.label||'')}"></button>`
+        `<button class="cr-preset-thumb ${el.img && el.img.src===p.src ? 'active' : ''}" onclick="swapPlacedImage('${kind}',${el.id},${i})">${thumbImg(p.src, p.label)}</button>`
       ).join('')}</div>` : ''}`;
   }
   if (tool==='color' && isShape && el.vectorShapeId){
@@ -3255,6 +3255,20 @@ function drawForegroundElements(ctx, artboardPx){
 // The customer's actual background content (solid/gradient color, or a
 // photo) — a normal reorderable layer (see ensureBackgroundLayerSync)
 // instead of being structurally locked to the very back.
+// Library images can be 4000+px / several MB. Drawing one at full size on every redraw lags the editor (and can
+// crash a phone's tab), so it is drawn from a one-off downscaled copy — still far more pixels than the ~1000px
+// artboard needs. The original <img> stays the source of truth (its .src is what templates/orders store).
+function downscaledForDraw(img, maxSide){
+  const nw = img.naturalWidth || img.width, nh = img.naturalHeight || img.height, m = Math.max(nw, nh);
+  if (!m || m <= maxSide) return img;
+  if (!img._small){
+    const k = maxSide / m, c = document.createElement('canvas');
+    c.width = Math.round(nw*k); c.height = Math.round(nh*k);
+    const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(img, 0, 0, c.width, c.height);
+    img._small = c;
+  }
+  return img._small;
+}
 function drawBackgroundContent(ctx, artboardPx){
   const imageActive = state.bg.imageOn && state.bg.img;
 
@@ -3282,12 +3296,13 @@ function drawBackgroundContent(ctx, artboardPx){
     ctx.save();
     ctx.globalAlpha = state.bg.opacity;
     const img = state.bg.img;
+    const drawImg = downscaledForDraw(img, 1800);
     const baseScale = artboardPx / Math.min(img.naturalWidth, img.naturalHeight);
     const drawScale = baseScale * state.bg.scale;
     const w = img.naturalWidth * drawScale, h = img.naturalHeight * drawScale;
     const cx = artboardPx/2 + state.bg.offsetXFrac*artboardPx;
     const cy = artboardPx/2 + state.bg.offsetYFrac*artboardPx;
-    ctx.drawImage(img, cx-w/2, cy-h/2, w, h);
+    ctx.drawImage(drawImg, cx-w/2, cy-h/2, w, h);
     ctx.restore();
   }
 }
@@ -3330,7 +3345,7 @@ function drawPlacedImage(ctx, artboardPx, img, xFrac, yFrac, dFrac, rotation){
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(rotation);
-  ctx.drawImage(img, -w/2, -h/2, w, h);
+  ctx.drawImage(downscaledForDraw(img, 1400), -w/2, -h/2, w, h);
   ctx.restore();
 }
 
@@ -3528,7 +3543,7 @@ function updateRotateRail(){
   if (slider && document.activeElement !== slider){ slider.value = deg; }
   if (slider) slider.disabled = !!el.locked;
   const thumb = document.getElementById('rotateThumb');
-  if (thumb) thumb.innerHTML = kind==='text' ? ICON_TEXT : (el.img ? `<img src="${el.img.src}" alt="">` : '');
+  if (thumb) thumb.innerHTML = kind==='text' ? ICON_TEXT : (el.img ? `${thumbImg(el.img.src)}` : '');
 }
 window.updateRotateRail = updateRotateRail;
 
@@ -3678,7 +3693,7 @@ function updateCutlineWarning(){
 
 function overlapItemThumb(item){
   if (item.kind==='text') return ICON_TEXT;
-  if (item.el.img) return `<img src="${item.el.img.src}" alt="">`;
+  if (item.el.img) return `${thumbImg(item.el.img.src)}`;
   return item.kind==='character' ? ICON_CHARACTER : ICON_BORDER;
 }
 
@@ -4125,6 +4140,18 @@ function showDoneScreen(code, emailResult){
    those same shared arrays with whichever group applies — so every existing
    consumer keeps working unchanged, it just sees different contents. ── */
 const PINS_RAW_BASE = 'https://raw.githubusercontent.com/campingchairph/morphii/main/assets/pins/';
+// Library thumbnails: assets/pins-opt/thumb/<same path>.webp (max 256px, built by tools/make-thumbs.py and by the
+// admin upload page). Every picker grid uses these instead of the full files — some backgrounds are 8 MB each, and
+// loading hundreds of them at once froze and crashed phones the first time the design page opened. If a thumbnail
+// doesn't exist yet the <img> falls back to the original.
+const PINS_THUMB_BASE = 'https://raw.githubusercontent.com/campingchairph/morphii/main/assets/pins-opt/thumb/';
+function thumbOf(src){
+  return (src && src.indexOf(PINS_RAW_BASE)===0) ? PINS_THUMB_BASE + src.slice(PINS_RAW_BASE.length) + '.webp' : src;
+}
+function thumbImg(src, alt){
+  const t = thumbOf(src);
+  return `<img src="${escHtml(t)}" ${t!==src ? `data-full="${escHtml(src)}" onerror="this.onerror=null;this.src=this.dataset.full" ` : ''}alt="${escHtml(alt||'')}" loading="lazy" decoding="async">`;
+}
 // GitHub's per-category Contents API (one request per folder) blew through the
 // 60-req/hr unauthenticated rate limit in minutes once there were 4 asset
 // groups x 8 categories = 32 requests on every single page load — the limit
@@ -4381,8 +4408,8 @@ function renderCanvasBgDecor(){
 
     const el = document.createElement('img');
     el.className = 'cr-bg-sticker';
-    el.src = src;
-    el.alt = '';
+    const tsrc = thumbOf(src); el.src = tsrc; if (tsrc!==src) el.onerror = () => { el.onerror = null; el.src = src; };
+    el.alt = ''; el.decoding = 'async';
     el.style.width = size + 'px';
     el.style.height = size + 'px';
     wrap.appendChild(el);

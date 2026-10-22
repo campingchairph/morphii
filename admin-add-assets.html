@@ -626,6 +626,16 @@ async function pushAllAssetsToGithub(){
     const base64 = canvas.toDataURL('image/png').split(',')[1];
     try {
       await pushFileToGithub(repoPath, base64, `Add ${kindDef.id}: ${folderPath}/${filename}`);
+      // Small WebP thumbnail next to the original (assets/pins-opt/thumb/...) so the designer's pickers never have
+      // to download the full file. Best effort: without it the picker simply falls back to the original.
+      try {
+        const tc = document.createElement('canvas');
+        const sc = Math.min(1, 256 / Math.max(canvas.width, canvas.height));
+        tc.width = Math.max(1, Math.round(canvas.width * sc)); tc.height = Math.max(1, Math.round(canvas.height * sc));
+        tc.getContext('2d').drawImage(canvas, 0, 0, tc.width, tc.height);
+        const thumb64 = tc.toDataURL('image/webp', 0.78).split(',')[1];
+        await pushFileToGithub(`assets/pins-opt/thumb/${base}${folderPath}/${filename}.webp`, thumb64, `Thumbnail: ${folderPath}/${filename}`);
+      } catch(e){ /* optional */ }
       results.push({ i, filename, ok:true });
       resetStickerSlot(i);
     } catch(e){

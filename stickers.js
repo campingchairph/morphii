@@ -56,6 +56,13 @@ function swatchFill(ctx, bb, id) {
   sw.stops.forEach((c, i) => gr.addColorStop(i / (sw.stops.length - 1), c));
   return gr;
 }
+// small WebP thumbnails of the library (see tools/make-thumbs.py) so grids don't download multi-MB originals
+const PINS_THUMB_BASE = 'https://raw.githubusercontent.com/campingchairph/morphii/main/assets/pins-opt/thumb/';
+const thumbOf = src => (src && src.indexOf(PINS_RAW_BASE) === 0 ? PINS_THUMB_BASE + src.slice(PINS_RAW_BASE.length) + '.webp' : src);
+const thumbImg = src => {
+  const t = thumbOf(src);
+  return '<img loading="lazy" decoding="async" src="' + esc(t) + '"' + (t !== src ? ' data-full="' + esc(src) + '" onerror="this.onerror=null;this.src=this.dataset.full"' : '') + ' alt="">';
+};
 const STICKER_LOGO_RE = /^logo\.[^.]+$/i;
 
 /* ── state ─────────────────────────────────────────────────── */
@@ -222,7 +229,7 @@ function renderLibrary() {
     (LIB.isAdmin ? tool('admin', 'Admin', ICON_ADMIN) : '');
   strip.innerHTML = cats.map(c =>
       '<button class="st-group' + (S.panel === 'lib' && c.key === LIB.category ? ' active' : '') + (LIB.hidden.has(c.key) ? ' is-hidden' : '') + '" data-cat="' + esc(c.key) + '">' +
-      '<div class="th"><img loading="lazy" src="' + esc(groupThumb(c)) + '" alt=""></div><span>' + esc(c.shown) + '</span></button>').join('');
+      '<div class="th">' + thumbImg(groupThumb(c)) + '</div><span>' + esc(c.shown) + '</span></button>').join('');
   if (LIB.source === 'premium' && !cats.length) strip.insertAdjacentHTML('beforeend', '<span class="st-prem-note">' + (LIB.premium.loading ? 'Loading designers…' : 'No designer stickers yet') + '</span>');
   strip.scrollLeft = keep;
   renderGrid();
@@ -242,7 +249,7 @@ function renderGrid() {
   if (!same) {
     $('libGrid').innerHTML = items.map(it => it.premium
       ? '<div class="st-lib-item" data-pid="' + esc(it.premium.id) + '"><img loading="lazy" src="' + esc(it.src) + '" alt=""><span class="st-ptag' + (it.premium.price ? '' : ' free') + '">' + (it.premium.price ? '₱' + it.premium.price : 'Free') + '</span></div>'
-      : '<div class="st-lib-item" data-src="' + esc(it.src) + '" data-label="' + esc(it.label) + '"><img loading="lazy" src="' + esc(it.src) + '" alt=""></div>').join('');
+      : '<div class="st-lib-item" data-src="' + esc(it.src) + '" data-label="' + esc(it.label) + '">' + thumbImg(it.src) + '</div>').join('');
     $('libGrid').dataset.cat = cat.key;
     $('pane-lib').parentElement.scrollTop = 0;
   }
@@ -1209,12 +1216,12 @@ function bdRenderTray() {
   const keep = $('bdGroups').scrollLeft;
   $('bdGroups').innerHTML =
     '<label class="bd-group tool" for="bdUpload"><div class="th">' + ICON_UPLOAD + '</div><span>Upload</span></label>' +
-    cats.map(c => '<button class="bd-group' + (c.key === BD.cat ? ' active' : '') + '" data-bcat="' + esc(c.key) + '"><div class="th"><img loading="lazy" src="' + esc(groupThumb(c)) + '" alt=""></div><span>' + esc(c.shown) + '</span></button>').join('');
+    cats.map(c => '<button class="bd-group' + (c.key === BD.cat ? ' active' : '') + '" data-bcat="' + esc(c.key) + '"><div class="th">' + thumbImg(groupThumb(c)) + '</div><span>' + esc(c.shown) + '</span></button>').join('');
   $('bdGroups').scrollLeft = keep;
   const cat = cats.find(c => c.key === BD.cat);
   $('bdGrid').innerHTML = cat ? cat.items.slice().sort((a, b) =>
     (STICKER_LOGO_RE.test(b.name) ? 1 : 0) - (STICKER_LOGO_RE.test(a.name) ? 1 : 0) || a.label.localeCompare(b.label)).map(it =>
-    '<button class="bd-asset" data-src="' + esc(it.src) + '"><img loading="lazy" src="' + esc(it.src) + '" alt=""></button>').join('') : '';
+    '<button class="bd-asset" data-src="' + esc(it.src) + '">' + thumbImg(it.src) + '</button>').join('') : '';
   $('bdGrid').scrollLeft = 0; $('bdGrid').scrollTop = 0;
 }
 
