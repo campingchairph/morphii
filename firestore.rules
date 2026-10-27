@@ -1,0 +1,182 @@
+// Morphii — complete Firestore security rules (generated from the comment block in firebase-config.js).
+// To publish: Firebase Console -> Firestore Database -> Rules -> replace EVERYTHING with this file -> Publish.
+// Covers: pin orders (+ minimum-order strip designs), sticker sheet orders, designer accounts,
+// designer stickers/payments, config, finance, templates, visits, funeral.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /morphii_orders/{orderId} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null
+        && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+      // extra unique designs of a minimum-order strip (only while the order is being created)
+      match /designs/{did} {
+        allow create: if !exists(/databases/$(database)/documents/morphii_orders/$(orderId))
+          && existsAfter(/databases/$(database)/documents/morphii_orders/$(orderId))
+          && request.resource.data.keys().hasOnly(['png'])
+          && request.resource.data.png is string && request.resource.data.png.size() < 900000;
+        allow read, delete: if request.auth != null
+          && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+      }
+    }
+    match /morphii_config/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+    }
+    match /morphii_costs/{costId} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+    }
+    match /morphii_finance/{docId} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+    }
+    match /morphii_pin_templates/{templateId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null
+        && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+    }
+    match /morphii_secrets/{docId} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+    }
+    match /morphii_shopee/{docId} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+    }
+    match /morphii_visits/{deviceId} {
+      allow create, update: if true;
+      allow read, delete: if request.auth != null
+        && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+    }
+    match /morphii_funeral_contacts/{contactId} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+    }
+    match /morphii_sticker_orders/{code} {
+      allow create: if code.matches('S-[A-Z2-9]{6}')
+        && request.resource.data.keys().hasOnly(['code','status','contactMethod','customerName','customerEmail','customerPhone','notes','productLabel','sheets','stickers','pricePerSheet','sheetTotal','premiumTotal','total','premium','settings','items','createdAt'])
+        && request.resource.data.code == code
+        && request.resource.data.status == 'new'
+        && request.resource.data.contactMethod in ['email','phone']
+        && request.resource.data.customerName is string
+        && request.resource.data.customerName.size() >= 1 && request.resource.data.customerName.size() <= 80
+        && request.resource.data.sheets is int && request.resource.data.sheets >= 1 && request.resource.data.sheets <= 60
+        && request.resource.data.items is list && request.resource.data.items.size() <= 150;
+      allow read, update, delete: if request.auth != null
+        && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+      match /assets/{aid} {
+        allow create: if !exists(/databases/$(database)/documents/morphii_sticker_orders/$(code))
+          && existsAfter(/databases/$(database)/documents/morphii_sticker_orders/$(code))
+          && request.resource.data.keys().hasOnly(['png'])
+          && request.resource.data.png is string && request.resource.data.png.size() < 900000;
+        allow read, delete: if request.auth != null
+          && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+      }
+    }
+    match /morphii_funeral/{docId} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+    }
+    match /morphii_designers/{uid} {
+      allow read: if request.auth != null
+        && (request.auth.uid == uid
+            || request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com']);
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['uid','email','displayName','uploadsEver','paidListed','paidSlots','createdAt'])
+        && request.resource.data.uid == uid
+        && request.resource.data.uploadsEver == 0
+        && request.resource.data.paidListed == 0
+        && request.resource.data.paidSlots == 0
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 40;
+      allow update: if (request.auth != null
+          && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'])
+        || (request.auth != null && request.auth.uid == uid && (
+            // rename
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName'])
+            // upload #1-#5: the free lifetime points (counter can only rise by 1, with a matching sticker)
+            || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uploadsEver','lastStickerId'])
+                && request.resource.data.uploadsEver == resource.data.uploadsEver + 1
+                && request.resource.data.uploadsEver <= 5
+                && getAfter(/databases/$(database)/documents/morphii_designer_stickers/$(request.resource.data.lastStickerId)).data.seq == request.resource.data.uploadsEver
+                && getAfter(/databases/$(database)/documents/morphii_designer_stickers/$(request.resource.data.lastStickerId)).data.designerId == uid)
+            // upload #6+: needs an active pass with a free slot
+            || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uploadsEver','lastStickerId','paidListed'])
+                && request.resource.data.uploadsEver == resource.data.uploadsEver + 1
+                && request.resource.data.uploadsEver > 5
+                && resource.data.get('paidUntil', null) != null
+                && resource.data.paidUntil > request.time
+                && request.resource.data.paidListed == resource.data.paidListed + 1
+                && request.resource.data.paidListed <= resource.data.paidSlots
+                && getAfter(/databases/$(database)/documents/morphii_designer_stickers/$(request.resource.data.lastStickerId)).data.seq == request.resource.data.uploadsEver
+                && getAfter(/databases/$(database)/documents/morphii_designer_stickers/$(request.resource.data.lastStickerId)).data.designerId == uid)
+            // deleting a paid sticker frees its slot (never the lifetime counter)
+            || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['paidListed','lastDeletedId'])
+                && request.resource.data.paidListed == resource.data.paidListed - 1
+                && request.resource.data.paidListed >= 0
+                && !existsAfter(/databases/$(database)/documents/morphii_designer_stickers/$(request.resource.data.lastDeletedId))
+                && get(/databases/$(database)/documents/morphii_designer_stickers/$(request.resource.data.lastDeletedId)).data.seq > 5
+                && get(/databases/$(database)/documents/morphii_designer_stickers/$(request.resource.data.lastDeletedId)).data.designerId == uid)
+          ));
+      allow delete: if false;
+    }
+    match /morphii_designer_stickers/{sid} {
+      allow read: if resource.data.status == 'approved'
+        || (request.auth != null && resource.data.designerId == request.auth.uid)
+        || (request.auth != null && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com']);
+      allow create: if request.auth != null
+        && request.resource.data.designerId == request.auth.uid
+        && request.resource.data.keys().hasOnly(['designerId','designerName','name','seq','price','status','thumb','w','h','paidUntil','createdAt'])
+        && request.resource.data.status == 'pending'
+        && request.resource.data.price is int && request.resource.data.price >= 0 && request.resource.data.price <= 99
+        && request.resource.data.name is string && request.resource.data.name.size() <= 40
+        && request.resource.data.thumb is string && request.resource.data.thumb.size() < 60000
+        && request.resource.data.seq == getAfter(/databases/$(database)/documents/morphii_designers/$(request.auth.uid)).data.uploadsEver
+        && getAfter(/databases/$(database)/documents/morphii_designers/$(request.auth.uid)).data.uploadsEver
+           == get(/databases/$(database)/documents/morphii_designers/$(request.auth.uid)).data.uploadsEver + 1
+        && (request.resource.data.seq <= 5
+            ? request.resource.data.paidUntil == null
+            : request.resource.data.paidUntil == get(/databases/$(database)/documents/morphii_designers/$(request.auth.uid)).data.get('paidUntil', null));
+      allow update: if (request.auth != null
+          && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'])
+        || (request.auth != null && resource.data.designerId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','price'])
+            && request.resource.data.price is int && request.resource.data.price >= 0 && request.resource.data.price <= 99);
+      allow delete: if request.auth != null
+        && (resource.data.designerId == request.auth.uid
+            || request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com']);
+      match /data/{docId} {
+        allow read: if (request.auth != null && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'])
+          || (request.auth != null && get(/databases/$(database)/documents/morphii_designer_stickers/$(sid)).data.designerId == request.auth.uid)
+          || (get(/databases/$(database)/documents/morphii_designer_stickers/$(sid)).data.status == 'approved'
+              && get(/databases/$(database)/documents/morphii_designer_stickers/$(sid)).data.price == 0);
+        // only as part of creating a brand-new sticker
+        allow create: if request.auth != null
+          && !exists(/databases/$(database)/documents/morphii_designer_stickers/$(sid))
+          && existsAfter(/databases/$(database)/documents/morphii_designer_stickers/$(sid))
+          && getAfter(/databases/$(database)/documents/morphii_designer_stickers/$(sid)).data.designerId == request.auth.uid
+          && request.resource.data.keys().hasOnly(['png'])
+          && request.resource.data.png is string && request.resource.data.png.size() < 900000;
+        allow delete: if request.auth != null
+          && (get(/databases/$(database)/documents/morphii_designer_stickers/$(sid)).data.designerId == request.auth.uid
+              || request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com']);
+      }
+    }
+    match /morphii_designer_payments/{pid} {
+      allow create: if request.auth != null
+        && request.resource.data.designerId == request.auth.uid
+        && request.resource.data.keys().hasOnly(['designerId','designerName','slots','amount','ref','status','createdAt'])
+        && request.resource.data.status == 'pending'
+        && request.resource.data.slots is int && request.resource.data.slots >= 1 && request.resource.data.slots <= 2000
+        && request.resource.data.amount == request.resource.data.slots
+        && request.resource.data.ref is string && request.resource.data.ref.size() <= 60;
+      allow read: if request.auth != null
+        && (resource.data.designerId == request.auth.uid
+            || request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com']);
+      allow update, delete: if request.auth != null
+        && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
+    }
+  }
+}
