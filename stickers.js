@@ -1466,9 +1466,62 @@ async function loadOrderForAdmin(code) {
     S.items = items; S.sel = null; S.selK = null;
     Object.assign(S.settings, o.settings || {});
     if (hooks.syncSettings) hooks.syncSettings();
-    refreshUI(); scheduleBuild();
-    bar.innerHTML = '<b>' + esc(code) + '</b> · ' + esc(o.customerName) + ' · ' + esc(o.customerEmail || o.customerPhone || '') + ' · ' + o.sheets + ' sheet' + (o.sheets > 1 ? 's' : '') + ' · ₱' + o.total + ' · ' + esc(o.status);
+    refreshUI();
+    clearTimeout(buildTimer); await rebuild();      // lay the sheets out now so the viewer has them
+    o.code = code; S.order = o;
+    bar.innerHTML = '<b>' + esc(code) + '</b> · ' + esc(o.customerName) + ' · ' + esc(o.customerEmail || o.customerPhone || '') + ' · ' + o.sheets + ' sheet' + (o.sheets > 1 ? 's' : '') + ' · ₱' + o.total + ' · ' + esc(o.status) +
+      ' <button class="st-link-btn" data-ov="reopen" style="color:#fff;text-decoration:underline;">Back to print preview</button>';
+    openOrderViewer();
   } catch (e) { bar.textContent = 'Couldn’t load that order: ' + (e.code || e.message); }
+}
+
+/* Admin order viewer. "Open layout" from the Stickers Admin lands here, not in the editor: a read-only preview of
+   the sheets exactly as they will print, with Print and the download buttons. "Edit layout" is still there if the
+   layout needs to be changed. Built only for a signed-in admin (nothing of it is in the HTML). */
+const ORDER_PPMM = 6;       // 150 dpi — plenty for a screen preview and for the browser's Print
+function drawOrderPages() {
+  const box = $('ovPages'); if (!box) return;
+  const cut = $('ovCut').checked;
+  box.innerHTML = '';
+  S.pages.forEach((pg, i) => {
+    const cv = document.createElement('canvas');
+    cv.width = Math.round(PAGE_W * ORDER_PPMM); cv.height = Math.round(PAGE_H * ORDER_PPMM);
+    drawPage(cv.getContext('2d'), pg, ORDER_PPMM, cut ? 'proof' : 'print');
+    const sheet = document.createElement('div'); sheet.className = 'ov-sheet';
+    sheet.innerHTML = '<span class="ov-tag">Sheet ' + (i + 1) + ' of ' + S.pages.length + '</span>';
+    sheet.appendChild(cv); box.appendChild(sheet);
+  });
+}
+function openOrderViewer() {
+  if (!isAdminNow() || !S.order) return;
+  closeOrderViewer();
+  const o = S.order, contact = o.customerEmail || o.customerPhone || '';
+  const ov = document.createElement('div'); ov.id = 'orderView'; ov.className = 'ov';
+  ov.innerHTML =
+    '<div class="ov-head"><div class="ov-info"><b>' + esc(o.code) + '</b><span>' + esc(o.customerName) + (contact ? ' · ' + esc(contact) : '') + '</span>' +
+    '<span>' + o.sheets + ' A4 sheet' + (o.sheets > 1 ? 's' : '') + ' · ' + o.stickers + ' stickers · ₱' + o.total + ' · ' + esc(o.status) + '</span>' +
+    (o.notes ? '<span>Notes: ' + esc(o.notes) + '</span>' : '') + '</div>' +
+    '<button class="ov-x" data-ov="close" aria-label="Close preview">✕</button></div>' +
+    '<div class="ov-body" id="ovPages"></div>' +
+    '<div class="ov-foot"><label class="ov-cut"><input type="checkbox" id="ovCut" checked> Show cut line</label>' +
+    '<div class="ov-btns"><button class="st-btn" data-ov="print">🖨 Print</button>' +
+    '<button class="st-btn ghost" data-exp="print">Print PNG</button><button class="st-btn ghost" data-exp="proof">Proof PNG</button><button class="st-btn ghost" data-exp="svg">Cut line SVG</button>' +
+    '<button class="st-btn ghost" data-ov="edit">Edit layout</button></div></div>';
+  document.body.appendChild(ov); document.body.classList.add('ov-open');
+  $('ovCut').addEventListener('change', drawOrderPages);
+  drawOrderPages();
+}
+function closeOrderViewer() {
+  const ov = $('orderView'); if (ov) ov.remove();
+  document.body.classList.remove('ov-open');
+}
+function orderViewerClick(e) {
+  const b = e.target.closest('[data-ov],[data-exp]'); if (!b) return;
+  if (b.dataset.exp) { try { exportFiles(b.dataset.exp); } catch (err) { /* not an admin */ } return; }
+  const a = b.dataset.ov;
+  if (a === 'print') window.print();
+  else if (a === 'close' || a === 'edit') closeOrderViewer();
+  else if (a === 'reopen') openOrderViewer();
 }
 
 /* ═══════════════ wiring ═══════════════ */
@@ -1621,6 +1674,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   $('fabPaste').addEventListener('click', pasteFromClipboard);
+  document.addEventListener('click', e => { if (e.target.closest('#orderView,#orderBanner')) orderViewerClick(e); });
 
   // review & order
   getStickerPricing().then(p => { RV.pricing = p; updateOrderBtn(); });
@@ -1692,7 +1746,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // localhost-only test hook — absent on the live site
   if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
-    window.__stTest = { S, LIB, becomeAdmin() { TEST_ADMIN = true; applyAuth(); }, stopAdmin() { TEST_ADMIN = false; applyAuth(); } };
+    window.__stTest = { S, LIB, rebuild, openOrderViewer, becomeAdmin() { TEST_ADMIN = true; applyAuth(); }, stopAdmin() { TEST_ADMIN = false; applyAuth(); } };
   }
 });
 })();

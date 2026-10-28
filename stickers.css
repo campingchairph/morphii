@@ -322,6 +322,32 @@ h1,h2,h3,.st-logo{font-family:'Baloo 2',cursive;}
 .st-orderbanner{background:var(--pill);color:#fff;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;margin-bottom:8px;}
 .st-orderbanner[hidden]{display:none;}
 
+/* ── Admin order viewer (read-only preview + print; built by stickers.js for admins only) ── */
+.ov{position:fixed;inset:0;z-index:400;display:flex;flex-direction:column;background:#e9e7dc;color:var(--ink);}
+.ov-head{flex:0 0 auto;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--border);}
+.ov-info{display:flex;flex-direction:column;gap:1px;font-size:12.5px;font-weight:700;color:var(--ink-dim);min-width:0;}
+.ov-info b{font-family:'Baloo 2',cursive;font-size:18px;color:var(--ink);line-height:1.2;}
+.ov-x{flex:0 0 auto;width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--card);color:var(--ink);font-size:15px;font-weight:800;cursor:pointer;}
+.ov-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;align-items:center;gap:18px;}
+.ov-sheet{position:relative;width:min(100%,520px);}
+.ov-sheet canvas{display:block;width:100%;height:auto;background:#fff;box-shadow:0 8px 28px rgba(0,0,0,.25);}
+.ov-tag{position:absolute;top:-9px;left:10px;background:var(--pill);color:#fff;border-radius:20px;padding:1px 10px;font-size:11px;font-weight:800;z-index:1;}
+.ov-foot{flex:0 0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--border);}
+.ov-cut{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;}
+.ov-btns{display:flex;flex-wrap:wrap;gap:8px;}
+body.ov-open{overflow:hidden;}
+@media print{
+  @page{size:A4;margin:0;}
+  body.ov-open{display:block;height:auto;overflow:visible;background:#fff;}
+  body.ov-open > *:not(#orderView){display:none !important;}
+  body.ov-open .ov{position:static;display:block;background:#fff;}
+  .ov-head,.ov-foot,.ov-tag{display:none !important;}
+  .ov-body{display:block;overflow:visible;padding:0;}
+  .ov-sheet{width:210mm;height:297mm;page-break-after:always;break-after:page;}
+  .ov-sheet:last-child{page-break-after:auto;break-after:auto;}
+  .ov-sheet canvas{width:210mm;height:297mm;box-shadow:none;}
+}
+
 /* ── Review & order: full-screen window ── */
 .rv{position:fixed;inset:0;z-index:150;display:flex;flex-direction:column;background:#1b231a;color:#fff;}
 .rv[hidden]{display:none;}
