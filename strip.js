@@ -251,7 +251,7 @@
     try {
       return await submitPinStripOrder(Object.assign({}, order, {
         designDataUrl: uniq[0],
-        strip: { size: st.size, count: st.count, layout: st.layout, slots, unique: uniq.length },
+        strip: { size: st.size, count: st.count, layout: st.layout, width: cfgFor(st.size).width, slots, unique: uniq.length },
       }), uniq);
     } catch (e) {
       console.error('Strip order failed:', e.code, e.message);

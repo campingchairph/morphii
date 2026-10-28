@@ -42,6 +42,15 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 .adm-menu button:hover,.adm-menu a:hover{background:rgba(255,255,255,.1);}
 .adm-menu-n{display:inline-block;min-width:18px;padding:1px 6px;border-radius:10px;background:var(--pink);color:white;font-size:11px;font-weight:800;text-align:center;}
 .adm-menu-n:empty{display:none;}
+.adm-btn.strip-view{flex:1 1 100%;background:var(--yellow);color:#0B2E4E;border-color:var(--yellow);}
+.sv{position:fixed;inset:0;z-index:500;display:flex;flex-direction:column;background:rgba(7,25,41,0.97);color:white;}
+.sv-head{flex:0 0 auto;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 18px;background:var(--panel);border-bottom:1px solid var(--border);}
+.sv-info{display:flex;flex-direction:column;gap:2px;font-size:12.5px;font-weight:700;color:var(--ink-dim);min-width:0;}
+.sv-info b{font-family:'Fredoka One',cursive;font-size:18px;color:white;font-weight:400;}
+.sv-body{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;padding:16px;}
+.sv-body canvas{max-height:100%;max-width:100%;width:auto;height:auto;background:#fff;border-radius:3px;box-shadow:0 10px 40px rgba(0,0,0,.6);}
+.sv-foot{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 18px;background:var(--panel);border-top:1px solid var(--border);}
+.sv-cut{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;}
 .adm-strip-note{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:8px 14px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid var(--border);font-size:13px;font-weight:800;}
 .adm-strip-note button{margin-left:auto;}
 
@@ -867,8 +876,8 @@ function renderOrders(){
     const sel = selectedOrders.has(o.id);
     return `
     <div class="adm-card ${o.printed?'printed-flag':''}" data-oid="${o.id}">
-      <div class="adm-card-select ${sel?'checked':''}" onclick="event.stopPropagation();toggleSelect('${o.id}')">${sel?'✓':''}</div>
-      <img src="${thumbSrc(o)}" data-oid="${o.id}" onclick="openLightbox('${o.id}')" alt="Design" decoding="async">
+      ${o.strip ? '' : `<div class="adm-card-select ${sel?'checked':''}" onclick="event.stopPropagation();toggleSelect('${o.id}')">${sel?'✓':''}</div>`}
+      <img src="${thumbSrc(o)}" data-oid="${o.id}" onclick="${o.strip ? `openStripView('${o.id}')` : `openLightbox('${o.id}')`}" alt="Design" decoding="async">
       <div class="adm-card-body">
         <span class="adm-badge adm-badge-${o.status}">${o.status}</span>
         <div class="adm-card-title">${escHtml(o.productLabel||o.product||'')}</div>
@@ -881,10 +890,11 @@ function renderOrders(){
         ${o.shopeeOrderId ? `<div class="adm-card-row"><b>Shopee:</b> ${escHtml(o.shopeeOrderId)}</div>` : ''}
         ${o.notes ? `<div class="adm-card-row"><b>Notes:</b> ${escHtml(o.notes)}</div>` : ''}
         <div class="adm-card-actions">
+          ${o.strip ? `<button class="adm-btn strip-view" onclick="openStripView('${o.id}')">👁 Preview &amp; PDF</button>` : ''}
           <button class="adm-btn approve ${o.status==='approved'?'active':''}" onclick="setStatus('${o.id}','approved')">Approve</button>
           <button class="adm-btn reject ${o.status==='rejected'?'active':''}" onclick="setStatus('${o.id}','rejected')">Reject</button>
-          <button class="adm-btn printed ${o.printed?'active':''}" onclick="togglePrinted('${o.id}')">${o.printed?'✓ Printed':'🖨 Queue'}</button>
-          <button class="adm-btn" onclick="event.stopPropagation();downloadDesign('${o.id}')" title="Download high-res PNG">⬇</button>
+          <button class="adm-btn printed ${o.printed?'active':''}" onclick="togglePrinted('${o.id}')">${o.printed?'✓ Printed':(o.strip?'Mark printed':'🖨 Queue')}</button>
+          ${o.strip ? '' : `<button class="adm-btn" onclick="event.stopPropagation();downloadDesign('${o.id}')" title="Download high-res PNG">⬇</button>`}
           <button class="adm-btn danger" onclick="event.stopPropagation();deleteOrder('${o.id}')" title="Delete this order">🗑</button>
         </div>
       </div>
@@ -1992,6 +2002,94 @@ function doPrint(){
   batch.commit().catch(err => console.warn('Failed to mark orders printed:', err));
 }
 window.doPrint = doPrint;
+
+/* ── Strip order viewer ──────────────────────────────────────────────────
+   A minimum-order strip is one A4 cut lengthwise: a W × 297 mm piece of paper with the circles laid out the way
+   the customer built it (column / zigzag / 2 columns — same maths as geometry() in strip.js). This is a read-only
+   preview of that paper and a PDF of it at exactly W × 297 mm; there is nothing to edit or drag. */
+const STRIP_H = 297;
+let stripCfgCache = null;
+async function stripWidthFor(o){
+  if (o.strip.width >= 40) return o.strip.width;          // new orders carry the width they were built with
+  if (!stripCfgCache) stripCfgCache = await getPinStrips().catch(() => DEFAULT_PIN_STRIPS);
+  const c = stripCfgCache[o.strip.size] || DEFAULT_PIN_STRIPS[o.strip.size];
+  return (c && c.width) || 84;
+}
+function stripPoints(layout, n, W, d){
+  const pts = [], H = STRIP_H;
+  if (layout === 'grid2'){
+    const rows = Math.ceil(n / 2), g = (H - rows * d) / (rows + 1);
+    for (let i = 0; i < n; i++){ const r = Math.floor(i / 2); pts.push([i % 2 ? W * 0.75 : W * 0.25, g * (r + 1) + d * r + d / 2]); }
+  } else if (layout === 'zigzag'){
+    const g0 = 6, step = n > 1 ? (H - d - 2 * g0) / (n - 1) : 0;
+    for (let i = 0; i < n; i++) pts.push([i % 2 ? W * 0.7 : W * 0.3, g0 + d / 2 + step * i]);
+  } else {
+    const g = (H - n * d) / (n + 1);
+    for (let i = 0; i < n; i++) pts.push([W / 2, g * (i + 1) + d * i + d / 2]);
+  }
+  return pts;
+}
+function drawStripSheet(ctx, v, ppmm, cut){
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, Math.round(v.W * ppmm), Math.round(STRIP_H * ppmm));
+  v.pts.forEach(([x, y], i) => {
+    const cx = x * ppmm, cy = y * ppmm, r = v.d / 2 * ppmm, img = v.imgs[i];
+    ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.clip();
+    if (img) ctx.drawImage(img, cx - r, cy - r, r * 2, r * 2);
+    ctx.restore();
+    if (cut){
+      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, v.size / 2 * ppmm, 0, Math.PI * 2);
+      ctx.setLineDash([1.6 * ppmm, 1 * ppmm]); ctx.strokeStyle = '#e6007e'; ctx.lineWidth = Math.max(1, 0.3 * ppmm); ctx.stroke(); ctx.restore();
+    }
+  });
+}
+const loadImgEl = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
+
+let stripView = null;
+async function openStripView(id){
+  const o = allOrders.find(x => x.id === id); if (!o || !o.strip) return;
+  closeStripView();
+  const ov = document.createElement('div'); ov.id = 'stripView'; ov.className = 'sv';
+  ov.innerHTML = '<div class="sv-head"><div class="sv-info"><b>Loading strip…</b></div><button class="adm-signout" onclick="closeStripView()">✕ Close</button></div>';
+  document.body.appendChild(ov);
+  try {
+    await loadStripDesigns(o);
+    const W = await stripWidthFor(o), d = bleedMMFor(o), n = o.strip.slots.length;
+    const imgs = await Promise.all(o.strip.slots.map(k => loadImgEl(o._stripDesigns[k] || o.designDataUrl)));
+    stripView = { o, W, d, size: parseFloat(o.strip.size || o.size) || 37, pts: stripPoints(o.strip.layout, n, W, d), imgs };
+    const layoutName = { column: 'single column', zigzag: 'zigzag', grid2: '2 columns' }[o.strip.layout] || o.strip.layout;
+    ov.innerHTML =
+      '<div class="sv-head"><div class="sv-info"><b>' + escHtml(o.saveCode || 'Strip order') + ' · ' + stripView.size + 'mm pins</b>' +
+      '<span>' + escHtml(o.customerName || '') + ' · ' + escHtml(o.customerEmail || o.customerContact || '') + (o.customerPhone ? ' · ' + escHtml(o.customerPhone) : '') + '</span>' +
+      '<span>' + n + ' pins · ' + o.strip.unique + ' unique design' + (o.strip.unique > 1 ? 's' : '') + ' · ' + layoutName + ' · paper ' + W + ' × ' + STRIP_H + ' mm</span>' +
+      (o.notes ? '<span>Notes: ' + escHtml(o.notes) + '</span>' : '') + '</div>' +
+      '<button class="adm-signout" onclick="closeStripView()">✕ Close</button></div>' +
+      '<div class="sv-body"><canvas id="svCanvas"></canvas></div>' +
+      '<div class="sv-foot"><label class="sv-cut"><input type="checkbox" id="svCut"> Show cut line</label>' +
+      '<button class="print-action-btn" style="width:auto;margin:0;padding:10px 20px;font-size:15px" id="svPdf" onclick="downloadStripPdf()">⬇ Download PDF</button></div>';
+    document.getElementById('svCut').addEventListener('change', drawStripPreview);
+    drawStripPreview();
+  } catch (e) {
+    ov.querySelector('.sv-info').innerHTML = '<b>Couldn’t open this strip</b><span>' + escHtml(e.message || e) + '</span>';
+  }
+}
+function drawStripPreview(){
+  const v = stripView, cv = document.getElementById('svCanvas'); if (!v || !cv) return;
+  const ppmm = 4; cv.width = Math.round(v.W * ppmm); cv.height = Math.round(STRIP_H * ppmm);
+  drawStripSheet(cv.getContext('2d'), v, ppmm, document.getElementById('svCut').checked);
+}
+function closeStripView(){ const el = document.getElementById('stripView'); if (el) el.remove(); stripView = null; }
+function downloadStripPdf(){
+  const v = stripView; if (!v) return;
+  const cut = document.getElementById('svCut').checked, ppmm = PRINT_PPMM;     // ~300 dpi
+  const cv = document.createElement('canvas'); cv.width = Math.round(v.W * ppmm); cv.height = Math.round(STRIP_H * ppmm);
+  drawStripSheet(cv.getContext('2d'), v, ppmm, cut);
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit: 'mm', format: [v.W, STRIP_H], orientation: 'portrait', compress: true });   // page = the strip itself
+  pdf.addImage(cv.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, v.W, STRIP_H, undefined, 'FAST');
+  pdf.save((v.o.saveCode || v.o.id) + '-strip-' + v.size + 'mm' + (cut ? '-cutline' : '') + '.pdf');
+}
+window.openStripView = openStripView; window.closeStripView = closeStripView; window.downloadStripPdf = downloadStripPdf;
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeStripView(); });
 </script>
 </body>
 </html>
