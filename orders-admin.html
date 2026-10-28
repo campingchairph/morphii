@@ -1245,6 +1245,14 @@ async function loadAssetCatFiles(){
   renderAssetFilesList();
 }
 
+// assets/pins/<path> -> assets/pins-opt/thumb/<path>.webp (256px, see tools/make-thumbs.py); the <img> falls back to the
+// original if a thumbnail doesn't exist yet. Backgrounds are 3-8 MB each, so listing them in full froze this modal.
+function assetThumbUrl(url){
+  return url.indexOf(ASSET_RAW_BASE) === 0
+    ? ASSET_RAW_BASE.replace('/assets/pins/', '/assets/pins-opt/thumb/') + url.slice(ASSET_RAW_BASE.length) + '.webp'
+    : url;
+}
+
 function renderAssetFilesList(){
   const list = document.getElementById('assetFilesList');
   if (!currentAssetFiles.length){
@@ -1255,7 +1263,7 @@ function renderAssetFilesList(){
     const label = assetLabelOverrides[f.url] || assetLabelFromFilename(f.name);
     return `
     <div class="asset-row">
-      <img src="${f.url}" alt="">
+      <img src="${assetThumbUrl(f.url)}" data-full="${f.url}" onerror="this.onerror=null;this.src=this.dataset.full" loading="lazy" decoding="async" alt="">
       <div style="flex:1;min-width:0;">
         <div class="asset-row-name">${escHtml(f.name)}</div>
         <input type="text" class="asset-label-input" value="${escHtml(label)}" id="assetLabelInput_${i}">
