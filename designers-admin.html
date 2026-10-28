@@ -181,10 +181,14 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
       AUTH.signInWithEmailAndPassword($('loginEmail').value.trim(), $('loginPass').value).catch(e => { $('loginErr').textContent = e.message; });
     });
     $('outBtn').addEventListener('click', () => AUTH && AUTH.signOut());
-    document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+    const openTab = name => {
+      const t = document.querySelector('.tab[data-tab="' + name + '"]'); if (!t) return;
       document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
-      ['orders', 'pricing', 'strips', 'review', 'pay', 'designers', 'settings'].forEach(n => { $('tab-' + n).hidden = n !== t.dataset.tab; });
-    }));
+      ['orders', 'pricing', 'strips', 'review', 'pay', 'designers', 'settings'].forEach(n => { $('tab-' + n).hidden = n !== name; });
+    };
+    document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => openTab(t.dataset.tab)));
+    // the Order Admin menu links here with #pricing, #strips, #review… to land on the right tab
+    openTab(location.hash.slice(1));
     const stickerAction = e => {
       const b = e.target.closest('[data-a]'); if (!b) return;
       const id = b.closest('[data-id]').dataset.id, a = b.dataset.a;

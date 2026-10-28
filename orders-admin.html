@@ -34,6 +34,16 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 .adm-header .logo span{color:var(--pink);}
 .adm-user{font-size:12px;color:var(--ink-dim);font-weight:700;}
 .adm-signout{background:rgba(255,255,255,0.08);border:1px solid var(--border);color:white;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:800;cursor:pointer;}
+.adm-menu-wrap{position:relative;}
+.adm-menu{position:absolute;right:0;top:calc(100% + 8px);z-index:40;width:250px;max-height:calc(100vh - 90px);overflow-y:auto;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:6px;box-shadow:0 12px 34px rgba(0,0,0,.45);}
+.adm-menu[hidden]{display:none;}
+.adm-menu-h{font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--ink-dim);padding:10px 10px 4px;}
+.adm-menu button,.adm-menu a{display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;padding:9px 10px;border:none;border-radius:9px;background:none;color:white;font:inherit;font-size:13px;font-weight:800;text-align:left;text-decoration:none;cursor:pointer;}
+.adm-menu button:hover,.adm-menu a:hover{background:rgba(255,255,255,.1);}
+.adm-menu-n{display:inline-block;min-width:18px;padding:1px 6px;border-radius:10px;background:var(--pink);color:white;font-size:11px;font-weight:800;text-align:center;}
+.adm-menu-n:empty{display:none;}
+.adm-strip-note{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:8px 14px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid var(--border);font-size:13px;font-weight:800;}
+.adm-strip-note button{margin-left:auto;}
 
 .adm-main{max-width:1100px;margin:0 auto;padding:24px;}
 .adm-stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
@@ -260,17 +270,33 @@ h1,.logo{font-family:'Fredoka One',cursive;}
   <div class="adm-header">
     <div class="logo">morphii<span>.</span> Order Admin</div>
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end">
-      <button class="adm-signout" onclick="openHelpModal()">❓ Help</button>
-      <button class="adm-signout" onclick="openVisitorsModal()">📊 Visitors</button>
-      <a class="adm-signout" href="funeral-admin.html" target="_blank" style="text-decoration:none;display:inline-block">⚰️ Funeral Home</a>
-      <a class="adm-signout" href="designers-admin.html" target="_blank" style="text-decoration:none;display:inline-block">🎨 Designers</a>
-      <button class="adm-signout" onclick="openFinanceModal()">💰 Finance</button>
-      <button class="adm-signout" onclick="openCatalogModal()">📦 Catalog</button>
-      <button class="adm-signout" onclick="openAssetsModal()">🖼 Assets</button>
-      <a class="adm-signout" href="admin-add-assets.html" style="text-decoration:none;display:inline-block">📦 Add Assets</a>
-      <button class="adm-signout" onclick="openFontsModal()">🔤 Fonts</button>
-      <a class="adm-signout" href="shopee-admin.html" target="_blank" style="text-decoration:none;display:inline-block">📦 Shopee</a>
       <div class="adm-user" id="admUserEmail"></div>
+      <div class="adm-menu-wrap" id="admMenuWrap">
+        <button class="adm-signout adm-menu-btn" id="admMenuBtn" aria-haspopup="true" aria-expanded="false" onclick="toggleAdmMenu(event)">☰ Menu</button>
+        <div class="adm-menu" id="admMenu" hidden onclick="closeAdmMenu()">
+          <div class="adm-menu-h">Orders</div>
+          <button onclick="showOrdersView('all')">🔘 Button pin orders</button>
+          <button onclick="showOrdersView('strip')">📏 Strip orders <span class="adm-menu-n" id="admStripN"></span></button>
+          <a href="designers-admin.html#orders" target="_blank">🟣 Sticker sheet orders</a>
+          <div class="adm-menu-h">Stickers &amp; designers</div>
+          <a href="designers-admin.html#pricing" target="_blank">💲 Sheet pricing</a>
+          <a href="designers-admin.html#strips" target="_blank">⚙️ Pin minimum (strip) setup</a>
+          <a href="designers-admin.html#review" target="_blank">🎨 Designer review &amp; payments</a>
+          <a href="designers-admin.html#designers" target="_blank">👥 Designers</a>
+          <div class="adm-menu-h">Shop</div>
+          <button onclick="openFinanceModal()">💰 Finance</button>
+          <button onclick="openCatalogModal()">📦 Catalog</button>
+          <a href="shopee-admin.html" target="_blank">🛍 Shopee</a>
+          <a href="funeral-admin.html" target="_blank">⚰️ Funeral Home</a>
+          <div class="adm-menu-h">Library</div>
+          <button onclick="openAssetsModal()">🖼 Assets</button>
+          <a href="admin-add-assets.html">➕ Add Assets</a>
+          <button onclick="openFontsModal()">🔤 Fonts</button>
+          <div class="adm-menu-h">Info</div>
+          <button onclick="openVisitorsModal()">📊 Visitors</button>
+          <button onclick="openHelpModal()">❓ Help</button>
+        </div>
+      </div>
       <button class="adm-signout" onclick="doSignOut()">Sign Out</button>
     </div>
   </div>
@@ -309,6 +335,7 @@ h1,.logo{font-family:'Fredoka One',cursive;}
         <option value="old">Oldest First</option>
       </select>
     </div>
+    <div class="adm-strip-note" id="admStripNote" hidden>📏 Showing minimum-order strip orders only <button class="adm-signout" onclick="showOrdersView('all')">Show all</button></div>
     <div class="adm-grid" id="ordersGrid"></div>
   </div>
 </div>
@@ -656,6 +683,32 @@ let ordersUnsub = null;
 let selectedOrders = new Set();
 let searchQuery = '';
 
+// ☰ Menu in the header
+function closeAdmMenu(){
+  document.getElementById('admMenu').hidden = true;
+  document.getElementById('admMenuBtn').setAttribute('aria-expanded', 'false');
+}
+function toggleAdmMenu(e){
+  e.stopPropagation();
+  const m = document.getElementById('admMenu');
+  m.hidden = !m.hidden;
+  document.getElementById('admMenuBtn').setAttribute('aria-expanded', String(!m.hidden));
+}
+document.addEventListener('click', e => { if (!e.target.closest('#admMenuWrap')) closeAdmMenu(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAdmMenu(); });
+window.closeAdmMenu = closeAdmMenu; window.toggleAdmMenu = toggleAdmMenu;
+
+// 'strip' = only the minimum-order strip orders (orders that carry a .strip block); 'all' = everything
+let stripOnly = false;
+function showOrdersView(view){
+  stripOnly = view === 'strip';
+  currentTypeFilter = 'all';
+  renderTypeTabs();
+  renderOrders();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+window.showOrdersView = showOrdersView;
+
 function setSearch(v){
   searchQuery = v.trim().toLowerCase();
   renderOrders();
@@ -779,7 +832,10 @@ function dateFilterCutoffMs(){
 
 function renderOrders(){
   const grid = document.getElementById('ordersGrid');
+  document.getElementById('admStripN').textContent = allOrders.filter(o=>o.strip).length || '';
+  document.getElementById('admStripNote').hidden = !stripOnly;
   let list = currentTypeFilter==='all' ? allOrders : allOrders.filter(o=>o.product===currentTypeFilter);
+  if (stripOnly) list = list.filter(o=>o.strip);
   list = currentStatusFilter==='all' ? list
     : currentStatusFilter==='printed' ? list.filter(o=>o.printed)
     : list.filter(o=>o.status===currentStatusFilter);
