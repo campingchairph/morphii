@@ -1446,16 +1446,26 @@ function showOrderDone(code, emailOk, phone) {
   rvStep('done');
 }
 
-/* admin: open a customer's order (stickers.html?order=S-XXXXXX) to download its print files */
+/* admin: a customer's order (stickers.html?order=S-XXXXXX, linked from Stickers Admin → Sheet orders).
+   It is a read-only viewer — a preview of the sheets exactly as laid out, and a PDF download. The order is never
+   put in the editor for changing: the viewer covers the page and has no way to close it. Built only for a
+   signed-in admin (nothing of it is in the HTML), and the order itself is only readable by the admin rules. */
 const hooks = {};
+const ORDER_PPMM = 6;       // 150 dpi for the on-screen preview
+function orderShell(inner) {
+  let ov = $('orderView');
+  if (!ov) { ov = document.createElement('div'); ov.id = 'orderView'; ov.className = 'ov'; document.body.appendChild(ov); document.body.classList.add('ov-open'); }
+  ov.innerHTML = inner; return ov;
+}
+const orderBack = '<a class="st-link" href="designers-admin.html#orders">← Stickers Admin</a>';
 async function loadOrderForAdmin(code) {
   if (!code || S.orderCode === code) return;
   S.orderCode = code;
-  const bar = $('orderBanner'); bar.hidden = false; bar.textContent = 'Loading order ' + code + '…';
+  orderShell('<div class="ov-head"><div class="ov-info"><b>' + esc(code) + '</b><span>Loading order…</span></div>' + orderBack + '</div><div class="ov-body" id="ovPages"></div>');
   try {
     guard();
     const o = await getStickerOrder(code);
-    if (!o) { bar.textContent = 'Order ' + code + ' not found.'; return; }
+    if (!o) { orderShell('<div class="ov-head"><div class="ov-info"><b>' + esc(code) + '</b><span>Order not found.</span></div>' + orderBack + '</div>'); return; }
     const assets = await getStickerOrderAssets(code), items = [];
     for (const it of o.items) {
       let src = it.src;
@@ -1465,20 +1475,13 @@ async function loadOrderForAdmin(code) {
     }
     S.items = items; S.sel = null; S.selK = null;
     Object.assign(S.settings, o.settings || {});
-    if (hooks.syncSettings) hooks.syncSettings();
     refreshUI();
-    clearTimeout(buildTimer); await rebuild();      // lay the sheets out now so the viewer has them
+    clearTimeout(buildTimer); await rebuild();      // lay the sheets out so the viewer has them
     o.code = code; S.order = o;
-    bar.innerHTML = '<b>' + esc(code) + '</b> · ' + esc(o.customerName) + ' · ' + esc(o.customerEmail || o.customerPhone || '') + ' · ' + o.sheets + ' sheet' + (o.sheets > 1 ? 's' : '') + ' · ₱' + o.total + ' · ' + esc(o.status) +
-      ' <button class="st-link-btn" data-ov="reopen" style="color:#fff;text-decoration:underline;">Back to print preview</button>';
     openOrderViewer();
-  } catch (e) { bar.textContent = 'Couldn’t load that order: ' + (e.code || e.message); }
+  } catch (e) { orderShell('<div class="ov-head"><div class="ov-info"><b>' + esc(code) + '</b><span>Couldn’t load that order: ' + esc(e.code || e.message) + '</span></div>' + orderBack + '</div>'); }
 }
 
-/* Admin order viewer. "Open layout" from the Stickers Admin lands here, not in the editor: a read-only preview of
-   the sheets exactly as they will print, with Print and the download buttons. "Edit layout" is still there if the
-   layout needs to be changed. Built only for a signed-in admin (nothing of it is in the HTML). */
-const ORDER_PPMM = 6;       // 150 dpi — plenty for a screen preview and for the browser's Print
 function drawOrderPages() {
   const box = $('ovPages'); if (!box) return;
   const cut = $('ovCut').checked;
@@ -1494,34 +1497,52 @@ function drawOrderPages() {
 }
 function openOrderViewer() {
   if (!isAdminNow() || !S.order) return;
-  closeOrderViewer();
   const o = S.order, contact = o.customerEmail || o.customerPhone || '';
-  const ov = document.createElement('div'); ov.id = 'orderView'; ov.className = 'ov';
-  ov.innerHTML =
+  orderShell(
     '<div class="ov-head"><div class="ov-info"><b>' + esc(o.code) + '</b><span>' + esc(o.customerName) + (contact ? ' · ' + esc(contact) : '') + '</span>' +
     '<span>' + o.sheets + ' A4 sheet' + (o.sheets > 1 ? 's' : '') + ' · ' + o.stickers + ' stickers · ₱' + o.total + ' · ' + esc(o.status) + '</span>' +
-    (o.notes ? '<span>Notes: ' + esc(o.notes) + '</span>' : '') + '</div>' +
-    '<button class="ov-x" data-ov="close" aria-label="Close preview">✕</button></div>' +
+    (o.notes ? '<span>Notes: ' + esc(o.notes) + '</span>' : '') + '</div>' + orderBack + '</div>' +
     '<div class="ov-body" id="ovPages"></div>' +
-    '<div class="ov-foot"><label class="ov-cut"><input type="checkbox" id="ovCut" checked> Show cut line</label>' +
-    '<div class="ov-btns"><button class="st-btn" data-ov="print">🖨 Print</button>' +
-    '<button class="st-btn ghost" data-exp="print">Print PNG</button><button class="st-btn ghost" data-exp="proof">Proof PNG</button><button class="st-btn ghost" data-exp="svg">Cut line SVG</button>' +
-    '<button class="st-btn ghost" data-ov="edit">Edit layout</button></div></div>';
-  document.body.appendChild(ov); document.body.classList.add('ov-open');
+    '<div class="ov-foot"><label class="ov-cut"><input type="checkbox" id="ovCut"> Show cut line</label>' +
+    '<button class="st-btn" id="ovPdf" data-ov="pdf">⬇ Download PDF</button></div>');
   $('ovCut').addEventListener('change', drawOrderPages);
   drawOrderPages();
 }
-function closeOrderViewer() {
-  const ov = $('orderView'); if (ov) ov.remove();
-  document.body.classList.remove('ov-open');
+
+// every sheet as one A4 page of a PDF, at 300 dpi; the "Show cut line" box decides whether the pink cut line is in it
+function loadJsPdf() {
+  if (window.jspdf) return Promise.resolve();
+  return new Promise((ok, no) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s.onload = ok; s.onerror = () => no(new Error('Couldn’t load the PDF library — check your connection.'));
+    document.head.appendChild(s);
+  });
+}
+async function downloadOrderPdf() {
+  guard();
+  const btn = $('ovPdf'), cut = $('ovCut').checked;
+  btn.disabled = true; btn.textContent = 'Making PDF…';
+  try {
+    await loadJsPdf();
+    const pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+    for (let i = 0; i < S.pages.length; i++) {
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(PAGE_W * EXPORT_PPMM); cv.height = Math.round(PAGE_H * EXPORT_PPMM);
+      const x = cv.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height);   // paper white behind the transparent print art
+      const art = document.createElement('canvas'); art.width = cv.width; art.height = cv.height;
+      drawPage(art.getContext('2d'), S.pages[i], EXPORT_PPMM, cut ? 'proof' : 'print');
+      x.drawImage(art, 0, 0);
+      if (i) pdf.addPage('a4', 'portrait');
+      pdf.addImage(cv.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, PAGE_W, PAGE_H, undefined, 'FAST');
+      await new Promise(r => setTimeout(r, 0));          // let the button repaint between pages
+    }
+    pdf.save(S.orderCode + '-sheets' + (cut ? '-cutline' : '') + '.pdf');
+  } catch (e) { alert('Couldn’t make the PDF: ' + (e.message || e)); }
+  btn.disabled = false; btn.textContent = '⬇ Download PDF';
 }
 function orderViewerClick(e) {
-  const b = e.target.closest('[data-ov],[data-exp]'); if (!b) return;
-  if (b.dataset.exp) { try { exportFiles(b.dataset.exp); } catch (err) { /* not an admin */ } return; }
-  const a = b.dataset.ov;
-  if (a === 'print') window.print();
-  else if (a === 'close' || a === 'edit') closeOrderViewer();
-  else if (a === 'reopen') openOrderViewer();
+  if (e.target.closest('[data-ov="pdf"]')) downloadOrderPdf();
 }
 
 /* ═══════════════ wiring ═══════════════ */
@@ -1674,7 +1695,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   $('fabPaste').addEventListener('click', pasteFromClipboard);
-  document.addEventListener('click', e => { if (e.target.closest('#orderView,#orderBanner')) orderViewerClick(e); });
+  document.addEventListener('click', e => { if (e.target.closest('#orderView')) orderViewerClick(e); });
 
   // review & order
   getStickerPricing().then(p => { RV.pricing = p; updateOrderBtn(); });
