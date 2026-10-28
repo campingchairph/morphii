@@ -857,13 +857,18 @@ function renderOrders(){
     grid.innerHTML = `<div class="adm-empty">${searchQuery ? 'No orders match your search.' : 'No orders here yet.'}</div>`;
     return;
   }
+  // Only the first page of cards goes into the DOM; a new filter/search/sort starts again from the top.
+  const sig = [currentTypeFilter, currentStatusFilter, currentDateFilter, currentSortOrder, searchQuery, stripOnly].join('|');
+  if (sig !== lastRenderSig){ lastRenderSig = sig; renderLimit = ORDERS_PAGE; }
+  const total = list.length;
+  list = list.slice(0, renderLimit);
   grid.innerHTML = list.map(o => {
     const dt = o.createdAt && o.createdAt.toDate ? o.createdAt.toDate().toLocaleString() : '';
     const sel = selectedOrders.has(o.id);
     return `
-    <div class="adm-card ${o.printed?'printed-flag':''}">
+    <div class="adm-card ${o.printed?'printed-flag':''}" data-oid="${o.id}">
       <div class="adm-card-select ${sel?'checked':''}" onclick="event.stopPropagation();toggleSelect('${o.id}')">${sel?'✓':''}</div>
-      <img src="${o.designDataUrl||''}" onclick="openLightbox('${o.id}')" alt="Design">
+      <img src="${thumbSrc(o)}" data-oid="${o.id}" onclick="openLightbox('${o.id}')" alt="Design" decoding="async">
       <div class="adm-card-body">
         <span class="adm-badge adm-badge-${o.status}">${o.status}</span>
         <div class="adm-card-title">${escHtml(o.productLabel||o.product||'')}</div>
@@ -884,12 +889,74 @@ function renderOrders(){
         </div>
       </div>
     </div>`;
-  }).join('');
+  }).join('') + (total > list.length
+    ? `<div style="grid-column:1/-1;text-align:center;padding:8px"><button class="adm-signout" onclick="showMoreOrders()">Show ${Math.min(ORDERS_PAGE, total-list.length)} more (${list.length} of ${total} shown)</button></div>`
+    : '');
+  observeThumbs();
+}
+
+// Each order carries its whole design as a base64 image (up to ~850 KB). Putting that straight into every card meant
+// the browser re-parsed and re-decoded every one of them on every click, so cards show a small cached thumbnail
+// instead, made once, only when the card scrolls into view, one at a time. The full image is still used for the
+// lightbox, the download and printing.
+const ORDERS_PAGE = 40;
+let renderLimit = ORDERS_PAGE, lastRenderSig = '';
+function showMoreOrders(){ renderLimit += ORDERS_PAGE; renderOrders(); }
+window.showMoreOrders = showMoreOrders;
+
+const THUMB_BLANK = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+const thumbCache = new Map();     // "<id>:<image length>" -> object URL of the small copy
+const thumbKey = o => o.id + ':' + (o.designDataUrl ? o.designDataUrl.length : 0);
+const thumbSrc = o => thumbCache.get(thumbKey(o)) || THUMB_BLANK;
+let thumbQueue = Promise.resolve(), thumbPending = new Set(), thumbObserver = null;
+
+function makeThumb(o){
+  const key = thumbKey(o);
+  if (thumbCache.has(key) || thumbPending.has(key) || !o.designDataUrl) return;
+  thumbPending.add(key);
+  thumbQueue = thumbQueue.then(() => new Promise(done => {
+    const img = new Image();
+    img.onload = () => {
+      const k = 256 / Math.max(img.naturalWidth, img.naturalHeight, 1), s = Math.min(1, k);
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(img.naturalWidth * s)); c.height = Math.max(1, Math.round(img.naturalHeight * s));
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      c.toBlob(b => {
+        if (b){
+          const url = URL.createObjectURL(b);
+          thumbCache.set(key, url);
+          document.querySelectorAll('img[data-oid="' + o.id + '"]').forEach(el => { el.src = url; });
+        }
+        thumbPending.delete(key); done();
+      }, 'image/webp', 0.8);
+    };
+    img.onerror = () => { thumbPending.delete(key); done(); };
+    img.src = o.designDataUrl;
+  }));
+}
+
+function observeThumbs(){
+  if (!thumbObserver){
+    thumbObserver = new IntersectionObserver(entries => entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      thumbObserver.unobserve(e.target);
+      const o = allOrders.find(x => x.id === e.target.dataset.oid);
+      if (o) makeThumb(o);
+    }), { rootMargin: '300px' });
+  }
+  document.querySelectorAll('#ordersGrid img[data-oid]').forEach(el => {
+    const o = allOrders.find(x => x.id === el.dataset.oid);
+    if (o && thumbCache.has(thumbKey(o))) return;
+    thumbObserver.observe(el);
+  });
 }
 
 function toggleSelect(id){
   if (selectedOrders.has(id)) selectedOrders.delete(id); else selectedOrders.add(id);
-  renderOrders();
+  // update just this card — rebuilding the whole grid is what made checking boxes feel slow
+  const box = document.querySelector('.adm-card[data-oid="' + id + '"] .adm-card-select');
+  if (box){ const on = selectedOrders.has(id); box.classList.toggle('checked', on); box.textContent = on ? '✓' : ''; }
+  else renderOrders();
   updateLayoutFab();
 }
 window.toggleSelect = toggleSelect;
