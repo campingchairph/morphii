@@ -5,8 +5,40 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // helpers for the public-create rules below
+    function optText(d, k, n) {
+      return !(k in d) || d[k] == null || (d[k] is string && d[k].size() <= n);
+    }
+    function validStrip(s) {
+      return s is map
+        && s.keys().hasOnly(['size','count','layout','width','slots','unique'])
+        && s.count is int && s.count >= 1 && s.count <= 40
+        && s.unique is int && s.unique >= 1 && s.unique <= 40
+        && s.layout in ['column','zigzag','grid2']
+        && s['size'] is number && s['size'] > 0 && s['size'] <= 200
+        && s.slots is list && s.slots.size() == s.count
+        && (!('width' in s) || (s.width is number && s.width >= 40 && s.width <= 400));
+    }
     match /morphii_orders/{orderId} {
-      allow create: if true;
+      // anyone can place an order, but only a well-formed one: auto-id document, known fields only, right types and
+      // sizes, status 'pending' — so nothing hostile or oversized can be stored for the admin pages to load
+      allow create: if orderId.matches('[A-Za-z0-9]{20}')
+        && request.resource.data.keys().hasOnly(['product','productLabel','size','paperSize','designDataUrl','customerName','customerEmail','customerPhone','notes','saveCode','status','createdAt','strip'])
+        && request.resource.data.keys().hasAll(['product','productLabel','size','designDataUrl','customerName','status','createdAt'])
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.product is string && request.resource.data.product.size() <= 40
+        && request.resource.data.productLabel is string && request.resource.data.productLabel.size() <= 80
+        && request.resource.data['size'] is number && request.resource.data['size'] > 0 && request.resource.data['size'] <= 200
+        && (!('paperSize' in request.resource.data) || request.resource.data.paperSize == null
+            || (request.resource.data.paperSize is number && request.resource.data.paperSize > 0 && request.resource.data.paperSize <= 400))
+        && request.resource.data.designDataUrl is string && request.resource.data.designDataUrl.size() <= 1040000
+        && request.resource.data.customerName is string && request.resource.data.customerName.size() <= 100
+        && optText(request.resource.data, 'customerEmail', 160)
+        && optText(request.resource.data, 'customerPhone', 40)
+        && optText(request.resource.data, 'notes', 1000)
+        && optText(request.resource.data, 'saveCode', 12)
+        && (!('strip' in request.resource.data) || validStrip(request.resource.data.strip));
       allow read, update, delete: if request.auth != null
         && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
       // extra unique designs of a minimum-order strip (only while the order is being created)
@@ -45,8 +77,18 @@ service cloud.firestore {
       allow read, write: if request.auth != null
         && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
     }
-    match /morphii_visits/{deviceId} {
-      allow create, update: if true;
+    match /morphii_visits/{day} {
+      // one document per day (YYYY-MM-DD); the only thing a visitor can do is add 1 to today's count
+      allow create: if day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && request.resource.data.keys().hasOnly(['day','lastSeen','visitCount'])
+        && request.resource.data.day == day
+        && request.resource.data.visitCount == 1
+        && request.resource.data.lastSeen == request.time;
+      allow update: if day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && request.resource.data.keys().hasOnly(['day','lastSeen','visitCount'])
+        && request.resource.data.day == day
+        && request.resource.data.visitCount == resource.data.visitCount + 1
+        && request.resource.data.lastSeen == request.time;
       allow read, delete: if request.auth != null
         && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];
     }
@@ -63,6 +105,17 @@ service cloud.firestore {
         && request.resource.data.customerName is string
         && request.resource.data.customerName.size() >= 1 && request.resource.data.customerName.size() <= 80
         && request.resource.data.sheets is int && request.resource.data.sheets >= 1 && request.resource.data.sheets <= 60
+        && request.resource.data.stickers is int && request.resource.data.stickers >= 0 && request.resource.data.stickers <= 5000
+        && request.resource.data.pricePerSheet is number && request.resource.data.pricePerSheet >= 0 && request.resource.data.pricePerSheet <= 10000
+        && request.resource.data.sheetTotal is number && request.resource.data.sheetTotal >= 0 && request.resource.data.sheetTotal <= 1000000
+        && request.resource.data.premiumTotal is number && request.resource.data.premiumTotal >= 0 && request.resource.data.premiumTotal <= 1000000
+        && request.resource.data.total is number && request.resource.data.total >= 0 && request.resource.data.total <= 1000000
+        && request.resource.data.productLabel is string && request.resource.data.productLabel.size() <= 100
+        && optText(request.resource.data, 'customerEmail', 160)
+        && optText(request.resource.data, 'customerPhone', 40)
+        && optText(request.resource.data, 'notes', 1000)
+        && request.resource.data.premium is list && request.resource.data.settings is map
+        && request.resource.data.createdAt == request.time
         && request.resource.data.items is list && request.resource.data.items.size() <= 150;
       allow read, update, delete: if request.auth != null
         && request.auth.token.email in ['buboyseph@gmail.com', 'morphiicreate@gmail.com'];

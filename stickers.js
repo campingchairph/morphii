@@ -1500,7 +1500,7 @@ function openOrderViewer() {
   const o = S.order, contact = o.customerEmail || o.customerPhone || '';
   orderShell(
     '<div class="ov-head"><div class="ov-info"><b>' + esc(o.code) + '</b><span>' + esc(o.customerName) + (contact ? ' · ' + esc(contact) : '') + '</span>' +
-    '<span>' + o.sheets + ' A4 sheet' + (o.sheets > 1 ? 's' : '') + ' · ' + o.stickers + ' stickers · ₱' + o.total + ' · ' + esc(o.status) + '</span>' +
+    '<span>' + (+o.sheets || 0) + ' A4 sheet' + (o.sheets > 1 ? 's' : '') + ' · ' + (+o.stickers || 0) + ' stickers · ₱' + (+o.total || 0) + ' · ' + esc(o.status) + '</span>' +
     (o.notes ? '<span>Notes: ' + esc(o.notes) + '</span>' : '') + '</div>' + orderBack + '</div>' +
     '<div class="ov-body" id="ovPages"></div>' +
     '<div class="ov-foot"><label class="ov-cut"><input type="checkbox" id="ovCut"> Show cut line</label>' +
@@ -1515,6 +1515,7 @@ function loadJsPdf() {
   return new Promise((ok, no) => {
     const s = document.createElement('script');
     s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s.integrity = 'sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk'; s.crossOrigin = 'anonymous';
     s.onload = ok; s.onerror = () => no(new Error('Couldn’t load the PDF library — check your connection.'));
     document.head.appendChild(s);
   });

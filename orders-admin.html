@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>if (window.top !== window.self) { document.documentElement.style.display = 'none'; try { window.top.location = window.self.location; } catch (e) {} }</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
@@ -303,6 +304,8 @@ h1,.logo{font-family:'Fredoka One',cursive;}
           <button onclick="openFontsModal()">🔤 Fonts</button>
           <div class="adm-menu-h">Info</div>
           <button onclick="openVisitorsModal()">📊 Visitors</button>
+          <button onclick="exportBackup(false)">💾 Backup data (no images)</button>
+          <button onclick="exportBackup(true)">💾 Backup with images (large)</button>
           <button onclick="openHelpModal()">❓ Help</button>
         </div>
       </div>
@@ -677,15 +680,15 @@ h1,.logo{font-family:'Fredoka One',cursive;}
 </div>
 
 <!-- Firebase SDK (compat mode — no build step needed) -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" integrity="sha384-yuGdyIzzYtOBlBG6JOWn+Ey9kpq7HocusNuxEGyyohr1eEyXpeEyehIIXC/hznw4" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js" integrity="sha384-lI+CxEx/bCvWP1b0OK13j5HTrTZP7yf1xle8TVOFq2smz6KC1RChTarRV/RHP5PP" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" integrity="sha384-nwX2Qpkhc2sv6L0ZPkLefLGguao67toSowvePuQvGF6cG+8MUphGI2uI94Ls3JF7" crossorigin="anonymous"></script>
 <script src="firebase-config.js?v=15"></script>
 <!-- jsPDF — used by doPrint() to write the exact page size directly into the
      PDF file itself, so the export is correct regardless of any browser
      print-dialog "Scale" setting (which is what was causing the 3% mismatch
      when going through window.print() -> Save as PDF). -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
 <script>
 let allOrders = [];
 let ordersUnsub = null;
@@ -764,7 +767,7 @@ function subscribeOrders(){
   if (ordersUnsub) return;
   ordersUnsub = DB.collection('morphii_orders').orderBy('createdAt','desc')
     .onSnapshot(snap => {
-      allOrders = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+      allOrders = snap.docs.filter(d => /^[A-Za-z0-9]{20}$/.test(d.id)).map(d => ({ id:d.id, ...d.data() }));
       const liveIds = new Set(allOrders.map(o=>o.id));
       selectedOrders.forEach(id => { if (!liveIds.has(id)) selectedOrders.delete(id); });
       renderStats();
@@ -793,7 +796,7 @@ function renderTypeTabs(){
   allOrders.forEach(o => { if (o.product) types.set(o.product, o.productLabel||o.product); });
   const tabs = [{ id:'all', label:'All' }, ...[...types.entries()].map(([id,label])=>({id,label}))];
   el.innerHTML = tabs.map(t =>
-    `<button class="adm-tab ${currentTypeFilter===t.id?'active':''}" onclick="setTypeFilter('${t.id}')">${escHtml(t.label)}</button>`
+    `<button class="adm-tab ${currentTypeFilter===t.id?'active':''}" onclick="setTypeFilter(${jsArg(t.id)})">${escHtml(t.label)}</button>`
   ).join('');
 }
 
@@ -879,10 +882,10 @@ function renderOrders(){
       ${o.strip ? '' : `<div class="adm-card-select ${sel?'checked':''}" onclick="event.stopPropagation();toggleSelect('${o.id}')">${sel?'✓':''}</div>`}
       <img src="${thumbSrc(o)}" data-oid="${o.id}" onclick="${o.strip ? `openStripView('${o.id}')` : `openLightbox('${o.id}')`}" alt="Design" decoding="async">
       <div class="adm-card-body">
-        <span class="adm-badge adm-badge-${o.status}">${o.status}</span>
+        <span class="adm-badge adm-badge-${safeStatus(o.status)}">${safeStatus(o.status)}</span>
         <div class="adm-card-title">${escHtml(o.productLabel||o.product||'')}</div>
-        <div class="adm-card-meta">${o.size}mm Circle${o.paperSize ? ` (${o.paperSize}mm w/ bleed)` : ''} · ${escHtml(dt)}</div>
-        ${o.strip ? `<div class="adm-card-row"><b>Minimum strip:</b> ${o.strip.count} pins · ${o.strip.unique} unique design${o.strip.unique>1?'s':''}</div>` : ''}
+        <div class="adm-card-meta">${num(o.size)}mm Circle${o.paperSize ? ` (${num(o.paperSize)}mm w/ bleed)` : ''} · ${escHtml(dt)}</div>
+        ${o.strip ? `<div class="adm-card-row"><b>Minimum strip:</b> ${num(o.strip.count)} pins · ${num(o.strip.unique)} unique design${num(o.strip.unique)>1?'s':''}</div>` : ''}
         ${o.saveCode ? `<div class="adm-card-row"><b>Code:</b> <span style="font-family:monospace;letter-spacing:1px">${escHtml(o.saveCode)}</span></div>` : ''}
         <div class="adm-card-row"><b>Name:</b> ${escHtml(o.customerName)}</div>
         <div class="adm-card-row"><b>Email:</b> ${escHtml(o.customerEmail||o.customerContact)}</div>
@@ -1031,7 +1034,12 @@ window.openLightbox = openLightbox;
 function closeLightbox(){ document.getElementById('lightbox').classList.remove('show'); }
 window.closeLightbox = closeLightbox;
 
-function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+// Order and visit documents can be created by anyone (see the Firestore rules), so every field is treated as hostile
+// text: numbers go through num(), the status through safeStatus(), and values used inside an onclick go through jsArg().
+const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+const safeStatus = s => ['pending','approved','rejected'].includes(s) ? s : 'pending';
+const jsArg = v => escHtml(JSON.stringify(String(v)));
 
 /* ── CUSTOM FONTS (morphii_config/fonts) ─────────────────────────────
    Admin pastes a font stylesheet link (Google Fonts embed URL, or any
@@ -1379,7 +1387,7 @@ function renderVisitorsModal(days){
 
   days = days.slice().sort((a, b) => b.id.localeCompare(a.id));
   document.getElementById('visitorsDayBody').innerHTML = days.map(x =>
-    `<tr><td>${escHtml(x.id)}</td><td>${(x.visitCount || 0).toLocaleString()}</td></tr>`).join('');
+    `<tr><td>${escHtml(x.id)}</td><td>${num(x.visitCount).toLocaleString()}</td></tr>`).join('');
   document.getElementById('visitorsEmpty').style.display = days.length ? 'none' : 'block';
 }
 
@@ -1640,8 +1648,8 @@ function renderRoiTab(){
   }
   const body = r.rows.map(row => `<tr>
     <td>${escHtml(row.productLabel||row.product)}</td>
-    <td>${row.size}mm</td>
-    <td>${row.count}</td>
+    <td>${escHtml(row.size)}mm</td>
+    <td>${num(row.count)}</td>
     <td>${fmtPeso(row.rowRevenue)}</td>
     <td>${fmtPeso(row.rowCost)}</td>
     <td style="color:${row.rowProfit>=0?'#55EFC4':'#ff9b98'}">${fmtPeso(row.rowProfit)}</td>
@@ -1879,7 +1887,7 @@ function renderPmiSidebar(){
     item.appendChild(mc);
 
     const info = document.createElement('div'); info.style.flex = '1';
-    info.innerHTML = `<div style="font-size:10px;color:white;font-weight:800">${escHtml(order.customerName||'')}</div><div style="font-size:8px;color:var(--ink-dim)">${order.size}mm · ${onPaperCount}/${qty} on paper</div>`;
+    info.innerHTML = `<div style="font-size:10px;color:white;font-weight:800">${escHtml(order.customerName||'')}</div><div style="font-size:8px;color:var(--ink-dim)">${num(order.size)}mm · ${onPaperCount}/${qty} on paper</div>`;
     item.appendChild(info);
 
     const qtyInput = document.createElement('input');
@@ -2010,7 +2018,7 @@ window.doPrint = doPrint;
 const STRIP_H = 297;
 let stripCfgCache = null;
 async function stripWidthFor(o){
-  if (o.strip.width >= 40) return o.strip.width;          // new orders carry the width they were built with
+  if (num(o.strip.width) >= 40 && num(o.strip.width) <= 400) return num(o.strip.width);   // new orders carry the width they were built with
   if (!stripCfgCache) stripCfgCache = await getPinStrips().catch(() => DEFAULT_PIN_STRIPS);
   const c = stripCfgCache[o.strip.size] || DEFAULT_PIN_STRIPS[o.strip.size];
   return (c && c.width) || 84;
@@ -2053,14 +2061,14 @@ async function openStripView(id){
   document.body.appendChild(ov);
   try {
     await loadStripDesigns(o);
-    const W = await stripWidthFor(o), d = bleedMMFor(o), n = o.strip.slots.length;
-    const imgs = await Promise.all(o.strip.slots.map(k => loadImgEl(o._stripDesigns[k] || o.designDataUrl)));
+    const W = await stripWidthFor(o), d = bleedMMFor(o), n = Math.min(60, Array.isArray(o.strip.slots) ? o.strip.slots.length : 0);
+    const imgs = await Promise.all(o.strip.slots.slice(0, n).map(k => loadImgEl(o._stripDesigns[k] || o.designDataUrl)));
     stripView = { o, W, d, size: parseFloat(o.strip.size || o.size) || 37, pts: stripPoints(o.strip.layout, n, W, d), imgs };
     const layoutName = { column: 'single column', zigzag: 'zigzag', grid2: '2 columns' }[o.strip.layout] || o.strip.layout;
     ov.innerHTML =
       '<div class="sv-head"><div class="sv-info"><b>' + escHtml(o.saveCode || 'Strip order') + ' · ' + stripView.size + 'mm pins</b>' +
       '<span>' + escHtml(o.customerName || '') + ' · ' + escHtml(o.customerEmail || o.customerContact || '') + (o.customerPhone ? ' · ' + escHtml(o.customerPhone) : '') + '</span>' +
-      '<span>' + n + ' pins · ' + o.strip.unique + ' unique design' + (o.strip.unique > 1 ? 's' : '') + ' · ' + layoutName + ' · paper ' + W + ' × ' + STRIP_H + ' mm</span>' +
+      '<span>' + n + ' pins · ' + num(o.strip.unique) + ' unique design' + (num(o.strip.unique) > 1 ? 's' : '') + ' · ' + escHtml(layoutName) + ' · paper ' + W + ' × ' + STRIP_H + ' mm</span>' +
       (o.notes ? '<span>Notes: ' + escHtml(o.notes) + '</span>' : '') + '</div>' +
       '<button class="adm-signout" onclick="closeStripView()">✕ Close</button></div>' +
       '<div class="sv-body"><canvas id="svCanvas"></canvas></div>' +
@@ -2090,6 +2098,85 @@ function downloadStripPdf(){
 }
 window.openStripView = openStripView; window.closeStripView = closeStripView; window.downloadStripPdf = downloadStripPdf;
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeStripView(); });
+
+/* ── Backup ───────────────────────────────────────────────────────────────
+   Everything that lives only in Firestore (orders, sticker orders, designers and their stickers, payments, config,
+   finance, templates, visits, Shopee and funeral data) as one JSON file. morphii_secrets (the GitHub token) is never
+   included. "No images" skips the design pictures, which are most of the size; "with images" also includes the extra
+   strip designs, sticker-order assets and designer sticker files. Reads are paged so a big backup doesn't hold every
+   image in memory at once. Admin only — the same rules that protect the pages protect these reads. */
+const BACKUP_COLLECTIONS = ['morphii_orders', 'morphii_sticker_orders', 'morphii_designers', 'morphii_designer_stickers',
+  'morphii_designer_payments', 'morphii_config', 'morphii_costs', 'morphii_finance', 'morphii_pin_templates',
+  'morphii_visits', 'morphii_shopee', 'morphii_funeral', 'morphii_funeral_contacts'];
+const BACKUP_SUBS = { morphii_orders: 'designs', morphii_sticker_orders: 'assets', morphii_designer_stickers: 'data' };
+const BACKUP_IMAGE_FIELDS = ['designDataUrl', 'png'];
+function backupStatus(msg){
+  let el = document.getElementById('backupStatus');
+  if (!msg){ if (el) el.remove(); return; }
+  if (!el){
+    el = document.createElement('div'); el.id = 'backupStatus';
+    el.style.cssText = 'position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:600;background:var(--panel);border:1px solid var(--border);color:white;padding:10px 18px;border-radius:14px;font-size:13px;font-weight:800;box-shadow:0 8px 28px rgba(0,0,0,.45);max-width:90vw;text-align:center';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+}
+async function eachDoc(colRef, fn){
+  let last = null;
+  for (;;){
+    let q = colRef.orderBy(firebase.firestore.FieldPath.documentId()).limit(40);
+    if (last) q = q.startAfter(last);
+    const snap = await q.get();
+    if (snap.empty) return;
+    for (const d of snap.docs) await fn(d);
+    last = snap.docs[snap.docs.length - 1];
+    if (snap.size < 40) return;
+  }
+}
+const backupReplacer = function(k, v){ const o = this[k]; return o && typeof o.toDate === 'function' ? o.toDate().toISOString() : v; };
+let backupBusy = false;
+async function exportBackup(withImages){
+  if (backupBusy) return;
+  const u = AUTH && AUTH.currentUser;
+  if (!(u && isAdmin(u))) { alert('Admin sign-in required.'); return; }
+  backupBusy = true;
+  try {
+    const parts = ['{"exportedAt":' + JSON.stringify(new Date().toISOString()) + ',"includesImages":' + !!withImages + ',"collections":{'];
+    let firstCol = true;
+    for (const name of BACKUP_COLLECTIONS){
+      backupStatus('Backing up ' + name + '…');
+      parts.push((firstCol ? '' : ',') + JSON.stringify(name) + ':{'); firstCol = false;
+      let firstDoc = true, n = 0;
+      await eachDoc(DB.collection(name), async d => {
+        const data = d.data();
+        if (!withImages) BACKUP_IMAGE_FIELDS.forEach(f => { if (f in data) data[f] = '[image not included]'; });
+        const entry = { data };
+        const sub = BACKUP_SUBS[name];
+        // pin orders only have a sub-collection when they are minimum-order strips
+        if (withImages && sub && (name !== 'morphii_orders' || data.strip)){
+          const ss = await d.ref.collection(sub).get();
+          entry.sub = { [sub]: {} }; ss.docs.forEach(x => { entry.sub[sub][x.id] = x.data(); });
+        }
+        parts.push((firstDoc ? '' : ',') + JSON.stringify(d.id) + ':' + JSON.stringify(entry, backupReplacer)); firstDoc = false;
+        if (++n % 20 === 0) backupStatus('Backing up ' + name + '… ' + n);
+      });
+      parts.push('}');
+    }
+    parts.push('}}');
+    const blob = new Blob(parts, { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'morphii-backup-' + new Date().toISOString().slice(0, 10) + (withImages ? '-images' : '') + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 8000);
+    backupStatus('Backup downloaded (' + (blob.size / 1048576).toFixed(1) + ' MB)');
+    setTimeout(() => backupStatus(''), 4000);
+  } catch (e) {
+    backupStatus('');
+    alert('Backup failed: ' + (e.code || e.message) + (e.code === 'permission-denied' ? '\n\nIs the latest rules file published?' : ''));
+  }
+  backupBusy = false;
+}
+window.exportBackup = exportBackup;
 </script>
 </body>
 </html>

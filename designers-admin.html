@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>if (window.top !== window.self) { document.documentElement.style.display = 'none'; try { window.top.location = window.self.location; } catch (e) {} }</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
@@ -134,9 +135,9 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
 </div>
 <div id="toast"></div>
 
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" integrity="sha384-yuGdyIzzYtOBlBG6JOWn+Ey9kpq7HocusNuxEGyyohr1eEyXpeEyehIIXC/hznw4" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js" integrity="sha384-lI+CxEx/bCvWP1b0OK13j5HTrTZP7yf1xle8TVOFq2smz6KC1RChTarRV/RHP5PP" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" integrity="sha384-nwX2Qpkhc2sv6L0ZPkLefLGguao67toSowvePuQvGF6cG+8MUphGI2uI94Ls3JF7" crossorigin="anonymous"></script>
 <script src="firebase-config.js?v=15"></script>
 <script>
 (function () {
@@ -163,10 +164,20 @@ th{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);
       '<tr data-id="' + p.id + '"><td>' + fd(p.createdAt) + '</td><td>' + esc(p.designerName) + '</td><td>' + p.slots + '</td><td>₱' + p.amount + '</td><td>' + esc(p.ref) + '</td><td><button class="btn ok" data-a="confirm">Confirm</button> <button class="btn no" data-a="decline">Decline</button></td></tr>').join('') + '</table>' : '<div class="empty">No payments waiting.</div>';
     $('designerTable').innerHTML = DESIGNERS.length ? '<table><tr><th>Designer</th><th>Email</th><th>Uploads (lifetime)</th><th>Paid kept</th><th>Slots</th><th>Pass until</th></tr>' + DESIGNERS.map(d =>
       '<tr><td>' + esc(d.displayName) + '</td><td>' + esc(d.email) + '</td><td>' + d.uploadsEver + '</td><td>' + (d.paidListed || 0) + '</td><td>' + (d.paidSlots || 0) + '</td><td>' + fd(d.paidUntil) + '</td></tr>').join('') + '</table>' : '<div class="empty">No designers yet.</div>';
+    // The browser sends the total with the order, so never take it on trust: recompute the sheets part from the
+    // current pricing and flag any order that doesn't add up (the price may also have been edited since — it says so).
+    const priceNote = o => {
+      if (!(PRICING.tiers && PRICING.tiers.length)) return '';
+      const sheets = +o.sheets || 0, exp = stickerSheetPrice(PRICING.tiers, sheets).total;
+      const notes = [];
+      if (Math.abs((+o.sheetTotal || 0) - exp) > 0.01) notes.push('sheets total ₱' + (+o.sheetTotal || 0) + ' ≠ ₱' + exp + ' at current pricing');
+      if (Math.abs((+o.total || 0) - ((+o.sheetTotal || 0) + (+o.premiumTotal || 0))) > 0.01) notes.push('total ≠ sheets + premium');
+      return notes.length ? '<br><small style="color:#b0304f;font-weight:800">⚠ ' + esc(notes.join('; ')) + '</small>' : '';
+    };
     const STATUSES = ['new', 'confirmed', 'paid', 'printing', 'done', 'cancelled'];
     const smsBody = o => 'Hi ' + o.customerName + '! This is Morphii. Your sticker sheet order ' + o.code + ' (' + o.sheets + ' A4 sheet' + (o.sheets > 1 ? 's' : '') + ', total ₱' + o.total + ') is confirmed. Please pay on Shopee and send this order number in chat. Thank you!';
     $('orderList').innerHTML = ORDERS.length ? '<table><tr><th>Order</th><th>When</th><th>Customer</th><th>Contact</th><th>Sheets</th><th>Total</th><th>Status</th><th></th></tr>' + ORDERS.map(o =>
-      '<tr data-code="' + esc(o.code) + '"><td><b>' + esc(o.code) + '</b></td><td>' + fd(o.createdAt) + '</td><td>' + esc(o.customerName) + (o.notes ? '<br><small style="color:var(--dim)">' + esc(o.notes) + '</small>' : '') + '</td><td>' + esc(o.customerEmail || o.customerPhone || '') + '</td><td>' + o.sheets + ' (' + o.stickers + ')<br><small style="color:var(--dim)">' + esc(o.productLabel || '') + '</small></td><td>₱' + o.total + '</td>' +
+      '<tr data-code="' + esc(o.code) + '"><td><b>' + esc(o.code) + '</b></td><td>' + fd(o.createdAt) + '</td><td>' + esc(o.customerName) + (o.notes ? '<br><small style="color:var(--dim)">' + esc(o.notes) + '</small>' : '') + '</td><td>' + esc(o.customerEmail || o.customerPhone || '') + '</td><td>' + (+o.sheets || 0) + ' (' + (+o.stickers || 0) + ')<br><small style="color:var(--dim)">' + esc(o.productLabel || '') + '</small></td><td>₱' + (+o.total || 0) + priceNote(o) + '</td>' +
       '<td><select class="inp" style="width:auto;margin:0;padding:6px 8px;font-size:12px" data-a="status">' + STATUSES.map(s => '<option' + (s === o.status ? ' selected' : '') + '>' + s + '</option>').join('') + '</select></td>' +
       '<td><a class="btn ghost" style="text-decoration:none;display:inline-block;padding:7px 12px;font-size:12px" target="_blank" href="stickers.html?order=' + encodeURIComponent(o.code) + '">Preview &amp; print</a>' +
       (o.contactMethod === 'phone' && o.customerPhone ? ' <a class="btn" style="text-decoration:none;display:inline-block;padding:7px 12px;font-size:12px" href="sms:' + esc(o.customerPhone) + '?body=' + encodeURIComponent(smsBody(o)) + '">Send text</a>' : '') + '</td></tr>').join('') + '</table>' : '<div class="empty">No sheet orders yet.</div>';
